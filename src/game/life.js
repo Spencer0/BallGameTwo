@@ -122,6 +122,9 @@ export class Life {
       const lights = sg.lights.map((l) => ({ i: inst(l.it), group: l.group })).filter((l) => reg(l.i));
       if (lights.length) this.signals.push({ node: sg.node, lights });
     }
+    // rail crossings: lights flash and cars wait while a train is near
+    this.crossings = (spec.crossings || []).map((c) => ({ x: c.x, z: c.z, r: c.r ?? 120, lights: (c.lights || []).map(inst).filter(reg), active: false }));
+    this.trains = this.movers.filter((m) => m.kind === 'train');
     this.honks = 0;
   }
 
@@ -151,6 +154,7 @@ export class Life {
       if (d2 < far2) return (f + k) % 4 === 0 ? 4 : 0;
       return (f + k) % 16 === 0 ? 16 : 0;
     };
+    if (this.crossings.length) this.updateCrossings();
     if (this.net) {
       this.updateSignals(dt);
       for (let k = 0; k < this.cars.length; k++) {
@@ -233,6 +237,43 @@ export class Life {
         this.w.tint[l.i] = green ? TINT_GREEN : amber ? TINT_AMBER : TINT_RED;
       }
     }
+  }
+
+  updateCrossings() {
+    const w = this.w;
+    const blink = Math.floor(this.s.time * 2.2) % 2 === 0;
+    for (const c of this.crossings) {
+      let near = false;
+      for (const m of this.trains) {
+        if (m.dead) continue;
+        for (const i of m.its) {
+          if (i < 0 || !this.alive(i)) continue;
+          if ((w.x[i] - c.x) ** 2 + (w.z[i] - c.z) ** 2 < c.r * c.r) {
+            near = true;
+            break;
+          }
+        }
+        if (near) break;
+      }
+      c.active = near;
+      for (let k = 0; k < c.lights.length; k++) {
+        const i = c.lights[k];
+        if (!this.alive(i)) continue;
+        w.tint[i] = near ? ((k % 2 === 0) === blink ? TINT_RED : PAL.charcoal + 1) : PAL.charcoal + 1;
+      }
+    }
+  }
+
+  /** a car at (x,z) heading (hx,hz): is there an active crossing just ahead? */
+  crossingAhead(x, z, hx, hz) {
+    for (const c of this.crossings) {
+      if (!c.active) continue;
+      const dx = c.x - x,
+        dz = c.z - z;
+      const along = dx * hx + dz * hz;
+      if (along > 4 && along < 26 && Math.abs(dx * hz - dz * hx) < 9) return along;
+    }
+    return 0;
   }
 
   /** may traffic on this lane (approaching its end node) go? */
@@ -386,6 +427,11 @@ export class Life {
         if (hold) gap = Math.min(gap, toEnd - 0.5);
       }
       if (gap < Infinity) target = Math.min(target, Math.max(0, (gap - 2.5) * 1.1));
+    }
+    // a train coming through the level crossing ahead
+    if (this.crossings.length) {
+      const ca = this.crossingAhead(w.x[a.i], w.z[a.i], a.hx ?? 0, a.hz ?? 1);
+      if (ca) target = Math.min(target, Math.max(0, (ca - 7) * 0.8));
     }
     // the ball in the way
     const bx = ball.pos.x - w.x[a.i],

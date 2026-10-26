@@ -270,6 +270,7 @@ export function layout(lib, seed = 505) {
     o += t.dims[0] + 0.6;
   }
   life.movers.push({ its, offs, route: [...route, ...back], speed: 13, loop: true, kind: 'train' });
+  life.crossings = ctx.crossings || [];
   return L;
 }
 
@@ -332,7 +333,24 @@ function depot(ctx, life) {
   occ.add({ x: MAIN_X - 70, z: gz, hw: gt.dims[0] / 2, hd: gt.dims[2] / 2, yaw: 0 }, 'bld');
   for (const dx of [-90, -100]) L.put('grain_silo', MAIN_X + dx - 10, gz + 4, { scale: 0.8 });
   // crossing signals where Main/Depot St and Elm Ave cross the tracks
-  for (const x of [MAIN_X, -520]) for (const side of [-1, 1]) L.put(pickId(L, ['crossing_signal', 'stop_sign']), x + side * 8, RAIL_Z + side * 9, { yaw: side > 0 ? 0 : Math.PI });
+  const crossings = (ctx.crossings = []);
+  const xs = [];
+  for (const e of net.edges) {
+    if (e.cls === 'rail' || !e.paint) continue;
+    for (let k = 1; k < e.poly.length; k++) {
+      const [ax, az] = e.poly[k - 1],
+        [bx, bz] = e.poly[k];
+      if ((az - RAIL_Z) * (bz - RAIL_Z) < 0) xs.push(ax + ((RAIL_Z - az) / (bz - az)) * (bx - ax));
+    }
+  }
+  for (const x of xs) {
+    const lights = [];
+    for (const side of [-1, 1]) {
+      const it = L.put(pickId(L, ['crossing_signal', 'stop_sign']), x + side * 8, RAIL_Z + side * 9, { yaw: side > 0 ? 0 : Math.PI });
+      if (it) lights.push(it);
+    }
+    crossings.push({ x, z: RAIL_Z, lights });
+  }
   parkingLot(ctx, MAIN_X + 90, z + 6, 30, 40, 0, { fill: 0.5 });
 }
 
