@@ -14,10 +14,13 @@
 import { Layout } from './layout.js';
 import { Network } from './city/network.js';
 import { paintNetwork } from './city/surface.js';
-import { Occupancy, occupyNetwork, frameAt, local, fillFrontage, fenceLine } from './city/frontage.js';
+import { Occupancy, occupyNetwork, frameAt, local, fillFrontage, fenceLine, tidyFences } from './city/frontage.js';
 import { SK } from '../render/streets.js';
 import { suburbLot, closeFences, frontageFences, pickId, woods, parkingLot, countryside } from './city/suburb.js';
 import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock, ducks } from './city/lifespec.js';
+
+// buildings a fence may stop against (a yard fence returns to the house; a paddock ends at the barn)
+const FENCE_STOPS = /^(house_|garage$|garden_shed$|farmhouse$|red_barn$|barn|apartment_block$|bakery$|boathouse$|cafe$|church$|clock_tower$|depot_station$|diner$|grain_elevator$|library$|mill$|motel$|petrol_station$|post_office$|school_building$|shop_|storefront|strip_mall$|supermarket$|town_hall$|grain_silo$|doghouse$|treehouse$)/;
 
 const S = 750;
 const MAIN_X = -150;
@@ -328,14 +331,15 @@ export function layout(lib, seed = 505) {
   alleys(ctx);
 
   // ---- houses: avenue lots are deep (the houses face the avenues), then whatever fits elsewhere
-  const RES = { ave: 46, eastave: 46, water: 34, river: 40, depot: 34, cross: 34, bank: 34, mainS: 34 };
+  const RES = { ave: 46, eastave: 46, water: 34, river: 40, depot: 40, cross: 50, bank: 44, mainS: 34 }; // deep enough that back yards meet mid-block
   const riverside = (f, e) => {
     if (e.tag !== 'water' && e.tag !== 'river') return false;
     const fr = frameAt(f, f.L[f.L.length - 1] / 2);
     return e.tag === 'water' ? -fr.fx > 0 : -fr.fx < 0;
   };
   const order = net.frontages.filter((f) => RES[net.edges[f.e].tag] && !riverside(f, net.edges[f.e]));
-  order.sort((a, b) => RES[net.edges[b.e].tag] - RES[net.edges[a.e].tag]);
+  const PRIO = { ave: 0, eastave: 0, river: 1, water: 2, cross: 3, bank: 3, depot: 3, mainS: 4 }; // the avenues' house rows first
+  order.sort((a, b) => PRIO[net.edges[a.e].tag] - PRIO[net.edges[b.e].tag]);
   const pool = avail(TOWN_HOUSES);
   for (const f of order) {
     const e = net.edges[f.e];
@@ -357,12 +361,16 @@ export function layout(lib, seed = 505) {
   // old towns are full of big trees: one more in most back yards
   const inLot = new Set(['lot']);
   for (const lot of ctx.lots || []) {
-    if (lot.D < 34 || L.rand() < 0.3) continue;
-    const [x, z] = local(lot.fr, L.range(-lot.W / 3, lot.W / 3), -lot.D + L.range(5, 9));
-    const r = { x, z, hw: 2, hd: 2, yaw: 0 };
-    if (occ.hits(r, inLot)) continue;
-    occ.add(r, 'yard');
-    L.put('tree_round', x, z, { scale: L.range(1.1, 1.45), tint: L.pick(['leaf', 'leaf', 'pine', 'lime']) });
+    if (lot.D < 34) continue;
+    // a big shade tree near the back line, and on a deep lot often a second one halfway down the yard
+    for (const back of lot.D >= 44 ? [L.range(5, 9), L.range(16, 22)] : [L.range(5, 9)]) {
+      if (L.rand() < 0.2) continue;
+      const [x, z] = local(lot.fr, L.range(-lot.W / 3, lot.W / 3), -lot.D + back);
+      const r = { x, z, hw: 2, hd: 2, yaw: 0 };
+      if (occ.hits(r, inLot)) continue;
+      occ.add(r, 'yard');
+      L.put('tree_round', x, z, { scale: L.range(1.1, 1.5), tint: L.pick(['leaf', 'leaf', 'pine', 'lime']) });
+    }
   }
 
   // ---- leftover downtown frontage: civic buildings; leftover block interiors: parking behind the stores
@@ -421,6 +429,8 @@ export function layout(lib, seed = 505) {
   }
   trains(ctx, life);
   life.crossings = ctx.crossings || [];
+  // last of all: no fence run may end in the air
+  L.fenceTidy = tidyFences(L, (id) => FENCE_STOPS.test(id));
   return L;
 }
 

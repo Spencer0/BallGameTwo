@@ -8,10 +8,13 @@
 import { Layout } from './layout.js';
 import { Network } from './city/network.js';
 import { paintNetwork } from './city/surface.js';
-import { Occupancy, occupyNetwork, frameAt, local, fenceLine } from './city/frontage.js';
+import { Occupancy, occupyNetwork, frameAt, local, fenceLine, tidyFences } from './city/frontage.js';
 import { SK } from '../render/streets.js';
 import { suburbLot, closeFences, frontageFences, pickId, woods, parkingLot, court, countryside } from './city/suburb.js';
 import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock, ducks } from './city/lifespec.js';
+
+// buildings a fence may stop against (a yard fence returns to the house; a paddock ends at the barn)
+const FENCE_STOPS = /^(house_|garage$|garden_shed$|farmhouse$|red_barn$|barn|apartment_block$|bakery$|boathouse$|cafe$|church$|clock_tower$|depot_station$|diner$|grain_elevator$|library$|mill$|motel$|petrol_station$|post_office$|school_building$|shop_|storefront|strip_mall$|supermarket$|town_hall$|grain_silo$|doghouse$|treehouse$)/;
 
 const S = 240;
 const ART_Z = 200;
@@ -327,6 +330,8 @@ export function layout(lib, seed = 404) {
   // woods beyond the back fences, to the map edge (and beyond, in the fog)
   woods(ctx, { minX: -S, maxX: S, minZ: -S, maxZ: S }, { count: 900, ids: ['pine_tree', 'tree_round', 'pine_tree', 'bush'], minRoadDist: 50, net });
   L.debugLots = ctx.debugLots;
+  // last of all: no fence run may end in the air
+  L.fenceTidy = tidyFences(L, (id) => FENCE_STOPS.test(id));
   return L;
 }
 

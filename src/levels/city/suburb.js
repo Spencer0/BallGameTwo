@@ -56,7 +56,11 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   }
   occ.add(lotRect, 'lot');
   const IN_LOT = ctx.inLot || (ctx.inLot = new Set(['lot']));
-  const house = L.pick(pool);
+  // never the same model as the house just built next door
+  const prev = ctx.prevHouse;
+  let house = L.pick(pool);
+  if (prev && pool.length > 1 && house === prev.id && (prev.x - fr.x) ** 2 + (prev.z - fr.z) ** 2 < 40 * 40) house = L.pick(pool.filter((id) => id !== prev.id));
+  ctx.prevHouse = { id: house, x: fr.x, z: fr.z };
   const t = L.lib.byId.get(house);
   const hw = t.dims[0] / 2,
     hd = t.dims[2] / 2;

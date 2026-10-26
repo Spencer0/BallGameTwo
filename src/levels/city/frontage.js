@@ -227,3 +227,98 @@ export function fenceLine(L, id, x0, z0, x1, z1, { dedupe = null, opts = {}, ski
   }
   return placed;
 }
+
+/**
+ * Final fence tidy (the owner's first complaint was "picket fences not touching"): chain the fence
+ * panels by their ends and peel back any run whose end hangs in the air. An end is fine where it meets
+ * another panel (end to end or on its side, a T), where it stops at a building, or where it faces another
+ * loose end across a gate-sized gap. Runs that end in a lawn are taken back panel by panel; lone panels go.
+ * `anchors` tests an item id for "a building a fence may stop against".
+ */
+export function tidyFences(L, anchors, { fence = /fence/, gate = 9, stop = 1.6 } = {}) {
+  const lib = L.lib;
+  const P = [];
+  for (const it of L.items) {
+    if (!fence.test(it.id)) continue;
+    const t = lib.byId.get(it.id);
+    const along0 = t.dims[0] >= t.dims[2];
+    const half = (Math.max(t.dims[0], t.dims[2]) * (it.scale || 1)) / 2;
+    const c = Math.cos(it.yaw || 0),
+      s = Math.sin(it.yaw || 0);
+    const ax = along0 ? c : s,
+      az = along0 ? -s : c;
+    P.push({ it, x0: it.x - ax * half, z0: it.z - az * half, x1: it.x + ax * half, z1: it.z + az * half, live: true });
+  }
+  if (!P.length) return 0;
+  const B = [];
+  for (const it of L.items) {
+    if (!anchors(it.id)) continue;
+    const t = lib.byId.get(it.id);
+    B.push({ x: it.x, z: it.z, c: Math.cos(it.yaw || 0), s: Math.sin(it.yaw || 0), hw: (t.dims[0] * (it.scale || 1)) / 2 + stop, hd: (t.dims[2] * (it.scale || 1)) / 2 + stop });
+  }
+  // spatial hashes: panels by their midpoints (cell 8 m), buildings by centre (cell 40 m)
+  const hash = (cell) => ({ cell, m: new Map() });
+  const key = (H, x, z) => (Math.floor(x / H.cell) + 32768) * 65536 + (Math.floor(z / H.cell) + 32768);
+  const add = (H, x, z, v) => {
+    const k = key(H, x, z);
+    let a = H.m.get(k);
+    if (!a) H.m.set(k, (a = []));
+    a.push(v);
+  };
+  const near = (H, x, z, r, fn) => {
+    const c = H.cell;
+    for (let ix = Math.floor((x - r) / c); ix <= Math.floor((x + r) / c); ix++)
+      for (let iz = Math.floor((z - r) / c); iz <= Math.floor((z + r) / c); iz++) {
+        const a = H.m.get((ix + 32768) * 65536 + (iz + 32768));
+        if (a) for (const v of a) if (fn(v)) return true;
+      }
+    return false;
+  };
+  const PH = hash(8),
+    BH = hash(40);
+  for (const p of P) add(PH, (p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2, p);
+  for (const b of B) add(BH, b.x, b.z, b);
+  const segD = (x, z, p) => {
+    const dx = p.x1 - p.x0,
+      dz = p.z1 - p.z0;
+    const l2 = dx * dx + dz * dz || 1;
+    const t = Math.max(0, Math.min(1, ((x - p.x0) * dx + (z - p.z0) * dz) / l2));
+    return Math.hypot(x - p.x0 - dx * t, z - p.z0 - dz * t);
+  };
+  const touches = (p, x, z) => near(PH, x, z, 6, (q) => q !== p && q.live && segD(x, z, q) < 0.9);
+  const atBuilding = (x, z) =>
+    near(BH, x, z, 60, (b) => {
+      const dx = x - b.x,
+        dz = z - b.z;
+      return Math.abs(dx * b.c - dz * b.s) < b.hw && Math.abs(dx * b.s + dz * b.c) < b.hd;
+    });
+  const loose = (p, x, z) => !touches(p, x, z) && !atBuilding(x, z);
+  // a loose end facing another loose end a gate-width away is a gateway, not a loose end
+  const gateway = (p, x, z) =>
+    near(PH, x, z, gate + 4, (q) => {
+      if (q === p || !q.live) return false;
+      for (const [ex, ez] of [[q.x0, q.z0], [q.x1, q.z1]]) {
+        const d = Math.hypot(ex - x, ez - z);
+        if (d > 1 && d < gate && loose(q, ex, ez)) return true;
+      }
+      return false;
+    });
+  let removed = 0;
+  for (let pass = 0; pass < 400; pass++) {
+    let changed = 0;
+    for (const p of P) {
+      if (!p.live) continue;
+      const bad0 = loose(p, p.x0, p.z0) && !gateway(p, p.x0, p.z0),
+        bad1 = loose(p, p.x1, p.z1) && !gateway(p, p.x1, p.z1);
+      if (bad0 || bad1) {
+        p.live = false;
+        changed++;
+      }
+    }
+    removed += changed;
+    if (!changed) break;
+  }
+  const dead = new Set(P.filter((p) => !p.live).map((p) => p.it));
+  if (dead.size) L.items = L.items.filter((it) => !dead.has(it));
+  return removed;
+}
