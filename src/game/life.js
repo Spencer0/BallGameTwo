@@ -163,6 +163,8 @@ export class Life {
         const m = tick(this.w.x[a.i], this.w.z[a.i], k);
         if (m) this.stepCar(a, dt * m, ball);
       }
+    }
+    {
       for (let k = 0; k < this.peds.length; k++) {
         const p = this.peds[k];
         if (p.dead) continue;

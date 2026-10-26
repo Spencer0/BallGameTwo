@@ -260,8 +260,21 @@ export function layout(lib, seed = 303) {
   // the street out front: parked cars and street stuff for when the ball is big
   for (const [x, id, tint] of [[-14, 'car', 'tomato'], [-8.5, 'pickup_truck', null], [-2, 'car', 'sun'], [6, 'delivery_van', null], [12.5, 'car', 'leaf']])
     L.put(id, x, 16.3, { yaw: L.along(id, Math.PI / 2), tint: tint || undefined });
-  L.put('car', 3, 18.8, { yaw: L.along('car', -Math.PI / 2), tint: 'cobalt' });
-  L.put('motorcycle', -11, 18.7, { yaw: L.along('motorcycle', -Math.PI / 2) });
+  // traffic going by in the far lane (eastbound), people strolling the sidewalk
+  const life = (L.life = { cars: [], peds: [], followers: [], grazers: [], flocks: [], movers: [], spinners: [], signals: [] });
+  const lane = [[-75, 18.8], [75, 18.8]];
+  for (const [id, s0, v, tint] of [['car', 20, 7, 'cobalt'], ['motorcycle', 70, 9, undefined], ['delivery_van', 115, 6, undefined]]) {
+    const it = L.put(id, -75 + s0, 18.8, { yaw: L.along(id, Math.PI / 2), tint });
+    if (it) life.movers.push({ its: [it], offs: [0], route: lane, speed: v, s: s0, loop: true, kind: 'car' });
+  }
+  for (const [id, x] of [['person_adult', -30], ['person_grandpa', 12], ['person_kid', 40]]) {
+    const it = L.put(id, x, 14.2);
+    if (it) life.peds.push({ it, path: [[-60, 14 + Math.random() * 0.4], [60, 14.2]], s: x + 60, dir: x < 0 ? 1 : -1, lat: 0, speed: 1 });
+  }
+  if (L.has('dog')) {
+    const dog = L.put('dog', -29, 14.2);
+    if (dog) life.followers.push({ it: dog, owner: life.peds[0].it, side: 0.6, back: 1 });
+  }
   for (const x of [-15, -5, 5, 15]) L.put('street_lamp', x, 14.3, { yaw: Math.PI });
   L.put('mailbox', -3, 13.6, { yaw: Math.PI });
   L.put('wheelie_bin', 1, 13.8);

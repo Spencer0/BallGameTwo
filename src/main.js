@@ -20,6 +20,8 @@ import { SONGS } from './audio/songs.js';
 import { UI } from './ui/ui.js';
 import { Autopilot } from './debug/autopilot.js';
 
+const AMBIENCE = { culdesac: 'suburb', town: 'town', city: 'city', house: 'suburb' };
+
 const params = new URLSearchParams(location.search);
 const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -168,6 +170,17 @@ class App {
 
   wireEvents() {
     const ev = this.events;
+    // city life: horns and flocks, quieter the further they are from the camera
+    const near = (e) => {
+      const s = e.session;
+      if (!s || s.attract || s.over) return 0;
+      const c = s.camera.position;
+      const d = Math.hypot(e.x - c.x, e.z - c.z);
+      const ref = Math.max(20, s.cam.camR * 6);
+      return Math.max(0, 1 - d / (ref * 4)) ** 1.5;
+    };
+    ev.on('honk', (e) => this.sfx.honk(near(e), Math.random() < 0.25));
+    ev.on('flock', (e) => this.sfx.flutter(near(e), e.n));
     ev.on('pickup', (e) => {
       if (e.session.attract) return;
       this.sfx.pickup(e.type.mat, e.rel, e.combo);
@@ -260,6 +273,7 @@ class App {
         }
         s.update(dt, this.input);
         if (!s.over) this.ui.hudFrame(s);
+        if (!s.paused) this.sfx.ambienceTick(dt);
         if (s.mode === 'timed' && !s.over) this.music.tempoScale = s.timeLeft < 30 ? 1.07 : 1;
       } else this.resultsCamera(dt);
       if (this.debugView) this.applyDebugView();
@@ -318,9 +332,11 @@ class App {
       const song = SONGS[this.session.level.theme];
       this.music.play(song);
       this.sfx.setKey(song.id);
+      this.sfx.ambience(AMBIENCE[this.session.level.theme] || null);
     } else {
       this.music.play(SONGS.title);
       this.sfx.setKey('title');
+      this.sfx.ambience(null);
     }
   }
 
@@ -413,6 +429,7 @@ class App {
   onSessionEnd(result) {
     this.input.setEnabled(false);
     this.music.stop(1.2);
+    this.sfx.ambience(null);
     if (result.reason === 'time') {
       this.sfx.timeUp();
       this.ui.hudStamp("Time's up!", 'goal');

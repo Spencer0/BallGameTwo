@@ -398,4 +398,104 @@ export class Sfx {
     if (!this.ok) return;
     this.pop(this.e.now, 91, 0.5, true);
   }
+
+  // ------------------------------------------------------------------ city life
+  /** a car horn: two detuned squares, short "meep" or a longer "meeeep"; v = 0..1 by distance */
+  honk(v = 1, long = false) {
+    if (!this.ok || v < 0.03) return;
+    const e = this.e;
+    const t = e.now + 0.01;
+    const o = e.out(e.sfx, 0.05);
+    const lp = e.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1800;
+    lp.connect(o);
+    const g = e.gain(0, lp);
+    const base = 330 + Math.random() * 90;
+    const dur = long ? 0.55 : 0.18;
+    for (const r of [1, 1.26]) e.osc('square', base * r, t, t + dur + 0.05, g);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.09 * v, t + 0.015);
+    g.gain.setValueAtTime(0.09 * v, t + dur - 0.03);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    if (!long && Math.random() < 0.5) {
+      // double tap
+      const g2 = e.gain(0, lp);
+      for (const r of [1, 1.26]) e.osc('square', base * r, t + 0.24, t + 0.45, g2);
+      g2.gain.setValueAtTime(0, t + 0.24);
+      g2.gain.linearRampToValueAtTime(0.09 * v, t + 0.255);
+      g2.gain.linearRampToValueAtTime(0, t + 0.42);
+    }
+  }
+
+  /** a flock taking off: a burst of soft wing claps */
+  flutter(v = 1, n = 6) {
+    if (!this.ok || v < 0.03) return;
+    const e = this.e;
+    const o = e.out(e.sfx, 0.08);
+    for (let k = 0; k < n * 3; k++) {
+      const t = e.now + k * 0.035 + Math.random() * 0.02;
+      e.noiseHit(t, 0.05, o, 'bandpass', 1400 + Math.random() * 900, 1.2, 0.09 * v * (1 - k / (n * 3)));
+    }
+  }
+
+  /** ambient bed for a place: 'suburb' | 'town' | 'city' | null; call ambienceTick each frame */
+  ambience(kind) {
+    if (!this.ok) return;
+    const e = this.e;
+    if (this.amb) {
+      const a = this.amb;
+      a.g.gain.setTargetAtTime(0, e.now, 0.4);
+      setTimeout(() => {
+        try {
+          a.src.stop();
+        } catch {}
+      }, 2000);
+      this.amb = null;
+    }
+    this.ambKind = kind;
+    if (!kind) return;
+    const c = e.ctx;
+    const src = c.createBufferSource();
+    src.buffer = e.noise;
+    src.loop = true;
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = kind === 'city' ? 380 : kind === 'town' ? 260 : 200;
+    lp.Q.value = 0.3;
+    const g = c.createGain();
+    g.gain.value = 0;
+    src.connect(lp).connect(g).connect(e.sfx);
+    src.start();
+    g.gain.setTargetAtTime(kind === 'city' ? 0.11 : 0.05, e.now, 1.5);
+    this.amb = { src, g };
+    this.ambT = 0;
+  }
+
+  ambienceTick(dt) {
+    if (!this.ok || !this.ambKind) return;
+    this.ambT -= dt;
+    if (this.ambT > 0) return;
+    const kind = this.ambKind;
+    this.ambT = kind === 'city' ? 1.5 + Math.random() * 3 : 0.8 + Math.random() * 2.5;
+    if (kind === 'city' && Math.random() < 0.35) this.honk(0.12 + Math.random() * 0.12, Math.random() < 0.3);
+    else this.chirp(kind === 'city' ? 0.25 : 0.6);
+  }
+
+  /** a little bird: two or three quick sine sweeps */
+  chirp(v = 0.5) {
+    const e = this.e;
+    const o = e.out(e.sfx, 0.25, (Math.random() - 0.5) * 0.8);
+    const f = 2400 + Math.random() * 1600;
+    const n = 2 + Math.floor(Math.random() * 3);
+    for (let k = 0; k < n; k++) {
+      const t = e.now + k * 0.09;
+      const g = e.gain(0, o);
+      const s = e.osc('sine', f, t, t + 0.08, g);
+      s.frequency.exponentialRampToValueAtTime(f * (1.3 + Math.random() * 0.4), t + 0.05);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.035 * v, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    }
+  }
 }
