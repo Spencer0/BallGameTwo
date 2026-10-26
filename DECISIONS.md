@@ -143,3 +143,18 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
   don't leave dark strokes hanging in the haze; spindly landmarks (statues, masts, cranes) never become
   far-box impostors.
 - **Ducks** (a new asset) paddle in single file on the suburban pond, the town lake and the park lakes.
+- **Rebalance after the city rebuild** (calibration bot at 32× simulation; it rendered too slowly at 8×):
+  the rebuilt suburbs, town and city are much richer, so the bot hit every old goal within a quarter of the
+  timer and swept the whole map soon after. New settings keep the rule "timer ≈ 2–2.5× the bot's time to
+  goal, top star near the full sweep":
+  L4 22 m in 5:00 (stars 22 / 66 / 143 m), L5 150 m in 4:30 (150 / 360 / 555 m), L6 800 m in 6:00
+  (800 / 1600 / 2320 m). The total play time drops from ≈ 45 to ≈ 38 minutes.
+- **Backdrops beyond the map are boxes, not tiles**: flat painted roof tiles read as a carpet from the play
+  camera. Each beyond-map block is now two plain boxes (roof colour on top, wall colour on the two
+  city-facing sides), with heights varying block to block. That's about 7,000 boxes and 44k triangles in a
+  single draw.
+- **Bends in curved streets** get an oversized patch under the strips: each strip ends square to its own
+  last segment, and the hairline wedge between them showed the lawn as a green line across the road.
+- **Vehicles stop by the nose**, so a box truck waits as far behind the stop line as a hatchback.
+- **Boats never become far boxes** (they read as floating cubes on the water); lake sailing loops are
+  concentric so boats can't pass through each other.
