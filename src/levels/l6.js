@@ -936,7 +936,8 @@ function bowTies(ctx) {
       const f = (r - 13) / r; // stay clear of the carriageways
       if (f < 0.12) continue;
       const ins = tri.map(([x, z]) => [gx + (x - gx) * f, gz + (z - gz) * f]);
-      paint.push((bb) => bb.poly(ins, SK.plaza, { P: [3], C: ['concrete', 'cloud', 'stone'], y: 0.03, origin: ins[0] }));
+      // (one tone of paver with just the joints: a two-tone checker cut by the island's slanted edges reads as a sawtooth)
+      paint.push((bb) => bb.poly(ins, SK.plaza, { P: [3], C: ['concrete', 'concrete', 'stone'], y: 0.03, origin: ins[0] }));
       L.put(pickId(L, ['street_tree', 'tree_round']), gx, gz, { scale: 1.2, tint: 'leaf' });
       L.put('park_bench', gx + (ins[0][0] - gx) * 0.5, gz + (ins[0][1] - gz) * 0.5, { yaw: 0 });
     }
@@ -993,14 +994,15 @@ function plaza(ctx, life) {
     const [ax, az] = e.poly[0],
       [bx, bz] = e.poly[e.poly.length - 1];
     const yaw = Math.atan2(bx - ax, bz - az);
-    // where a road crosses the plaza (it runs under the road), keep the crowd clear of the carriageway
+    // keep the crowd clear of every carriageway at the plaza's ends: a road crossing the plaza (it runs
+    // under the road) or the street the plaza ends at, which Broadway meets at a slant, so one corner of a
+    // square-ended crowd would poke out into the junction
     const clear = (n, trim) => {
-      if (!n.plazaX) return trim;
       let c = trim;
       for (const a of n.arms) {
         const eo = net.edges[a.e];
-        if (eo.plaza) continue;
-        const sn = Math.max(0.2, Math.abs(Math.sin(a.ang - yaw)));
+        if (eo.plaza || Math.abs(Math.sin(a.ang - yaw)) < 0.3) continue; // (Broadway carrying on past the plaza)
+        const sn = Math.abs(Math.sin(a.ang - yaw));
         c = Math.max(c, (eo.w / 2 + eo.verge + eo.walk) / sn + (Math.abs(Math.cos(a.ang - yaw)) * (e.w / 2 + e.walk)) / sn);
       }
       return c;
