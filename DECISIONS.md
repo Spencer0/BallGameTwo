@@ -158,3 +158,22 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
 - **Vehicles stop by the nose**, so a box truck waits as far behind the stop line as a hatchback.
 - **Boats never become far boxes** (they read as floating cubes on the water); lake sailing loops are
   concentric so boats can't pass through each other.
+
+## Living cities, review rounds 9–12
+- **Back yards are closed boxes**: each house's yard is fenced from its back corners, about a dozen metres
+  back and across, with the gate on the driveway side. Fences that followed the lot lines left half-runs
+  pointing at nothing wherever a neighbour's lot was shaped differently. A tidy pass then chains every fence
+  panel to its neighbours and peels off loose ends shorter than a gate. Deliberate runs (the sound wall, the
+  ball-field backstop) are marked to keep, and paddock gates up to 13 m survive.
+- **Blob shadows fade into the fog like everything else.** The "dark streaks in the sky" on the city
+  horizon were a far stadium's contact shadow drawn on top of the haze.
+- **Deep rowhouse blocks get mews**: a cobbled lane down the spine with small houses either side, as in
+  older city blocks, instead of 70 m of yards.
+- **Pedestrians and drivers yield to each other**: cars stop for people on the zebra ahead, people wait at
+  the kerb for a gap and never step in front of a train at a level crossing. Riderless motorcycles are out
+  of the traffic mix; no car changes lanes on a straight.
+- **Review panel**: four reviewers (an urban planner, an art director, a life and simulation lens, and a QA
+  skeptic) judged fresh renders of L4–L6 each round. From round 12 the planner, the art director and the
+  life reviewer pass all three levels, with only polish left. That polish went in: a wider tower mix on
+  the Jersey waterfront, markings on the airport apron, grey terraces among Brooklyn's brick, a dressed
+  seawall at the Battery, and shop backs with windows.

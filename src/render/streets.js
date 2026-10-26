@@ -83,7 +83,7 @@ void main() {
       m = max(m, band(abs(u) - (inner - 0.35), 0.07));
       if (!oneway) {
         if (style > 1.5) y = max(band(abs(u) - 0.16, 0.06), y);                     // double yellow
-        else if (style > 0.5) m = max(m, band(u, 0.07) * dashes(v, 6.0, 0.5));        // dashed centre
+        else if (style > 0.5) y = max(y, band(u, 0.07) * dashes(v, 6.0, 0.5));        // dashed yellow centre (two-way)
         // lane dividers within each direction
         for (int j = 1; j < 4; j++) { if (float(j) >= lanes) break; m = max(m, band(abs(u) - lw * float(j), 0.06) * dashes(v, 9.0, 0.35)); }
       } else {
