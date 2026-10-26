@@ -234,22 +234,51 @@ export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
 export const spawn = { x: 170, z: 470, yaw: Math.PI };
 
 // ------------------------------------------------------------------ zoning
-const TOWERS = ['skyscraper_spire', 'skyscraper_deco', 'skyscraper_twist', 'highrise_glass', 'highrise_stone', 'office_block', 'apartment_tower', 'highrise_glass'];
-const MIDRISE = ['midrise_prewar', 'midrise_modern', 'midrise_deco', 'office_block', 'apartment_block', 'tenement', 'midrise_prewar'];
-const WALKUP = ['brownstone', 'brownstone', 'brownstone', 'tenement', 'tenement', 'shop_a', 'cafe', 'bakery'];
+// Height falls off from two cores (midtown, downtown); avenues and Broadway carry the bigger buildings,
+// side streets the walk-ups; the park is lined with grand apartment houses; the borough is low-rise.
+const SUPER = ['skyscraper_spire', 'skyscraper_deco', 'skyscraper_twist'];
+const HIGH = ['highrise_glass', 'highrise_stone', 'office_block', 'apartment_tower'];
+const MID = ['midrise_prewar', 'midrise_modern', 'midrise_deco', 'office_block', 'apartment_block'];
+const WALKUP = ['brownstone', 'brownstone', 'brownstone', 'tenement', 'tenement'];
+const SHOPS = ['shop_a', 'shop_b', 'cafe', 'bakery'];
 const BORO = ['brownstone', 'brownstone', 'tenement', 'house_c', 'apartment_block', 'shop_a', 'shop_b'];
+const CORES = [
+  { x: 0, z: -150, r: 420 }, // midtown
+  { x: 120, z: 1450, r: 380 }, // downtown
+];
 
+/** returns a picker (rand, avail) -> id list for a frontage at (x,z) on a road of class cls */
 function zone(x, z, cls) {
-  const midtown = z > -620 && z < 360;
-  const downtown = z > 1000;
-  const parkSide = z > PARK.minZ - 150 && z < PARK.maxZ + 150;
   const avenue = cls === 'avenue' || cls === 'boulevard';
-  if (x > EAST_X0) return { ids: BORO, gap: 0 };
-  if (downtown) return { ids: avenue ? TOWERS : [...TOWERS, ...MIDRISE], gap: 0 };
-  if (midtown) return { ids: avenue ? TOWERS : [...MIDRISE, 'highrise_glass', 'highrise_stone'], gap: 0 };
-  if (parkSide) return { ids: avenue ? ['midrise_prewar', 'midrise_prewar', 'midrise_deco', 'highrise_stone'] : WALKUP.slice(0, 5), gap: 0 };
-  if (cls === 'highway') return { ids: MIDRISE, gap: 18 };
-  return { ids: avenue ? MIDRISE : WALKUP, gap: 0 };
+  if (x > EAST_X0) return { tiers: [[BORO, 1]], gap: 0 };
+  if (cls === 'highway') return { tiers: [[MID, 1]], gap: 18 };
+  let core = 0;
+  for (const c of CORES) core = Math.max(core, Math.exp(-((x - c.x) ** 2 + (z - c.z) ** 2) / (2 * c.r * c.r)));
+  const parkSide = z > PARK.minZ - 160 && z < PARK.maxZ + 160 && Math.abs(x) < 460;
+  if (parkSide && avenue) return { tiers: [[['midrise_prewar', 'midrise_deco', 'highrise_stone'], 1]], gap: 0 };
+  const a = avenue ? 1 : 0.45;
+  return {
+    tiers: [
+      [SUPER, 0.5 * core * core * a],
+      [HIGH, (0.9 * core + 0.08) * a],
+      [MID, 0.55 * (avenue ? 1 : 0.6)],
+      [WALKUP, avenue ? 0.05 : 0.9 * (1 - core)],
+      [SHOPS, avenue ? 0.04 : 0.12],
+    ],
+    gap: 0,
+  };
+}
+
+function zonePick(L, lib, zn, rem) {
+  const tiers = zn.tiers.map(([ids, w]) => [ids.filter((id) => lib.byId.has(id) && lib.byId.get(id).dims[0] <= rem + 0.5), w]).filter(([ids, w]) => ids.length && w > 0);
+  const total = tiers.reduce((t, [, w]) => t + w, 0);
+  if (!total) return null;
+  let r = L.rand() * total;
+  for (const [ids, w] of tiers) {
+    r -= w;
+    if (r <= 0) return L.pick(ids);
+  }
+  return L.pick(tiers[tiers.length - 1][0]);
 }
 
 export function layout(lib, seed = 606) {
@@ -280,14 +309,8 @@ export function layout(lib, seed = 606) {
     if (Math.abs(ix) > SHORE + 5 && ix < EAST_X0) continue; // over water
     if (ix < WEST_X0) continue; // the west bank is port and airport
     const z = zone(ix, iz, e.cls);
-    const ids = avail(z.ids);
-    if (!ids.length) continue;
-    // keep the Broadway plaza open
     fillFrontage(L, occ, f, {
-      pick: (rem) => {
-        const fit = ids.filter((id) => lib.byId.get(id).dims[0] <= rem + 0.5);
-        return fit.length ? L.pick(fit) : null;
-      },
+      pick: (rem) => zonePick(L, lib, z, rem),
       setback: 0.3,
       gap: () => z.gap + (L.rand() < 0.08 ? 4 : 0.4),
       step: 6,
