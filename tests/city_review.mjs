@@ -42,7 +42,10 @@ for (const n of levels) {
       s.rVis = r;
       s.cam.reset(s.ball, v.yaw ?? 0, 0);
     }, v);
-    await page.waitForTimeout(1600);
+    // jumping the ball to a new size fires milestone confetti: let it fire, then sweep it away
+    await page.waitForTimeout(300);
+    await page.evaluate(() => window.__game.session.particles.clear());
+    await page.waitForTimeout(1300);
     await shot(`play_${v.name}`);
   }
   // aerial and map views from fixed cameras

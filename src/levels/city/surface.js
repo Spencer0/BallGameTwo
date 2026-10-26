@@ -47,7 +47,8 @@ export function paintNetwork(b, net, style = {}) {
     if (e.plaza) {
       // pedestrianised: paved kerb to kerb, sidewalks included
       const z = hw + e.verge + e.walk;
-      b.strip(e.poly, e.L, -z, z, s0, s1, SK.plaza, { P: [2.2], C: [S.plazaA || 'tomato', S.plazaB || 'flamingo', 'ink_soft'], y: e.y });
+      // a hair under the roads, so a road crossing the plaza lies on top of it
+      b.strip(e.poly, e.L, -z, z, s0, s1, SK.plaza, { P: [2.2], C: [S.plazaA || 'tomato', S.plazaB || 'flamingo', 'ink_soft'], y: (e.y ?? 0) - 0.012 });
       continue;
     }
     const centre = e.oneway ? 3 : e.markings ? e.center : 0;

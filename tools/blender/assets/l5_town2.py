@@ -470,9 +470,14 @@ def town_hall():
     lathe([(2.1, 0), (2.0, 0.7), (1.6, 1.4), (0.9, 1.9), (0.0, 2.1)], at=(0, yc, zb + 3.05), color="teal", segs=12)
     cyl(0.1, 1.0, at=(0, yc, zb + 5.1), color="sun", segs=6)
     sphere(0.28, at=(0, yc, zb + 5.3), color="sun", segs=8, rings=5)
-    # flag poles flanking the steps
-    for x in (-7.2, 7.2):
-        cyl(0.1, 6.5, at=(x, py0 - 0.8, 0), color="ink_soft", segs=6, lod0=True)
+    # flag poles flanking the steps, each flying a small flag that streams away from the portico
+    for x, fl in ((-7.2, "tomato"), (7.2, "navy")):
+        cyl(0.07, 6.2, at=(x, py0 - 0.8, 0), color="cloud", segs=6, lod0=True)
+        sphere(0.13, at=(x, py0 - 0.8, 6.3), color="sun", segs=6, rings=4, lod0=True)
+        s = math.copysign(1, x)
+        for i in range(3):
+            box((1.5, 0.05, 0.3), at=(x + s * 0.8, py0 - 0.8, 5.2 + i * 0.3), base=True,
+                color=fl if i % 2 == 0 else "snow", lod0=True)
 
 
 @asset("library", "Public Library", "Shhh. The books are sleeping. Some for ninety years.", L, "stone",

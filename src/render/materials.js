@@ -147,7 +147,9 @@ uniform float uFogFar;
 varying vec3 vColor;
 varying float vFogDepth;
 void main() {
-  float f = smoothstep(uFogNear, uFogFar, vFogDepth);
+  // ink lines fade into the haze sooner than the surfaces they edge: a far cloud's underside or a
+  // distant tower's silhouette shouldn't hang in the fog as a dark stroke
+  float f = smoothstep(uFogNear, mix(uFogNear, uFogFar, 0.6), vFogDepth);
   gl_FragColor = vec4(mix(vColor, uFogColor, f), 1.0);
   #include <colorspace_fragment>
 }

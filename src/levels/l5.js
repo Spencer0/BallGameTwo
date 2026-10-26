@@ -16,8 +16,8 @@ import { Network } from './city/network.js';
 import { paintNetwork } from './city/surface.js';
 import { Occupancy, occupyNetwork, frameAt, local, fillFrontage, fenceLine } from './city/frontage.js';
 import { SK } from '../render/streets.js';
-import { suburbLot, closeFences, pickId, woods, parkingLot, countryside } from './city/suburb.js';
-import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock } from './city/lifespec.js';
+import { suburbLot, closeFences, frontageFences, pickId, woods, parkingLot, countryside } from './city/suburb.js';
+import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock, ducks } from './city/lifespec.js';
 
 const S = 750;
 const MAIN_X = -150;
@@ -143,7 +143,7 @@ function buildNet() {
   const hx = [-S - 450, -640, ...WEST_X, MAIN_X, LAKE_RD_X, bW, hb.x + hb.hw + 14, riverRoadX(HWY_Z), ...EAST_X, S + 450].sort((a, b) => a - b);
   for (let k = 0; k < hx.length - 1; k++) {
     const bridge = Math.abs(hx[k] - bW) < 0.01;
-    net.edge(N(hx[k], HWY_Z, k === 0 ? { exit: true } : {}), N(hx[k + 1], HWY_Z, k + 1 === hx.length - 1 ? { exit: true } : {}), bridge ? { cls: 'arterial', name: 'Route 9 Bridge', tag: 'hwy', walk: 0, verge: 0, y: 0.5, paint: false } : { cls: 'arterial', name: 'Route 9', tag: 'hwy', draw: 2 });
+    net.edge(N(hx[k], HWY_Z, k === 0 ? { exit: true } : {}), N(hx[k + 1], HWY_Z, k + 1 === hx.length - 1 ? { exit: true } : {}), bridge ? { cls: 'arterial', name: 'Route 9 Bridge', tag: 'hwy', walk: 0, verge: 0, y: 0.5, paint: false } : { cls: 'arterial', name: 'Route 9', tag: 'hwy', draw: 1.5 });
   }
   // --- Main Street: Route 9 north to Front Street and the depot. One traffic light (at the square);
   // four-way stops and painted crosswalks at the other corners
@@ -151,7 +151,7 @@ function buildNet() {
   const mzs = [...MAIN_Z, HWY_Z];
   for (let k = 0; k < mzs.length - 1; k++) {
     const core = mzs[k + 1] <= 220;
-    net.edge(N(MAIN_X, mzs[k], mainNode(mzs[k])), N(MAIN_X, mzs[k + 1], mainNode(mzs[k + 1])), core ? { cls: 'main', name: 'Main Street', tag: 'main', draw: 8 } : { cls: 'street', name: 'Main Street', tag: 'mainS', w: 11 });
+    net.edge(N(MAIN_X, mzs[k], mainNode(mzs[k])), N(MAIN_X, mzs[k + 1], mainNode(mzs[k + 1])), core ? { cls: 'main', name: 'Main Street', tag: 'main', draw: 18 } : { cls: 'street', name: 'Main Street', tag: 'mainS', w: 11 });
   }
   net.edge(N(MAIN_X, -430), N(MAIN_X, MILL_Z), { cls: 'street', name: 'Depot Street', tag: 'depot' });
   // --- the west grid: cross streets from Main to Ash Avenue, avenues from Front Street to Route 9
@@ -344,10 +344,14 @@ export function layout(lib, seed = 505) {
     const n = Math.floor((len - 2) / W);
     if (n < 1) continue;
     const pad = (len - n * W) / 2;
+    const recs = [];
     for (let k = 0; k < n; k++) {
-      const fr = frameAt(f, pad + W * (k + 0.5));
-      suburbLot(ctx, fr, e, { W, D: RES[e.tag], first: k === 0, last: k === n - 1, setback: [4.5, 6.5], pool, fenceP: 0.25, fenceIds: ['picket_fence', 'privacy_fence'], fenceTint: 'paper' });
+      const s = pad + W * (k + 0.5);
+      const fr = frameAt(f, s);
+      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: RES[e.tag], first: k === 0, last: k === n - 1, setback: [4.5, 6.5], pool, fenceP: 0.3, fenceIds: ['picket_fence', 'privacy_fence'], fenceTint: 'paper', fenceMode: 'frontage' }) });
     }
+    // fenced back yards close on the lot lines and return to the house corners
+    frontageFences(ctx, f, recs, frameAt);
   }
   closeFences(ctx);
   // old towns are full of big trees: one more in most back yards
@@ -382,9 +386,9 @@ export function layout(lib, seed = 505) {
   stopSigns(L, net);
   const laneW = (l) => {
     const e = net.edges[l.e];
-    return e.cls === 'arterial' ? 3 : e.cls === 'main' ? 3.5 : e.cls === 'lane' ? 0.35 : e.tag === 'river' || e.tag === 'water' ? 1.4 : 1;
+    return e.cls === 'arterial' ? 2 : e.cls === 'main' ? 11 : e.cls === 'lane' ? 0.35 : e.tag === 'river' || e.tag === 'water' ? 1.4 : 1;
   };
-  spawnTraffic(L, life, net, 230, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 6], ['delivery_van', 1.5], ['mail_truck', 0.6], ['tractor', 0.6], ['school_bus', 0.4], ['police_car', 0.3], ['motorcycle', 0.8], ['garbage_truck', 0.3], ['fire_truck', 0.15]], { laneWeight: laneW });
+  spawnTraffic(L, life, net, 260, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 6], ['delivery_van', 1.5], ['mail_truck', 0.6], ['tractor', 0.6], ['school_bus', 0.4], ['police_car', 0.3], ['motorcycle', 0.8], ['garbage_truck', 0.3], ['fire_truck', 0.15]], { laneWeight: laneW });
   spawnWalkers(L, life, net, 280, {
     dogs: 0.2,
     walkWeight: (w) => {
@@ -548,11 +552,13 @@ function angledParking(ctx) {
     const dx = (e.poly[1][0] - e.poly[0][0]) / e.len,
       dz = (e.poly[1][1] - e.poly[0][1]) / e.len;
     for (const side of [1, -1]) {
-      for (let v = (e.trimA || 0) + 6; v < e.len - (e.trimB || 0) - 6; v += 3.4) {
-        // one car per painted bay, about three bays in five taken
-        if (L.rand() > 0.4) continue;
+      // painted bays repeat every BAY m along the kerb (streets.js); a car sits centred in its bay
+      const BAY = 4.2;
+      for (let k = Math.ceil(((e.trimA || 0) + 6) / BAY); BAY * (k + 1) - 2.2 < e.len - (e.trimB || 0) - 4; k++) {
+        // one car per bay, a bit under half the bays taken
+        if (L.rand() > 0.45) continue;
         const u = inner + 2.75;
-        const vc = v + 1.7 - 2.75 * 0.8;
+        const vc = BAY * (k + 1) - 2.75 * 0.8;
         const x = e.poly[0][0] + dx * vc - dz * u * side,
           z = e.poly[0][1] + dz * vc + dx * u * side;
         const ax = -dz * side * 1 + dx * -0.8,
@@ -658,7 +664,7 @@ function riverfront(ctx, life) {
     const edge = r.x - r.hw - BANK;
     L.put(L.rand() < 0.75 ? 'tree_round' : 'street_tree', edge - 14 - L.range(0, 5), z + L.range(-3, 3), { scale: L.range(1.1, 1.5) });
     if (L.rand() < 0.45) L.put('park_bench', edge - 4.5, z + 6, { yaw: Math.PI / 2 });
-    if (L.rand() < 0.2) L.put(pickId(L, ['park_lamp', 'town_lamp']), edge - 9.5, z + 9);
+    if (L.rand() < 0.2) L.put(pickId(L, ['town_lamp', 'street_lamp']), edge - 9.5, z + 9);
   }
   // anglers on the bank
   for (const z of [-250, -120, 60, 150]) {
@@ -750,8 +756,8 @@ function highwayStrip(ctx, life) {
   place(pickId(L, ['motel', 'shop_a']), -400, S1 + 6 + 6, Math.PI);
   parkingLot(ctx, -400, S1 + 6 + 12 + 10, 40, 14, 0, { fill: 0.4, tints: PARKED_TINTS });
   place('water_tower', -520, S1 + 40, 0);
-  place('billboard', -680, HWY_Z - 30, Math.PI / 2);
-  place('billboard', 640, HWY_Z + 30, -Math.PI / 2);
+  place('billboard', -680, HWY_Z - 20, Math.PI / 2 + 0.55); // angled to face eastbound drivers
+  place('billboard', 640, HWY_Z + 20, -Math.PI / 2 + 0.55);
   // the farm co-op and the feed store on the east edge of town
   place(pickId(L, ['red_barn', 'shop_b']), 600, S1 + 14, Math.PI);
   place('grain_silo', 625, S1 + 14);
@@ -899,6 +905,10 @@ function lake(ctx, life) {
   }
   if (L.lib.byId.has('rail_bridge')) L.put('rail_bridge', riverAt(RAIL_Z).x, RAIL_Z, { yaw: 0, y: -4.05 });
   flock(L, life, bx + 40, bz - 10, 6, { id: pickId(L, ['pigeon']) });
+  // ducks off the beach and in the marina's lee
+  ducks(L, life, LAKE.x - 60, LAKE.z - 40, 20, 12, { n: 6, y: -0.2 });
+  ducks(L, life, LAKE.x + 30, LAKE.z - 70, 14, 9, { n: 4, phase: 1.5, y: -0.2 });
+  ducks(L, life, LAKE.x - 20, LAKE.z + 30, 10, 6, { n: 1, speed: 0.3, y: -0.2 });
 }
 
 function trains(ctx, life) {

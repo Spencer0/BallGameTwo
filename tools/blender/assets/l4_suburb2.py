@@ -603,6 +603,20 @@ def pigeon():
         box((0.07, 0.012, 0.02), at=(-0.06, k * 0.083, 0.132), rot=(0, -10, 0), color="ink", lod0=True)
 
 
+@asset("duck", "Duck", "Paddles like mad under the water. Above it, total calm.", 4, "living", "tiny", col="sphere",
+       variants=["leaf", "cocoa", "snow"], flags=["creature", "flee"], fill=0.5)
+def duck():
+    # a swimming mallard, long axis along X, head at +X (0.6 x 0.25 x 0.35); sits at the waterline
+    sphere(0.13, at=(-0.02, 0, 0.09), scale=(1.75, 1.0, 0.75), color="stone", segs=6, rings=4)
+    extrude([(-0.2, 0.1), (-0.3, 0.17), (-0.25, 0.08)], 0.12, rot=(90, 0, 0), color="ink_soft", lod0=True)
+    for k in (-1, 1):
+        box((0.26, 0.03, 0.08), at=(-0.04, k * 0.1, 0.1), rot=(0, -12, 0), color="cocoa", lod0=True)
+        box((0.008, 0.012, 0.012), at=(0.25, k * 0.05, 0.29), color="ink", lod0=True)
+    sphere(0.072, at=(0.19, 0, 0.27), color="leaf", tint=True, segs=5, rings=3)
+    box((0.04, 0.06, 0.08), at=(0.15, 0, 0.17), color="snow", lod0=True)
+    box((0.09, 0.05, 0.025), at=(0.28, 0, 0.255), color="sun")
+
+
 # ---------------------------------------------------------------- vehicles (nose at +X)
 
 @asset("taxi", "Taxi", "Knows a shortcut. The shortcut is longer.", 4, "metal", "large", col="box", fill=0.65)

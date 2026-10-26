@@ -178,3 +178,22 @@ export function flock(L, life, x, z, n, { id = 'pigeon', r = 3, y = 0, homes = n
   // birds are modelled facing +x: turn them so they fly beak first
   if (its.length) life.flocks.push({ its, x, z, r, y, homes, yawOff: -Math.PI / 2 });
 }
+
+/** a duck and her ducklings paddling in single file round an ellipse on a pond or lake */
+export function ducks(L, life, cx, cz, rx, rz, { n = 4, speed = 0.45, phase = 0, y = 0 } = {}) {
+  if (!L.lib.byId.has('duck')) return;
+  const route = [];
+  for (let j = 0; j <= 20; j++) {
+    const a = phase + (j / 20) * Math.PI * 2;
+    route.push([cx + Math.sin(a) * rx, cz + Math.cos(a) * rz]);
+  }
+  const its = [],
+    offs = [];
+  for (let k = 0; k < n; k++) {
+    const it = L.put('duck', route[0][0], route[0][1], { y, scale: k === 0 ? 1 : 0.55, tint: k === 0 ? L.pick(['leaf', 'leaf', 'cocoa', 'snow']) : 'butter' });
+    if (!it) continue;
+    its.push(it);
+    offs.push(k === 0 ? 0 : 0.5 + k * 0.45);
+  }
+  if (its.length) life.movers.push({ its, offs, route, speed, y, kind: 'duck' });
+}

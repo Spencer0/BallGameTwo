@@ -11,7 +11,7 @@ import { paintNetwork } from './city/surface.js';
 import { Occupancy, occupyNetwork, frameAt, local, fenceLine } from './city/frontage.js';
 import { SK } from '../render/streets.js';
 import { suburbLot, closeFences, frontageFences, pickId, woods, parkingLot, court, countryside } from './city/suburb.js';
-import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock } from './city/lifespec.js';
+import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock, ducks } from './city/lifespec.js';
 
 const S = 240;
 const ART_Z = 200;
@@ -190,6 +190,9 @@ export function layout(lib, seed = 404) {
     }
   }
 
+  // the school (and its ball field) claims its ground before the house lots
+  school(ctx);
+
   // ---- lots: courts first (their stubs), then the inner streets, then the loop
   const prio = (f) => {
     const n = net.edges[f.e].name;
@@ -217,7 +220,6 @@ export function layout(lib, seed = 404) {
   closeFences(ctx);
   birchGreen(ctx);
   greenbelt(ctx);
-  school(ctx);
   stripMall(ctx);
 
   // sound wall + trees along the back of the lots that face away from Maple Avenue
@@ -274,16 +276,29 @@ export function layout(lib, seed = 404) {
   const life = (L.life = lifeSpec(net));
   trafficLights(L, life, net);
   stopSigns(L, net);
-  const artW = (l) => (net.edges[l.e].cls === 'arterial' ? 1.2 : net.edges[l.e].name === 'Maple Loop' ? 3 : 1.4);
-  spawnTraffic(L, life, net, 120, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 3], ['delivery_van', 1.5], ['mail_truck', 1], ['motorcycle', 1], ['police_car', 0.4], ['garbage_truck', 0.4], ['ice_cream_van', 0.4], ['school_bus', 0.3]], { laneWeight: artW });
+  const artW = (l) => (net.edges[l.e].cls === 'arterial' ? 2.6 : net.edges[l.e].name === 'Maple Loop' ? 3 : 1.4);
+  spawnTraffic(L, life, net, 150, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 3], ['delivery_van', 1.5], ['mail_truck', 1], ['motorcycle', 1], ['police_car', 0.4], ['garbage_truck', 0.4], ['ice_cream_van', 0.4], ['school_bus', 0.3]], { laneWeight: artW });
   spawnWalkers(L, life, net, 110, { dogs: 0.3, walkWeight: (w) => (net.edges[w.e].cls === 'arterial' ? 0.4 : net.edges[w.e].name.endsWith('Court') ? 2 : 1) });
   if (ctx.pondPath) spawnLoopWalkers(L, life, ctx.pondPath, 10);
+  if (ctx.pondC) {
+    // ducks on the pond
+    ducks(L, life, ctx.pondC[0] - 4, ctx.pondC[1], 13, 7, { n: 5 });
+    ducks(L, life, ctx.pondC[0] + 7, ctx.pondC[1] + 2, 7, 4, { n: 1, speed: 0.3, phase: 2 });
+    ducks(L, life, ctx.pondC[0] - 8, ctx.pondC[1] - 2, 6, 4, { n: 1, speed: 0.35, phase: 4 });
+  }
   spawnLoopWalkers(L, life, willow, 3);
   if (ctx.park) {
     flock(L, life, ctx.park.x + 30, ctx.park.z - 6, 7);
     flock(L, life, ctx.park.x - 40, ctx.park.z + 10, 5);
   }
   flock(L, life, SCHOOL.x - 30, ART_Z - 30, 6);
+  if (ctx.ballField) {
+    const { x, z } = ctx.ballField;
+    for (let k = 0; k < 9; k++) {
+      const it = L.put(pickId(L, ['person_kid', 'person_teen']), x + L.range(-15, 15), z + L.range(-14, 14));
+      if (it) life.grazers.push({ it, cx: x, cz: z, yaw: 0, hw: ctx.ballField.hw - 3, hd: ctx.ballField.hd - 3, speed: 2, still: 0.4 });
+    }
+  }
   flock(L, life, -60, ART_Z + 30, 6);
   flock(L, life, 40, ART_Z + 24, 5);
   for (const d of ctx.yardDogs || []) {
@@ -352,6 +367,7 @@ function greenbelt(ctx) {
     b.rect(P.cx + 50, P.cz + 2, 24.6, 16.6, 0, SK.dirt, { C: ['caramel', 'cocoa'], y: 0 });
   });
   ctx.pondPath = path;
+  ctx.pondC = [P.cx - 25, P.cz + 2];
   L.put('playground_slide', P.cx + 44, P.cz + 0, { yaw: 0.3 });
   L.put('swing_set', P.cx + 56, P.cz + 6, { yaw: 0 });
   // benches beside the path, not on it (the path rings the pond at 34 x 23)
@@ -374,6 +390,9 @@ function school(ctx) {
   const bx = SCHOOL.x,
     bz = ART_Z - 48 - SCHOOL.bulb - 8 - t.dims[2] / 2;
   L.put(id, bx, bz, { yaw: 0 });
+  ctx.occ.add({ x: bx, z: bz, hw: t.dims[0] / 2 + 3, hd: t.dims[2] / 2 + 3, yaw: 0 }, 'bld');
+  ctx.occ.add({ x: bx - 52, z: ART_Z - 50, hw: 12, hd: 19, yaw: 0 }, 'lot');
+  ctx.occ.add({ x: bx + 50, z: (ART_Z - 50 + bz - 8) / 2, hw: 14, hd: (ART_Z - 50 - bz + 8) / 2 + 9, yaw: 0 }, 'park');
   L.put(pickId(L, ['flagpole', 'street_lamp']), bx - 10, bz + t.dims[2] / 2 + 4);
   parkingLot(ctx, bx - 52, ART_Z - 50, 22, 36, 0, { fill: 0.6 });
   paint.push((b) => {
@@ -385,6 +404,23 @@ function school(ctx) {
   L.put('basketball_hoop', bx + 52 + 10, ART_Z - 50, { yaw: -Math.PI / 2 });
   L.put('playground_slide', bx + 40, bz - 10, { yaw: 0 });
   L.put('swing_set', bx + 52, bz - 8, { yaw: 0 });
+  // the ball field behind the school: an infield diamond, outfield grass, a backstop, kids at practice
+  const back = bz - t.dims[2] / 2 - 4;
+  for (const [fx, fz, hw, hd] of [[bx, back - 26, 30, 26], [bx + 98, bz + 4, 30, 26], [bx + 96, bz - 20, 28, 24], [bx - 110, ART_Z - 56, 26, 22]]) {
+    const fr = { x: fx, z: fz, hw, hd, yaw: 0 };
+    if (ctx.occ.hits(fr, new Set(['school']))) continue; // inside the school's own grounds is fine
+    ctx.occ.add(fr, 'park');
+    const inf = Math.min(20, hd * 0.8);
+    paint.push((b) => {
+      b.rect(fx, fz, hw * 2, hd * 2, 0, SK.solid, { C: ['leaf'], y: -0.05 });
+      b.rect(fx, fz + hd - inf * 0.75, inf, inf, Math.PI / 4, SK.dirt, { C: ['sand', 'caramel'] });
+      b.rect(fx, fz + hd - inf * 0.75, inf * 0.62, inf * 0.62, Math.PI / 4, SK.solid, { C: ['leaf'], y: 0.01 });
+    });
+    const fence = pickId(L, ['chainlink_fence', 'picket_fence']);
+    fenceLine(L, fence, fx - 9, fz + hd - 1, fx + 9, fz + hd - 1, { opts: { tint: 'stone' } });
+    ctx.ballField = { x: fx, z: fz, hw, hd };
+    break;
+  }
 }
 
 function stripMall(ctx) {

@@ -91,8 +91,8 @@ void main() {
       }
       // angled parking bays along the curbs
       if (park > 0.5 && abs(u) > inner) {
-        float d = fract((v + (abs(u) - inner) * 0.8) / 3.4);
-        m = max(m, band(d - 0.5, 0.025) * 0.9);
+        float d = fract((v + (abs(u) - inner) * 0.8) / 4.2);
+        m = max(m, band(d - 0.5, 0.02) * 0.9);
       }
     }
     // stop lines (inbound side only) and zebra crosswalks

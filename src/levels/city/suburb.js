@@ -30,7 +30,7 @@ const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'hous
  * One suburban lot. fr = frame on the property line at the lot's centre (yaw faces the road).
  * e = the street edge (for verge/walk widths). opts: W (frontage), D (depth), first/last (fence ends), pie.
  */
-export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'sand', fenceMode = 'lot' } = {}) {
+export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'caramel', fenceMode = 'lot' } = {}) {
   const { L, occ, fences, paint } = ctx;
   const pool = (poolIds || HOUSE_POOL).filter((id) => L.lib.byId.has(id));
   if (!pool.length) return false;
@@ -191,10 +191,12 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       r1 = R + D;
     const P = (ang, r) => [cx + Math.sin(ang) * r, cz + Math.cos(ang) * r];
     if (fenced) {
-      const wedge = [];
-      for (let k = 0; k <= 6; k++) wedge.push(P(a - half + (2 * half * k) / 6, r0));
-      for (let k = 6; k >= 0; k--) wedge.push(P(a - half + (2 * half * k) / 6, r1));
-      paint.push((b) => b.poly(wedge, SK.solid, { C: ['lime'], y: -0.06, origin: [cx, cz] }));
+      // the wedge is an annular sector (concave on the inner arc): paint it as convex quads, since a fan
+      // from one corner would sweep thin slivers across the turning circle
+      const ang = (k) => a - half + (2 * half * k) / 6;
+      paint.push((b) => {
+        for (let k = 0; k < 6; k++) b.poly([P(ang(k), r0), P(ang(k + 1), r0), P(ang(k + 1), r1), P(ang(k), r1)], SK.solid, { C: ['lime'], y: -0.06, origin: [cx, cz] });
+      });
     }
     const rs = r0; // from the back of the house
     fenceLine2(L, fence, P(a - half, rs), P(a - half, r1), fences, fenceTint, occ);

@@ -190,6 +190,10 @@ export class Network {
     for (const n of N) {
       n.arms.sort((u, v) => u.ang - v.ang);
       n.deg = n.arms.length;
+      // a pedestrian plaza crossing a straight road (Broadway's bow-ties): the road runs straight through
+      // with a zebra across the plaza
+      const road = n.arms.filter((a) => !E[a.e].plaza);
+      n.plazaX = road.length === 2 && road.length < n.deg && Math.abs(Math.sin(road[0].ang - road[1].ang)) < 0.25;
     }
     // trims: how far from the node centre each arm's road surface starts
     for (const n of N) {
@@ -197,7 +201,17 @@ export class Network {
         const arm = n.arms[k];
         const e = E[arm.e];
         let trim = 0;
-        if (n.deg >= 3) {
+        if (n.plazaX) {
+          // the road isn't trimmed; the plaza (drawn just under roads) runs in until its nearer corner
+          // meets the road's sidewalk line, so the road and its zebra lie across it
+          if (e.plaza)
+            for (const o of n.arms) {
+              const eo = E[o.e];
+              if (eo.plaza) continue;
+              const d = Math.max(0.2, Math.abs(Math.sin(o.ang - arm.ang)));
+              trim = Math.max(trim, ((eo.w / 2 + eo.verge + eo.walk) - Math.abs(Math.cos(o.ang - arm.ang)) * (e.w / 2 + e.verge + e.walk)) / d);
+            }
+        } else if (n.deg >= 3) {
           // distance to clear the other roads' carriageways (projected on this arm's direction)
           for (const o of n.arms) {
             if (o === arm) continue;
@@ -213,7 +227,7 @@ export class Network {
         arm.trim = trim;
         // 2 = zebra crosswalk + stop line, 1 = stop line only, 0 = nothing. With the 'signals' policy
         // (suburbs, towns) only signalised junctions (or ones marked crosswalks: true) get zebras.
-        const marked = n.deg >= 3 && n.crosswalks !== false && e.cls !== 'lane' && e.cls !== 'highway';
+        const marked = (n.plazaX ? !e.plaza : n.deg >= 3) && n.crosswalks !== false && e.cls !== 'lane' && e.cls !== 'highway';
         const zebra = this.crosswalks !== 'signals' || n.signal === true || n.crosswalks === true || this.isSignal(n);
         arm.cross = marked ? (zebra ? 2 : 1) : 0;
         if (arm.end === 0) e.trimA = trim;
@@ -222,7 +236,7 @@ export class Network {
         else e.crossB = arm.cross;
       }
       // intersection patch: covers the overlap of the arms (oriented on the widest arm)
-      if (n.deg >= 3) {
+      if (n.deg >= 3 && !n.plazaX) {
         let main = n.arms[0];
         for (const a of n.arms) if (E[a.e].w > E[main.e].w) main = a;
         n.mainAng = main.ang;

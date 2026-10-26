@@ -137,6 +137,11 @@ export class Session {
     const placed = new Map();
     for (const it of layout.items) {
       const t = lib.byId.get(it.id);
+      if (!t.geo || !t.geo[0]) {
+        // its pack isn't loaded for this level: an invisible pickup would break the pickup animation
+        this.layoutMissing.push(`${it.id} (pack L${t.level} not loaded)`);
+        continue;
+      }
       const i = this.world.add(t.idx, it.x, it.y, it.z, it.yaw, it.scale, it.tint ? PAL[it.tint] + 1 : 0);
       placed.set(it, i);
       if (it.on) this.world.restOn[i] = placed.get(it.on) ?? -1;
@@ -635,7 +640,8 @@ export class Session {
     this.focus.y = b.pos.y;
     this.focus.z = b.pos.z;
     this.focus.r = b.r;
-    this.world.focus = this.over ? null : this.focus;
+    // a fixed debug/review camera isn't looking at the ball: don't hide what stands between them
+    this.world.focus = this.over || this.game.debugView ? null : this.focus;
     this.world.updateRender(this.camera, this.game.focalPx);
     renderer.render(this.scene, this.camera);
   }
