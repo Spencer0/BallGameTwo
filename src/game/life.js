@@ -105,7 +105,7 @@ export class Life {
     for (const f of spec.flocks || []) {
       const birds = f.its.map(inst).filter(reg);
       if (!birds.length) continue;
-      this.flocks.push({ birds, x: f.x, z: f.z, r: f.r ?? 4, state: 0, t: 0, homes: f.homes || null, vx: new Float32Array(birds.length), vy: new Float32Array(birds.length), vz: new Float32Array(birds.length), tx: 0, tz: 0, y0: f.y ?? 0 });
+      this.flocks.push({ birds, yawOff: f.yawOff ?? 0, x: f.x, z: f.z, r: f.r ?? 4, state: 0, t: 0, homes: f.homes || null, vx: new Float32Array(birds.length), vy: new Float32Array(birds.length), vz: new Float32Array(birds.length), tx: 0, tz: 0, y0: f.y ?? 0 });
     }
     for (const m of spec.movers || []) {
       const its = m.its.map(inst);
@@ -736,7 +736,7 @@ export class Life {
         w.x[i] += (tx - px) * Math.min(1, dt * 3) + fl.vx[k] * dt * (1 - u);
         w.z[i] += (tz - pz) * Math.min(1, dt * 3) + fl.vz[k] * dt * (1 - u);
         w.y[i] = ty;
-        w.yaw[i] = Math.atan2(fl.tx - fl.x, fl.tz - fl.z);
+        w.yaw[i] = Math.atan2(fl.tx - fl.x, fl.tz - fl.z) + fl.yawOff;
         w.tilt[i * 2 + 1] = Math.sin(fl.t * 22 + k) * 0.35; // flapping
         w.tilt[i * 2] = 0;
         w.updateMatrix(i);

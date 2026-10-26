@@ -587,8 +587,12 @@ def hot_dog_cart():
     box((1.5, 0.8, 0.75), at=(0.1, 0, 0.35), base=True, color="cloud", bevel=0.05, bseg=1)
     box((1.56, 0.86, 0.1), at=(0.1, 0, 1.1), base=True, color="stone")
     # big hot dog painted on the sidewalk side (-Y)
-    capsule(0.16, 0.8, at=(0.1, -0.42, 0.72), rot=(0, 90, 0), color="sand", segs=8)
-    capsule(0.1, 1.0, at=(0.1, -0.5, 0.78), rot=(0, 90, 0), color="tomato", segs=6)
+    if _lod1():
+        box((1.0, 0.1, 0.26), at=(0.1, -0.43, 0.6), base=True, color="sand")
+        box((1.15, 0.1, 0.16), at=(0.1, -0.48, 0.72), base=True, color="tomato")
+    else:
+        capsule(0.16, 0.8, at=(0.1, -0.42, 0.72), rot=(0, 90, 0), color="sand", segs=8)
+        capsule(0.1, 1.0, at=(0.1, -0.5, 0.78), rot=(0, 90, 0), color="tomato", segs=6)
     # wheels + stand
     for y in (-0.47, 0.47):
         _wheel(-0.25, y, 0.3, 0.3, 0.08, color="ink_soft", hub="stone", segs=10)

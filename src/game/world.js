@@ -418,6 +418,7 @@ export class World {
           const i = arr[k];
           if (this.stamp[i] === stamp) continue;
           this.stamp[i] = stamp;
+          if (this.hideAbove && this.y[i] > this.hideAbove) continue; // review map views: no clouds/aircraft
           const dx = this.x[i] - camX,
             dy = this.y[i] - camY,
             dz = this.z[i] - camZ;

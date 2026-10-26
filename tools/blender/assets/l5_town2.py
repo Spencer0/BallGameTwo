@@ -829,8 +829,8 @@ def crossing_signal():
             for t in (-0.5, -0.3, 0.3, 0.5):
                 box((0.14, 0.03, 0.1), at=(t * ca, -0.155, 3.55 - t * sa), rot=(0, a, 0), color="ink")
     # light bar with two lamps (lenses visible front and back; the game tints them red)
-    box((1.2, 0.1, 0.12), at=(0, 0, 2.55), color="charcoal")
-    for x in (-0.45, 0.45):
+    box((1.0, 0.1, 0.12), at=(0, 0, 2.55), color="charcoal")
+    for x in (-0.34, 0.34):
         cyl(0.26, 0.08, at=(x, 0, 2.55), rot=(90, 0, 0), base=False, color="ink", segs=12)
         cyl(0.155, 0.24, at=(x, 0, 2.55), rot=(90, 0, 0), base=False, color="charcoal", tint=True, segs=10)
         for s in (-1, 1):
@@ -1502,7 +1502,7 @@ def ferris_wheel_ring():
     for y in (-1.45, 1.45):
         for i in range(6):
             a = 30.0 * i + 15.0
-            box((2 * R, 0.55, 0.55), at=(0, y, 0), rot=(0, -a, 0), color="snow")
+            box((2 * R, 0.4, 1.0), at=(0, y, 0), rot=(0, -a, 0), color="snow")
     cyl(1.3, 4.4, at=(0, 0, 0), rot=(90, 0, 0), base=False, color="sun", segs=12)
     cyl(0.5, 5.2, at=(0, 0, 0), rot=(90, 0, 0), base=False, color="cobalt", segs=8)
     # drum-shaped gondolas between the rims (round, so they read right at any angle)

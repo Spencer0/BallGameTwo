@@ -323,7 +323,8 @@ function depot(ctx, life) {
   // the depot stands at the head of Main Street, its platform on the track side
   const id = pickId(L, ['depot_station', 'shop_b']);
   const t = L.lib.byId.get(id);
-  const z = RAIL_Z + 4 + 6 + t.dims[2] / 2;
+  // platform edge 4.73 m behind the depot's origin, track 1.6 m beyond it
+  const z = id === 'depot_station' ? RAIL_Z + 6.35 : RAIL_Z + 4 + 6 + t.dims[2] / 2;
   L.put(id, MAIN_X + 40, z, { yaw: 0 });
   occ.add({ x: MAIN_X + 40, z, hw: t.dims[0] / 2, hd: t.dims[2] / 2, yaw: 0 }, 'bld');
   const ge = pickId(L, ['grain_elevator', 'grain_silo']);
@@ -409,8 +410,8 @@ function eastBank(ctx, life) {
   L.put(mid, mx + mt.dims[0] / 2, millZ, { yaw: -Math.PI / 2 });
   occ.add({ x: mx + mt.dims[0] / 2, z: millZ, hw: mt.dims[0] / 2, hd: mt.dims[2] / 2, yaw: -Math.PI / 2 }, 'bld');
   if (L.lib.byId.has('water_wheel')) {
-    const ww = L.lib.byId.get('water_wheel');
-    const it = L.put('water_wheel', mx - 4, millZ, { yaw: Math.PI / 2, y: -1.5 });
+    // under the flume at mill-local (x -7, z +5.3); the mill faces -x (the river), so local x -> world +z
+    const it = L.put('water_wheel', mx + mt.dims[0] / 2 - 5.325, millZ - 7, { yaw: -Math.PI / 2, y: 0.5 });
     if (it) life.spinners.push({ it, axis: 'z', rate: -0.6 });
   }
   // the fairground: ferris wheel (turning), carousel, circus tent, stalls, crowds
@@ -549,8 +550,8 @@ function farms(ctx, life) {
   // woods along the far north and east edges
   woods(ctx, { minX: -S, maxX: S, minZ: -S, maxZ: S }, { count: 500, ids: ['pine_tree', 'tree_round', 'pine_tree'], scale: [1, 1.6], minRoadDist: 60, net });
 }
-const WINDMILL_AXLE = 18,
-  WINDMILL_FWD = 4;
+const WINDMILL_AXLE = 14.4, // tower axle height (asset report)
+  WINDMILL_FWD = 5; // sails sit this far in front of the tower centre
 
 // review views (tests/city_review.mjs)
 export const review = {

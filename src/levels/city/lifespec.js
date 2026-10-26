@@ -114,7 +114,8 @@ export function spawnLoopWalkers(L, life, path, count, ids = ['person_adult', 'p
 export function trafficLights(L, life, net, { id = 'traffic_light' } = {}) {
   if (!L.lib.byId.has(id)) return;
   const t = L.lib.byId.get(id);
-  const half = t.dims[0] / 2; // pole sits at the -x end of the model
+  // distance from the model's bbox centre back to its pole (the mast arm reaches out along +x)
+  const half = id === 'traffic_light' ? 2.625 : 0;
   for (const n of net.nodes) {
     if (!n.signal) continue;
     const lights = [];
@@ -173,5 +174,6 @@ export function flock(L, life, x, z, n, { id = 'pigeon', r = 3, y = 0, homes = n
     const it = L.put(id, x + Math.sin(a) * d, z + Math.cos(a) * d, { y });
     if (it) its.push(it);
   }
-  if (its.length) life.flocks.push({ its, x, z, r, y, homes });
+  // birds are modelled facing +x: turn them so they fly beak first
+  if (its.length) life.flocks.push({ its, x, z, r, y, homes, yawOff: -Math.PI / 2 });
 }

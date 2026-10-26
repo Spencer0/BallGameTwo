@@ -44,17 +44,17 @@ for (const n of levels) {
     await shot(`play_${v.name}`);
   }
   // aerial and map views from fixed cameras
-  for (const v of [...(review.aerial || []), ...(review.map ? [{ name: 'map', ...review.map }] : [])]) {
+  for (const v of [...(review.aerial || []), ...(review.map ? [{ name: 'map', ...review.map }] : []), ...(review.maps || []).map((m) => ({ ...m, name: 'map_' + m.name }))]) {
     await page.evaluate((v) => {
       const g = window.__game;
       if (v.cx !== undefined) {
         const aspect = innerWidth / innerHeight; // portrait: fit the half-size horizontally
         const h = v.half / (Math.tan(((v.fov ?? 20) * Math.PI) / 360) * aspect);
-        g.debugView = { pos: [v.cx, h, v.cz + 0.01], look: [v.cx, 0, v.cz], fov: v.fov ?? 20, near: h * 0.5, far: h * 2, noFog: true };
+        g.debugView = { pos: [v.cx, h, v.cz + 0.01], look: [v.cx, 0, v.cz], fov: v.fov ?? 20, near: h * 0.5, far: h * 2, noFog: true, hideAbove: 60 };
       } else g.debugView = { pos: v.pos, look: v.look, fov: v.fov ?? 55, near: v.near ?? 2, far: v.far ?? 20000, noFog: v.noFog ?? false };
     }, v);
     await page.waitForTimeout(900);
-    await shot(v.name === 'map' ? 'map' : `aerial_${v.name}`);
+    await shot(v.name.startsWith('map') ? v.name : `aerial_${v.name}`);
   }
   // motion strips: 4 frames 0.5 s apart from a fixed camera
   for (const v of review.motion || []) {

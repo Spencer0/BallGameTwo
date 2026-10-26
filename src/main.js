@@ -303,6 +303,7 @@ class App {
       shared.uFogFar.value = 2e7;
     }
     this.session.world.viewDist = cam.far;
+    this.session.world.hideAbove = v.hideAbove ?? 0;
     this.focalPx = shared.uResolution.value.y / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
   }
 

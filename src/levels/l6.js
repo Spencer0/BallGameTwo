@@ -319,6 +319,69 @@ export function layout(lib, seed = 606) {
       },
     });
   }
+  // second pass: plug the gaps the big buildings left (corners, diagonal lots) with narrow ones
+  const narrow = ['brownstone', 'tenement', 'shop_a', 'shop_b', 'cafe', 'bakery'].filter((id) => lib.byId.has(id));
+  for (const f of order) {
+    const e = net.edges[f.e];
+    if (e.cls === 'lane' || e.y > 0.1 || e.cls === 'highway' || e.plaza) continue;
+    const mid = frameAt(f, f.L[f.L.length - 1] / 2);
+    const [ix, iz] = local(mid, 0, -20);
+    if ((ix > PARK.minX && ix < PARK.maxX && iz > PARK.minZ && iz < PARK.maxZ) || (Math.abs(ix) > SHORE + 5 && ix < EAST_X0) || ix < WEST_X0) continue;
+    fillFrontage(L, occ, f, {
+      pick: (rem) => {
+        const fit = narrow.filter((id) => lib.byId.get(id).dims[0] <= rem + 0.3);
+        return fit.length ? L.pick(fit) : null;
+      },
+      setback: 0.3,
+      gap: () => 0.3,
+      step: 2,
+    });
+  }
+  // block interiors: rear yards (green, trees) in the residential districts, paved courts in the cores
+  const xsAll = [-SHORE, ...AVE_X, SHORE];
+  for (let i = 0; i < xsAll.length - 1; i++) {
+    for (let j = 0; j < STREET_Z.length - 1; j++) {
+      const x0 = xsAll[i] + (i === 0 ? DRIVE_IN + 11 : 12) + 5,
+        x1 = xsAll[i + 1] - (i + 1 === xsAll.length - 1 ? DRIVE_IN + 11 : 12) - 5;
+      const z0 = STREET_Z[j] + 12,
+        z1 = STREET_Z[j + 1] - 12;
+      if (x1 - x0 < 20 || z1 - z0 < 20) continue;
+      const cx = (x0 + x1) / 2,
+        cz = (z0 + z1) / 2;
+      if (cx > PARK.minX && cx < PARK.maxX && cz > PARK.minZ && cz < PARK.maxZ) continue;
+      if (Math.abs(cx) > driveX(cz) - 20) continue;
+      let core = 0;
+      for (const c of CORES) core = Math.max(core, Math.exp(-((cx - c.x) ** 2 + (cz - c.z) ** 2) / (2 * c.r * c.r)));
+      const green = core < 0.45;
+      L.paint.push((b) => b.rect(cx, cz, x1 - x0, z1 - z0, 0, SK.solid, { C: [green ? 'pine' : 'concrete'], y: -0.3 }));
+      for (let k = 0; k < (green ? 10 : 4); k++) {
+        const x = L.range(x0 + 4, x1 - 4),
+          z = L.range(z0 + 4, z1 - 4);
+        const r = { x, z, hw: 2, hd: 2, yaw: 0 };
+        if (occ.hits(r)) continue;
+        occ.add(r, 'tree');
+        L.put(pickId(L, ['street_tree', 'tree_round']), x, z, { scale: L.range(0.9, 1.3) });
+      }
+    }
+  }
+  // pocket plazas: the leftover wedges along Broadway become little squares with trees and benches
+  for (const f of net.frontages) {
+    const e = net.edges[f.e];
+    if (e.name !== 'Broadway') continue;
+    const len = f.L[f.L.length - 1];
+    for (let s = 6; s < len - 6; s += 9) {
+      const fr = frameAt(f, s);
+      const [x, z] = local(fr, 0, -6);
+      const r = { x, z, hw: 4.5, hd: 5.5, yaw: fr.yaw };
+      if (occ.hits(r)) continue;
+      occ.add(r, 'plaza');
+      L.paint.push((b) => b.rect(x, z, 9, 11, fr.yaw, SK.plaza, { P: [1.6], C: ['concrete', 'cloud', 'stone'] }));
+      const k = L.rand();
+      if (k < 0.5) L.put(pickId(L, ['street_tree', 'tree_round']), x, z, { scale: 1.1 });
+      else if (k < 0.75) L.put('park_bench', x, z, { yaw: fr.yaw });
+      else if (k < 0.85) L.put(pickId(L, ['newsstand', 'hot_dog_cart']), x, z, { yaw: fr.yaw });
+    }
+  }
   for (const it of roofTanks) {
     const t = lib.byId.get(it.id);
     const tank = pickId(L, ['rooftop_water_tank', 'water_tower']);
@@ -421,17 +484,51 @@ function centralPark(ctx, life) {
     for (const [cx, cz] of [[60, -1080], [150, -1080]]) b.disc(cx, cz, 26, SK.solid, { C: ['caramel'], segs: 4, a0: Math.PI * 0.75, a1: Math.PI * 1.25 + Math.PI * 1.0, y: 0 });
   });
   spawnLoopWalkers(L, life, ring.slice(0, -1), 40);
-  // trees in groves, avoiding lakes, paths and fields
-  for (let k = 0; k < 300; k++) {
-    const x = L.range(P.minX + 15, P.maxX - 15),
-      z = L.range(P.minZ + 15, P.maxZ - 15);
-    if (Math.hypot(x + 60, z + 1380) < 105 || Math.hypot(x - 120, z + 820) < 65) continue;
-    if (x > 20 && x < 190 && z > -1120 && z < -1040) continue;
-    if (TRANSVERSE.some((tz) => Math.abs(z - tz) < 14)) continue;
-    if (Math.abs(x - (P.minX + 45)) < 9 || Math.abs(x - (P.maxX - 45)) < 9 || Math.abs(z - (P.minZ + 45)) < 9 || Math.abs(z - (P.maxZ - 45)) < 9) continue;
-    const id = L.rand() < 0.75 ? 'tree_round' : L.rand() < 0.5 ? 'pine_tree' : pickId(L, ['street_tree', 'tree_round']);
-    L.put(id, x, z, { scale: L.range(1.5, 2.4) });
+  // trees in dense groves (the park is mostly woodland with meadows), avoiding lakes, drives and fields
+  const clear = (x, z) =>
+    Math.hypot(x + 60, z + 1380) < 105 ||
+    Math.hypot(x - 120, z + 820) < 65 ||
+    (x > 20 && x < 190 && z > -1120 && z < -1040) ||
+    TRANSVERSE.some((tz) => Math.abs(z - tz) < 14) ||
+    Math.abs(x - (P.minX + 45)) < 9 ||
+    Math.abs(x - (P.maxX - 45)) < 9 ||
+    Math.abs(z - (P.minZ + 45)) < 9 ||
+    Math.abs(z - (P.maxZ - 45)) < 9;
+  const groves = [];
+  for (let k = 0; k < 16; k++) groves.push([L.range(P.minX + 30, P.maxX - 30), L.range(P.minZ + 30, P.maxZ - 30), L.range(35, 70)]);
+  let planted = 0;
+  for (let k = 0; k < 2000 && planted < 300; k++) {
+    const [gx, gz, gr] = groves[k % groves.length];
+    const a = L.rand() * Math.PI * 2,
+      d = Math.sqrt(L.rand()) * gr;
+    const x = gx + Math.sin(a) * d,
+      z = gz + Math.cos(a) * d;
+    if (x < P.minX + 12 || x > P.maxX - 12 || z < P.minZ + 12 || z > P.maxZ - 12 || clear(x, z)) continue;
+    const id = L.rand() < 0.7 ? 'tree_round' : L.rand() < 0.6 ? 'pine_tree' : pickId(L, ['street_tree', 'tree_round']);
+    L.put(id, x, z, { scale: L.range(2.4, 3.8) });
+    planted++;
   }
+  // woodland floor under the groves (reads as woods from above)
+  paint.push((b) => {
+    for (const [gx, gz, gr] of groves) b.disc(gx, gz, gr * 0.95, SK.solid, { C: ['pine'], y: -0.45, segs: 24 });
+  });
+  // winding footpaths across the meadows
+  paint.push((b) => {
+    for (const [ax, az, bx, bz, bend] of [[-250, -700, 250, -1500, 120], [-250, -1500, 220, -700, -140], [0, -660, -40, -1540, 90]]) {
+      const pts = [];
+      for (let k = 0; k <= 24; k++) {
+        const t = k / 24;
+        const nx = -(bz - az),
+          nz = bx - ax;
+        const l = Math.hypot(nx, nz);
+        const off = Math.sin(t * Math.PI) * bend + Math.sin(t * Math.PI * 3) * 18;
+        pts.push([ax + (bx - ax) * t + (nx / l) * off, az + (bz - az) * t + (nz / l) * off]);
+      }
+      const Lp = [0];
+      for (let k = 1; k < pts.length; k++) Lp.push(Lp[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
+      b.strip(pts, Lp, -2.2, 2.2, 0, Lp[Lp.length - 1], SK.path, { P: [2.2], C: ['sand', 'caramel'], y: -0.1 });
+    }
+  });
   L.put(pickId(L, ['bandshell', 'gazebo']), 0, -980, { yaw: 0 });
   L.put('carousel', -150, -760);
   L.put('statue', -60, -1270, { yaw: 0 });
@@ -529,7 +626,7 @@ function borough(ctx, life) {
     for (let z = -S + segL / 2; z < 1250; z += segL) L.put('elevated_viaduct', ELEVATED_X + 9, z, { yaw: Math.PI / 2 });
     const car = L.lib.byId.get('subway_car');
     if (car) {
-      const route = [[ELEVATED_X + 6, -S - 200], [ELEVATED_X + 6, 1240], [ELEVATED_X + 12, 1240], [ELEVATED_X + 12, -S - 200]];
+      const route = [[ELEVATED_X + 7, -S - 200], [ELEVATED_X + 7, 1240], [ELEVATED_X + 11, 1240], [ELEVATED_X + 11, -S - 200]]; // the viaduct's two tracks, 2 m either side of its centre
       for (const s0 of [0, 3300]) {
         const its = [],
           offs = [];
@@ -635,6 +732,7 @@ export const review = {
     { name: 'park', pos: [900, 900, -300], look: [0, 0, -1100] },
   ],
   map: { cx: 0, cz: 0, half: 2250 },
+  maps: [{ name: 'midtown', cx: 0, cz: -150, half: 650 }, { name: 'downtown', cx: 150, cz: 1300, half: 650 }],
   motion: [
     { name: 'fifth_ave', pos: [60, 90, 300], look: [0, 0, 180] },
     { name: 'plaza', pos: [70, 80, 150], look: [0, 0, 66] },
