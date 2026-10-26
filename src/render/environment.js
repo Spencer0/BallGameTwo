@@ -262,6 +262,36 @@ export class Environment {
     return this.groundY;
   }
 
+  /** 2D line of travel blocked by a box taller than `climb` (used by the autopilot)? */
+  blockedPath(ax, az, bx, bz, climb) {
+    for (let k = 0; k < this.boxes.length; k++) {
+      const B = this.boxes[k];
+      if (B.maxY - Math.max(B.minY, this.groundY) <= climb) continue;
+      let t0 = 0,
+        t1 = 1;
+      const dx = bx - ax,
+        dz = bz - az;
+      let ok = true;
+      for (const [o, d, lo, hi] of [
+        [ax, dx, B.minX, B.maxX],
+        [az, dz, B.minZ, B.maxZ],
+      ]) {
+        if (Math.abs(d) < 1e-9) {
+          if (o < lo || o > hi) ok = false;
+          continue;
+        }
+        let ta = (lo - o) / d,
+          tb = (hi - o) / d;
+        if (ta > tb) [ta, tb] = [tb, ta];
+        t0 = Math.max(t0, ta);
+        t1 = Math.min(t1, tb);
+        if (t0 > t1) ok = false;
+      }
+      if (ok) return true;
+    }
+    return false;
+  }
+
   /**
    * Segment (ax,ay,az)->(bx,by,bz) against camera-blocking boxes (slab test).
    * Returns the smallest hit fraction in [0,1] (1 = clear).

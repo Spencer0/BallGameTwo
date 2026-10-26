@@ -15,7 +15,7 @@ export const PHYS = {
   dragIdle: 2.6, // 1/s when no input
   dragMove: 0.35,
   gravity: 26, // radii / s^2
-  climbMax: 2.3, // climbable lip height in radii
+  climbMax: 1.6, // climbable lip height in radii
   climbSpeed: 2.6, // radii / s
   restitution: 0.32,
   pickupReach: 1.06, // collectible things are picked up a touch before contact

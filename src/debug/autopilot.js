@@ -2,6 +2,7 @@
 // near the ball (bigger + closer = better), backs off when stuck. Drives Input.override.
 import { canPickUp, isTiny } from '../game/rules.js';
 import { ALIVE, MOVING } from '../game/world.js';
+import { PHYS } from '../game/ball.js';
 
 const BUF = new Int32Array(4096);
 
@@ -96,8 +97,9 @@ export class Autopilot {
       if (!canPickUp(size, D) || isTiny(size, b.r)) continue;
       const ban = this.banned.get(i);
       if (ban !== undefined && ban > this.t) continue;
-      // skip things resting on top of big obstacles (unreachable for now)
-      if (w.y[i] > b.pos.y + b.r * 1.5) continue;
+      // skip things resting on top of obstacles we can't climb yet
+      if (w.y[i] > b.pos.y - b.r + PHYS.climbMax * b.r * 0.9) continue;
+      if (s.env.blockedPath(b.pos.x, b.pos.z, w.x[i], w.z[i], PHYS.climbMax * b.r)) continue;
       const d = Math.hypot(w.x[i] - b.pos.x, w.z[i] - b.pos.z) + b.r;
       const score = (Math.pow(size / D, this.skill) + 0.05) / d;
       if (score > bestScore) {

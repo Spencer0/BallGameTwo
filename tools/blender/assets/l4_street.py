@@ -123,10 +123,10 @@ def traffic_cone():
 def fire_hydrant():
     lathe([(0, 0), (0.2, 0), (0.2, 0.06), (0.15, 0.08), (0.14, 0.55), (0.18, 0.56), (0.18, 0.62), (0.15, 0.63),
            (0.13, 0.7), (0.07, 0.76), (0, 0.77)], color="tomato", tint=True, segs=12)
-    cyl(0.04, 0.05, at=(0, 0, 0.75), color="cloud", segs=6)
+    cyl(0.04, 0.05, at=(0, 0, 0.75), color="cloud", segs=6, lod0=True)
     for k in (-1, 1):
         cyl(0.06, 0.08, at=(k * 0.15, 0, 0.42), rot=(0, k * 90, 0), color="tomato", tint=True, segs=8)
-        cyl(0.06, 0.04, at=(k * 0.225, 0, 0.42), rot=(0, 90, 0), base=False, color="cloud", segs=6)
+        cyl(0.06, 0.04, at=(k * 0.225, 0, 0.42), rot=(0, 90, 0), base=False, color="cloud", segs=6, lod0=True)
     cyl(0.085, 0.08, at=(0, -0.13, 0.33), rot=(90, 0, 0), color="tomato", tint=True, segs=10)
     cyl(0.09, 0.05, at=(0, -0.235, 0.33), rot=(90, 0, 0), base=False, color="cloud", segs=6)
     tube([(0.15, -0.07, 0.42), (0.1, -0.2, 0.3), (0.05, -0.24, 0.33)], 0.008, color="stone", segs=4, lod0=True)
@@ -434,7 +434,7 @@ def motorcycle():
         _tyre((x, 0, r), r, 0.16, hub="stone", segs=16)
     box((0.5, 0.26, 0.34), at=(-0.04, 0, 0.22), base=True, bevel=0.05, color="charcoal")
     for k in (-1, 1):
-        cyl(0.09, 0.08, at=(0.0, k * 0.17, 0.4), rot=(90, 0, 0), base=False, color="stone", segs=8)
+        cyl(0.09, 0.08, at=(0.0, k * 0.17, 0.4), rot=(90, 0, 0), base=False, color="stone", segs=8, lod0=True)
     sphere(0.26, at=(0.12, 0, 0.8), scale=(1.35, 0.78, 0.6), color="tomato", tint=True, segs=12, rings=7)
     sphere(0.22, at=(-0.36, 0, 0.78), scale=(1.5, 0.75, 0.32), color="ink_soft", segs=8, rings=5)
     sphere(0.2, at=(-0.68, 0, 0.73), scale=(1.4, 0.55, 0.4), rot=(0, -12, 0), color="tomato", tint=True, segs=10,
@@ -484,12 +484,13 @@ def dumpster():
                 rot=(90, 0, -k * 18), color="charcoal")
     sphere(0.2, at=(rx, ry - 0.2, rz + 0.15), scale=(1.65, 0.45, 0.5), color="charcoal", segs=10, rings=5)
     sphere(0.12, at=(rx, ry - 0.25, rz + 0.0), scale=(1.2, 0.9, 0.75), color="snow", segs=8, rings=5)
-    sphere(0.045, at=(rx, ry - 0.36, rz + 0.04), color="ink", segs=6, rings=4)
+    sphere(0.045, at=(rx, ry - 0.36, rz + 0.04), color="ink", segs=6, rings=4, lod0=True)
     for k in (-1, 1):
         sphere(0.055, at=(rx + k * 0.12, ry - 0.27, rz + 0.16), scale=(1, 0.5, 1.15), color="snow", segs=6, rings=4)
-        sphere(0.032, at=(rx + k * 0.12, ry - 0.3, rz + 0.155), scale=(1, 0.5, 1.15), color="ink", segs=6, rings=4)
+        sphere(0.032, at=(rx + k * 0.12, ry - 0.3, rz + 0.155), scale=(1, 0.5, 1.15), color="ink", segs=6, rings=4,
+               lod0=True)
         sphere(0.08, at=(rx + k * 0.22, ry - 0.42, zt + 0.08), scale=(1, 1.3, 0.6), color="charcoal", segs=6,
-               rings=4)
+               rings=4, lod0=True)
     box((0.4, 0.3, 0.02), at=(-0.4, -0.2, zt + 0.08), rot=(10, -6, 25), color="paper", lod0=True)
 
 

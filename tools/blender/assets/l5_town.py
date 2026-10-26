@@ -120,7 +120,7 @@ def sheep():
              (0, -0.28, 0.9, 0.2), (0, 0.15, 0.94, 0.22), (-0.2, -0.02, 0.88, 0.2), (0.2, -0.02, 0.88, 0.2),
              (0, 0.48, 0.72, 0.2), (-0.16, -0.42, 0.7, 0.16), (0.16, -0.42, 0.7, 0.16), (0, 0.38, 0.48, 0.18)]
     for i, (x, y, z, r) in enumerate(puffs):
-        sphere(r, at=(x, y, z), color="snow", tint=True, segs=8, rings=5, lod0=i >= 8)
+        sphere(r, at=(x, y, z), color="snow", tint=True, segs=8, rings=5, lod0=i >= 7)
     # dark face, ears, wool fringe
     sphere(0.17, at=(0, -0.5, 0.8), scale=(0.88, 1.12, 1.08), rot=(20, 0, 0), color="ink_soft", segs=10, rings=6)
     for k in (-1, 1):
@@ -593,7 +593,7 @@ def radio_mast():
     box((0.9, 0.1, 1.8), at=(4.6, -3.72, 0), base=True, color="ink_soft", lod0=True)
     nb = 8
     H = 54.0
-    rb, rt = 2.5, 0.9
+    rb, rt = 3.2, 1.1
     corners = [math.radians(90 + 120 * i) for i in range(3)]
     for k in range(nb):
         z0, z1 = 0.5 + H * k / nb, 0.5 + H * (k + 1) / nb
@@ -603,7 +603,7 @@ def radio_mast():
         p0 = [(r0 * math.cos(a), r0 * math.sin(a), z0) for a in corners]
         p1 = [(r1 * math.cos(a), r1 * math.sin(a), z1) for a in corners]
         for i in range(3):
-            tube([p0[i], p1[i]], 0.24, color=col, segs=4)
+            tube([p0[i], p1[i]], 0.3, color=col, segs=4)
             j = (i + 1) % 3
             tube([p1[i], p1[j]], 0.12, color=col, segs=4, lod0=True)
             if k % 2:
@@ -942,7 +942,7 @@ def town_fountain():
 
 
 @asset("gazebo", "Bandstand", "Hosts one brass band concert a year. Lives for it.", L, "wood", "large",
-       variants=["tomato", "cobalt", "leaf", "flamingo"], col="cyl", fill=0.35)
+       variants=["leaf", "cobalt", "tomato", "flamingo"], col="cyl", fill=0.35)
 def gazebo():
     R = 2.9
     cyl(3.4, 0.6, color="cloud", segs=8)
@@ -965,8 +965,8 @@ def gazebo():
         box(((p1 - p0).length, 0.08, 0.8), at=tuple(mid - Vector((0, 0, 0.85))), rot=(0, 0, yaw), base=True,
             color="snow", lod0=True)
     cyl(3.25, 0.35, at=(0, 0, zt), color="snow", segs=8)
-    _stripes(3.65, zt + 0.35, 1.7, zt + 1.35, 8, ("tomato", "snow"), start=22.5, thick=0.1)
-    _stripes(1.7, zt + 1.35, 0.0, zt + 2.6, 8, ("tomato", "snow"), start=22.5, thick=0.1)
+    _stripes(3.65, zt + 0.35, 1.7, zt + 1.35, 8, ("leaf", "snow"), start=22.5, thick=0.1)
+    _stripes(1.7, zt + 1.35, 0.0, zt + 2.6, 8, ("leaf", "snow"), start=22.5, thick=0.1)
     cyl(0.12, 0.6, at=(0, 0, zt + 2.55), color="snow", segs=6)
     sphere(0.22, at=(0, 0, zt + 3.2), color="sun", segs=8, rings=5)
     if not _lod1():
@@ -1009,20 +1009,20 @@ def _toy_horse(origin, yaw, body, saddle, lod1, s=1.35):
 
 
 @asset("carousel", "Carousel", "Round and round forever. The horses are not going anywhere.", L, "wood",
-       "landmark", variants=["tomato", "flamingo", "cobalt", "leaf"], col="cyl", fill=0.55)
+       "landmark", variants=["flamingo", "tomato", "cobalt", "leaf"], col="cyl", fill=0.55)
 def carousel():
     lod1 = _lod1()
     cyl(6.0, 0.7, color="sun", segs=16)
     cyl(5.85, 0.1, at=(0, 0, 0.7), color="sky", segs=16)
-    cyl(1.2, 4.2, at=(0, 0, 0.8), color="tomato", tint=True, segs=12)
+    cyl(1.2, 4.2, at=(0, 0, 0.8), color="flamingo", tint=True, segs=12)
     for i in range(6):
         a = math.radians(60 * i + 30)
         box((0.8, 0.1, 2.4), at=(1.21 * math.cos(a), 1.21 * math.sin(a), 1.6), rot=(0, 0, 60 * i + 120), base=True,
             color="sun", lod0=True)
     zc = 4.6
     n = 16 if not lod1 else 10
-    _stripes(6.25, zc, 6.25, zc + 0.9, n, ("tomato", "snow"), thick=0.14)
-    _stripes(6.5, zc + 0.9, 0.7, zc + 3.6, n, ("tomato", "snow"), thick=0.14)
+    _stripes(6.25, zc, 6.25, zc + 0.9, n, ("flamingo", "snow"), thick=0.14)
+    _stripes(6.5, zc + 0.9, 0.7, zc + 3.6, n, ("flamingo", "snow"), thick=0.14)
     cyl(6.3, 0.2, at=(0, 0, zc - 0.15), color="sun", segs=16)
     if not lod1:
         for i in range(n):
@@ -1030,7 +1030,7 @@ def carousel():
             cyl(0.42, 0.12, at=(6.27 * math.cos(a), 6.27 * math.sin(a), zc - 0.15), rot=(90, 0, 360 * (i + 0.5) / n + 90),
                 base=False, color="sun", segs=8)
     cyl(0.9, 0.7, at=(0, 0, zc + 3.4), color="sun", segs=10)
-    cyl(1.05, 0.9, at=(0, 0, zc + 4.1), r2=0.05, color="tomato", tint=True, segs=10)
+    cyl(1.05, 0.9, at=(0, 0, zc + 4.1), r2=0.05, color="flamingo", tint=True, segs=10)
     _flag((0, 0, zc + 4.9), 1.4, 1.1, "sun", pole="ink_soft", pr=0.06)
     # horses on brass poles, bobbing at different heights
     for i in range(8):

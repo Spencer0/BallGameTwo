@@ -595,7 +595,7 @@ def parking_garage():
                 lod0=x not in (-W / 2 + 0.6, W / 2 - 0.6))
     # corkscrew ramp drum on the side: the stripes spiral up
     cx, r = W / 2 + 7.5, 8.0
-    cyl(r, top + 1.4, at=(cx, 0, 0), color="cloud", segs=14)
+    cyl(r - 0.6, top + 1.4, at=(cx, 0, 0), color="cloud", segs=14)
     cyl(r * 0.7, top + 2.4, at=(cx, 0, 0), color="charcoal", segs=12)
     turns, k = 3.0, 12
     m = int(turns * k)
@@ -603,7 +603,7 @@ def parking_garage():
     for i in range(m + 1):
         a = 2 * math.pi * i / k - math.pi / 2
         pts.append((cx + (r + 0.2) * math.cos(a), (r + 0.2) * math.sin(a), 0.9 + (top - 0.4) * i / m))
-    tube(pts, 0.7, color="sun", tint=True, segs=5)
+    tube(pts, 1.0, color="sun", tint=True, segs=5)
     box((8.0, 6.0, 1.4), at=(W / 2 + 2.0, 0, top), base=True, color="cloud")
     # roof: parked cars as plain blocks + stair tower + big sign
     if not _lod1():
@@ -765,12 +765,12 @@ def giant_statue():
 @asset("observation_tower", "Observation Tower", "Great view of the city. Terrible view of the tower.", 6,
        "stone", "landmark", variants=["tomato", "cobalt", "sun", "flamingo"], col="cyl", fill=0.1)
 def observation_tower():
-    lathe([(17.0, 0.0), (17.0, 3.0), (10.0, 8.0), (6.0, 30.0), (4.6, 120.0), (4.0, 200.0), (0, 200.0)],
+    lathe([(18.0, 0.0), (18.0, 3.0), (11.0, 8.0), (7.0, 30.0), (5.4, 120.0), (4.6, 200.0), (0, 200.0)],
           color="cloud", segs=12)
     zp = 196.0
-    lathe([(4.0, zp), (12.0, zp + 3.0), (18.0, zp + 8.0), (19.0, zp + 11.0), (18.0, zp + 16.0), (13.0, zp + 20.0),
-           (5.0, zp + 23.0), (0, zp + 23.0)], color="tomato", tint=True, segs=16)
-    cyl(19.3, 4.0, at=(0, 0, zp + 9.5), r2=19.0, color="glass", segs=16)
+    lathe([(4.0, zp - 2.0), (14.0, zp + 2.0), (22.5, zp + 8.0), (24.0, zp + 11.0), (22.5, zp + 16.0),
+           (15.0, zp + 20.5), (5.0, zp + 23.0), (0, zp + 23.0)], color="tomato", tint=True, segs=16)
+    cyl(24.0, 4.6, at=(0, 0, zp + 9.0), r2=23.4, color="glass", segs=16)
     cyl(4.0, 20.0, at=(0, 0, zp + 23.0), r2=3.4, color="cloud", segs=10)
     sphere(6.0, at=(0, 0, zp + 46.0), scale=(1, 1, 0.75), color="tomato", tint=True, segs=12, rings=7)
     cyl(6.1, 1.4, at=(0, 0, zp + 45.3), color="glass", segs=12)
@@ -779,7 +779,7 @@ def observation_tower():
         cyl(1.6 * (1 - t) + 0.45, 4.0, at=(0, 0, zp + 49.0 + 55.0 * t), color="tomato", tint=True, segs=6)
     if not _lod1():
         for z in (60.0, 110.0, 160.0):
-            r = 6.0 + (4.0 - 6.0) * (z - 30.0) / 170.0 + 0.4
+            r = 7.0 + (4.6 - 7.0) * (z - 30.0) / 170.0 + 0.5
             cyl(r, 2.0, at=(0, 0, z), color="tomato", tint=True, segs=12)
 
 
