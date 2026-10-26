@@ -19,12 +19,14 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
   big pickups still dominate.
 - Knock-off: impacts above 0.6× top speed shed `1 + (impact−0.6)·5` most-recent items. Exact volume bookkeeping
   (each crust item stores the volume it added).
-- Climbing: pushing into an obstacle whose top is within **1.6 radii** of the ball's bottom climbs it, from any
-  contact angle (Katamari-style). 2.3 r was tried first: a 1 m ball mounted sofas and wandered on furniture tops.
-  Low obstacles also never bounce or knock items loose — they're steps, not walls. (A ball perched on a low
-  edge used to jitter in place because the contact was neither "ground" nor "wall".)
-- Dollhouse walls in the House level are 1.1 m: they keep rooms meaningful until the ball is ~1.4 m, then
-  become climbable.
+- Climbing: pushing into an obstacle whose top is within **2.0 radii** of the ball's bottom climbs it, from any
+  contact angle (Katamari-style). 2.3 r let a 1 m ball mount sofas and wander on furniture tops; 1.6 r made the
+  breakfast table too fiddly. Low obstacles never bounce or knock items loose — they're steps, not walls.
+  The climb assist stays on until the contact normal is nearly vertical (ny ≥ 0.92): with a narrower band a
+  ball could hang on the top edge of a thin wall, neither climbing nor standing on it (the final playthrough
+  caught a 3 m ball trapped in the kitchen this way).
+- Dollhouse walls in the House level are 1.5 m: rooms stay meaningful until the ball is ~1.5 m, then the whole
+  house opens. With walls passable, the House needed the same pace/growth tuning as the outdoor levels.
 - Camera: auto-follow toward direction of travel (not while deliberately reversing) + **double-tap quick turn**.
   No separate camera control was needed in testing; keyboard Q/E exists for desktop.
 - Zen mode: "Finish & inspect" in the pause menu ends the level; reaching the target counts as completed.
@@ -90,3 +92,5 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
 - Sound follows the iPhone's silent switch (default Web Audio session); no `audioSession` override.
 - A performance overlay is hidden behind a triple-tap on the size readout, so frame rate can be checked on a
   real phone.
+- The finale isn't forced on the player: the first City clear adds a "See the finale" button to the results
+  screen (instead of the story popping over the results after a delay).

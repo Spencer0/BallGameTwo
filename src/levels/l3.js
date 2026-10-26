@@ -4,7 +4,7 @@ import { Layout } from './layout.js';
 
 const W = 34,
   D = 38; // garden to z=±13, plus a street out front (z 13..19)
-const WALL_H = 1.1;
+const WALL_H = 1.5; // rooms open up once the ball is ~1.5 m (climb limit 2 r)
 const T = 0.24; // wall thickness
 
 // house footprint x[-9,9] z[-7,7]; rooms (see DESIGN.md L3)

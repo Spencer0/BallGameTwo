@@ -106,7 +106,8 @@ timer, and ★★★ needs most of what the level holds. Outdoor levels grow exp
 
 | Level | Stars (× goal) | pace | growth | bot: goal reached at |
 |---|---|---|---|---|
-| 1–3 | 1 / 1.4 / 1.9 | 1 | 1 | 38–72 % |
+| 1–2 | 1 / 1.4 / 1.9 | 1 | 1 | 30–48 % |
+| 3 | 1 / 1.5 / 1.9 | 0.9 | 0.75 | 27–39 % |
 | 4 | 1 / 2.6 / 5 | 0.85 | 0.6 | 36 % |
 | 5 | 1 / 2.2 / 3.2 | 0.8 | 0.5 | 42 % |
 | 6 | 1 / 1.4 / 1.65 | 0.65 | 0.35 | 45 % |

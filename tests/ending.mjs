@@ -1,0 +1,32 @@
+// Finale flow: clear the city, open the finale from the results screen, skip the story, land on
+// The End, and check the save remembers it.   node tests/ending.mjs
+import fs from 'node:fs';
+import { serve, launch } from './harness.mjs';
+fs.mkdirSync('build/screens', { recursive: true });
+const { srv, url } = await serve();
+const { browser, page, errors } = await launch('iphone14');
+await page.goto(`${url}?level=6&mode=zen&q=low`);
+await page.waitForFunction(() => window.__game?.session, null, { timeout: 120000 });
+await page.waitForTimeout(3000);
+await page.evaluate(() => { const s = window.__game.session; s.ball.r = s.level.target * 0.52; });
+await page.waitForFunction(() => window.__game.session.reachedTarget, null, { timeout: 20000 });
+await page.evaluate(() => window.__game.finish());
+await page.waitForSelector('[data-act="ending"]', { timeout: 15000 });
+await page.waitForTimeout(2500);
+await page.screenshot({ path: 'build/screens/ending_results.png' });
+await page.tap('[data-act="ending"]');
+await page.waitForSelector('.skip', { timeout: 5000 });
+await page.waitForTimeout(800);
+await page.screenshot({ path: 'build/screens/ending_story.png' });
+await page.tap('.skip');
+await page.waitForSelector('.ending-screen', { timeout: 5000 });
+await page.waitForTimeout(1500);
+await page.screenshot({ path: 'build/screens/ending.png' });
+const seen = await page.evaluate(() => window.__game.save.data.story.ending);
+await page.tap('.ending-screen [data-act="quit"]');
+await page.waitForTimeout(1500);
+const back = await page.evaluate(() => !!document.querySelector('.levels-screen, [data-act="level"]'));
+console.log(`${seen && back && !errors.length ? 'ok ' : 'BAD'} finale shown, saved=${seen}, back at levels=${back}`, errors.length ? errors : '');
+await browser.close();
+srv.close();
+process.exit(seen && back && !errors.length ? 0 : 1);

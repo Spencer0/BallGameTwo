@@ -8,6 +8,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 const _axis = new THREE.Vector3();
 const _dq = new THREE.Quaternion();
 const QUERY = new Int32Array(1024);
+const CLIMB_TOP = 0.92; // contact normals flatter than this count as "on top", not climbing
 
 export const PHYS = {
   speed: 4.4, // top speed in radii per second
@@ -127,10 +128,11 @@ export class Ball {
       const nx = dx / d,
         ny = dy / d,
         nz = dz / d;
-      this.resolve(nx, ny, nz, r - Math.min(d, r));
+      const low = B.climb && B.maxY - (this.pos.y - r) < PHYS.climbMax * r;
+      this.resolve(nx, ny, nz, r - Math.min(d, r), low);
       if (ny > 0.55) this.grounded = true;
-      else if (B.climb && Math.abs(ny) < 0.5 && this.wantsInto(nx, nz) && B.maxY - (this.pos.y - r) < PHYS.climbMax * r)
-        climb = true;
+      // keep climbing over the lip until the ball is properly on top (a steep edge contact is neither)
+      if (low && ny > -0.3 && ny < CLIMB_TOP && this.wantsInto(nx, nz)) climb = true;
     }
     // objects
     const reach = r * PHYS.pickupReach;
@@ -222,7 +224,7 @@ export class Ball {
       const low = lip < PHYS.climbMax * r;
       this.resolve(nx, ny, nz, r - d, low);
       if (ny > 0.55) this.grounded = true;
-      else if (low && ny > -0.3 && this.wantsInto(nx, nz)) climb = true; // walls and edges of low things
+      if (low && ny > -0.3 && ny < CLIMB_TOP && this.wantsInto(nx, nz)) climb = true; // walls and edges of low things
       if (!low && ny <= 0.55 && vn < 0) {
         const impact = -vn / (PHYS.speed * r);
         if (isAlmost(size, D)) this.handler.wobble(i, impact);

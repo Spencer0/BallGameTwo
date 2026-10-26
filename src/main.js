@@ -405,14 +405,11 @@ class App {
     this.lastResult = { result, rec };
     this.orbit = this.session.cam.yaw + Math.PI;
     setTimeout(() => this.sfx.results(result.completed), result.reason === 'time' ? 1100 : 200);
+    // first city clear: the results screen offers the finale instead of a next level
+    this.pendingEnding = result.completed && result.level.n === 6 && !this.save.data.story.ending;
     setTimeout(() => {
       this.ui.showResults(result, rec);
       for (const sk of SKINS) if (!isUnlocked(sk, before) && isUnlocked(sk, after)) setTimeout(() => this.ui.toast(`New ball skin: ${sk.name}!`, 'hot'), 1600);
-      if (result.completed && result.level.n === 6 && !this.save.data.story.ending) {
-        this.save.data.story.ending = true;
-        this.save.save();
-        setTimeout(() => this.ui.showEnding(), 2600);
-      }
     }, result.reason === 'time' ? 1300 : 400);
     setTimeout(() => {
       if (this.audio.ctx && this.session && this.session.over) this.music.play(SONGS.title, { fadeIn: 2 });

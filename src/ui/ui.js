@@ -551,6 +551,7 @@ export class UI {
           <div class="res-items">${grid || '<p class="sub">Nothing at all. Bold.</p>'}</div>
           <div class="res-verdict"><img src="${IMG}prudence_${mood}.png" alt=""><p class="sticker">${esc(verdict)}</p></div>
           <div class="res-actions">
+            ${this.app.pendingEnding ? `<button class="btn btn-primary btn-wide" data-act="ending">${ICON.star}<span>See the finale</span></button>` : ''}
             ${canNext ? `<button class="btn btn-primary btn-wide" data-act="next" data-i="${L.n}">${ICON.next}<span>Next mess</span></button>` : ''}
             <div class="row">
               <button class="btn" data-act="retry">${ICON.restart}<span>Again</span></button>
@@ -760,6 +761,12 @@ export class UI {
         break;
       case 'postcard':
         app.makePostcard();
+        break;
+      case 'ending':
+        app.pendingEnding = false;
+        app.save.data.story.ending = true;
+        app.save.save();
+        this.showEnding();
         break;
       default:
         break;
