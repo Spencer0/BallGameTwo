@@ -11,7 +11,24 @@ loader.setMeshoptDecoder(MeshoptDecoder);
 const v3 = new THREE.Vector3();
 const n3 = new THREE.Matrix3();
 
-export const ASSET_BASE = { url: 'assets/', packs: 'packs/' };
+export const ASSET_BASE = { url: 'assets/', packs: 'packs/', text: false };
+
+// The artifact host serves no binary model types, so the single-page build ships every pack as
+// base64 text (<pack>.glb.txt) and flags it; ?packtxt=1 exercises the same path locally.
+if (typeof window !== 'undefined') {
+  ASSET_BASE.text = !!window.__PACKS_AS_TEXT || new URLSearchParams(location.search).has('packtxt');
+}
+
+async function fetchPackText(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  const b64 = (await res.text()).trim();
+  if (Uint8Array.fromBase64) return Uint8Array.fromBase64(b64).buffer;
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out.buffer;
+}
 
 /** meshopt needs WebAssembly; some locked-down hosts forbid compiling it. Probe once. */
 export async function chooseCompression() {
@@ -131,7 +148,8 @@ export class AssetLibrary {
   }
 
   async _loadPack(name) {
-    const gltf = await loader.loadAsync(ASSET_BASE.url + ASSET_BASE.packs + name + '.glb');
+    const url = ASSET_BASE.url + ASSET_BASE.packs + name + '.glb';
+    const gltf = ASSET_BASE.text ? await loader.parseAsync(await fetchPackText(url + '.txt'), '') : await loader.loadAsync(url);
     gltf.scene.updateMatrixWorld(true);
     gltf.scene.traverse((o) => {
       if (!o.isMesh) return;

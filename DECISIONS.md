@@ -87,6 +87,9 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
   a system haptic for switches). Older iOS has no web haptics.
 - Extras chosen for effort/impact: collection log, 10 unlockable ball skins, postcard, attract-mode menus
   (the title floats over a live demo of Lint rolling up the table). Skipped: PWA (blocked by the host).
+- The artifact host serves no binary model types (.glb is refused), so the single-page build ships each pack as
+  base64 text (`<pack>.glb.txt`) and the page sets `window.__PACKS_AS_TEXT`; the loader decodes and parses
+  in memory. Costs ~33 % more download; the local `dist/index.html` still loads plain .glb.
 - Asset packs ship twice: meshopt-compressed (needs WebAssembly) and quantized-only. The game probes
   WebAssembly at boot and falls back, in case the host's content policy forbids WASM compilation.
 - Sound follows the iPhone's silent switch (default Web Audio session); no `audioSession` override.

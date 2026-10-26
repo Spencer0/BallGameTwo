@@ -34,7 +34,7 @@ fs.writeFileSync(path.join(DIST, 'index.html'), full);
 // function replacements: the minified JS contains `$'`/`$&` sequences that string replacements would expand
 const frag = tpl
   .replace('<!--STYLE-->', () => `<style>\n${css}</style>`)
-  .replace('<!--SCRIPT-->', () => `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`);
+  .replace('<!--SCRIPT-->', () => `<script>window.__PACKS_AS_TEXT = 1;</script>\n<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`);
 fs.writeFileSync(path.join(DIST, 'artifact.html'), frag);
 
 // assets
@@ -49,6 +49,10 @@ for (const f of ['catalog.json', 'icons.png', 'icons.json']) {
 for (const dir of ['packs', 'packs_q', 'img']) {
   const d = path.join(ROOT, 'assets', dir);
   if (!fs.existsSync(d)) continue;
-  for (const f of fs.readdirSync(d)) copy(path.join(d, f), path.join(DIST, 'assets', dir, f));
+  for (const f of fs.readdirSync(d)) {
+    copy(path.join(d, f), path.join(DIST, 'assets', dir, f));
+    // text copy for hosts that won't serve binary models (see ASSET_BASE.text)
+    if (f.endsWith('.glb')) fs.writeFileSync(path.join(DIST, 'assets', dir, f + '.txt'), fs.readFileSync(path.join(d, f)).toString('base64'));
+  }
 }
 console.log(`built ${dev ? 'dev' : 'release'}: game.js ${(js.length / 1024).toFixed(0)} KB, artifact.html ${(frag.length / 1024).toFixed(0)} KB`);

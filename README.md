@@ -8,6 +8,9 @@ and, eventually, the whole city.
 Everything is original and made from code: 240+ objects modelled by Blender Python scripts,
 seven pieces of music and all sound effects synthesised with Web Audio, rendered with Three.js.
 
+**Play it:** https://claude.ai/artifact/WY8bjgJp4aa1vB6BNitPUB. Open it on your iPhone and hold the phone
+upright. Tap once to start the sound.
+
 ## How to play
 
 - **Roll**: touch anywhere and drag. A joystick appears under your thumb; push up to roll forward.
@@ -41,6 +44,8 @@ Progress, the collection and settings are saved in your browser (localStorage).
 - The postcard can't be downloaded directly (the host blocks downloads); press and hold the image instead.
 - iPhone haptics need iOS 18 or newer; older iPhones have no web haptics.
 - Fonts load from Google Fonts; without a connection the game falls back to system fonts.
+- The hosted page can't serve binary model files, so the asset packs travel as base64 text (about a third
+  bigger to download: roughly 0.7 MB per level with WebAssembly, 1.6 MB without).
 - Performance was measured in desktop Chromium with software WebGL and iPhone-sized viewports, not on a
   physical iPhone. The automatic quality fallback is there to catch slower devices.
 
@@ -61,6 +66,7 @@ node tests/screens.mjs          # screenshots of every screen at iPhone sizes
 node tests/playthrough.mjs      # autopilot plays all 6 levels in both modes
 node tests/calibrate.mjs 3      # timed run to the buzzer: when the goal falls, final stars
 node tests/ending.mjs           # clear the city, watch the finale, check it's saved
+node tests/artifact_page.mjs    # the single-page build as the host serves it (after a DIST=build/release build)
 node tests/profile.mjs 30 1,3,6 # 30-minute soak: heap, GPU resources, frame time
 node tests/audio.mjs            # offline-render all music + SFX, check levels/clipping
 ```
