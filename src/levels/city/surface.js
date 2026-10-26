@@ -17,8 +17,16 @@ export function paintNetwork(b, net, style = {}) {
   const N = net.nodes,
     E = net.edges;
   for (const e of E) {
+    if (!e.paint) continue;
     if (e.cls === 'rail') {
-      b.strip(e.poly, e.L, -1.7, 1.7, 0, e.len, SK.rail, { C: ['stone', 'cocoa', 'cloud'], y: e.y });
+      // leave gaps where roads cross the track (the road surface carries on over it)
+      const gaps = railGaps(e, E);
+      let s = 0;
+      for (const [g0, g1] of gaps) {
+        if (g0 > s) b.strip(e.poly, e.L, -1.7, 1.7, s, g0, SK.rail, { C: ['stone', 'cocoa', 'cloud'], y: e.y });
+        s = Math.max(s, g1);
+      }
+      if (s < e.len) b.strip(e.poly, e.L, -1.7, 1.7, s, e.len, SK.rail, { C: ['stone', 'cocoa', 'cloud'], y: e.y });
       continue;
     }
     if (e.cls === 'path') {
@@ -77,4 +85,33 @@ export function paintNetwork(b, net, style = {}) {
       if (e.verge > 0) b.disc(n.x, n.z, n.bulb + 0.3, SK.solid, { r0: n.bulb, C: [S.curb], segs: 44, a0: mouth + gap, a1: mouth + Math.PI * 2 - gap });
     }
   }
+}
+
+/** distances along rail edge r where road edges cross it (with their half-width + sidewalk) */
+function railGaps(r, E) {
+  const gaps = [];
+  for (const e of E) {
+    if (e === r || e.cls === 'rail' || e.cls === 'path' || !e.paint) continue;
+    const half = e.w / 2 + e.verge + e.walk + 0.5;
+    for (let i = 1; i < r.poly.length; i++) {
+      const [ax, az] = r.poly[i - 1],
+        [bx, bz] = r.poly[i];
+      for (let j = 1; j < e.poly.length; j++) {
+        const [cx, cz] = e.poly[j - 1],
+          [dx, dz] = e.poly[j];
+        const den = (bx - ax) * (dz - cz) - (bz - az) * (dx - cx);
+        if (Math.abs(den) < 1e-9) continue;
+        const t = ((cx - ax) * (dz - cz) - (cz - az) * (dx - cx)) / den;
+        const u = ((cx - ax) * (bz - az) - (cz - az) * (bx - ax)) / den;
+        if (t < 0 || t > 1 || u < 0 || u > 1) continue;
+        const segLen = Math.hypot(bx - ax, bz - az);
+        // crossing angle widens the gap
+        const sin = Math.abs(den) / (segLen * Math.hypot(dx - cx, dz - cz));
+        const s = r.L[i - 1] + t * segLen;
+        const g = half / Math.max(0.3, sin);
+        gaps.push([s - g, s + g]);
+      }
+    }
+  }
+  return gaps.sort((a, b) => a[0] - b[0]);
 }

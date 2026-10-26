@@ -17,6 +17,8 @@ export const CLASSES = {
   boulevard: { w: 22, lanes: 2, walk: 5, verge: 0, center: 2, speed: 13 },
   highway: { w: 22, lanes: 2, walk: 0, verge: 0, center: 2, speed: 24 },
   main: { w: 20, lanes: 1, walk: 4, verge: 0, center: 1, speed: 8, parking: 'angled' },
+  rail: { w: 4, lanes: 0, walk: 0, verge: 0, center: 0, speed: 0 },
+  path: { w: 3, lanes: 0, walk: 0, verge: 0, center: 0, speed: 0 },
 };
 
 const TAU = Math.PI * 2;
@@ -136,6 +138,7 @@ export class Network {
       y: opts.y ?? 0,
       traffic: opts.traffic ?? true,
       plaza: opts.plaza ?? false,
+      paint: opts.paint ?? true, // false: the surface comes from a model (bridge decks)
       pts: opts.pts || [],
     };
     this.edges.push(e);
