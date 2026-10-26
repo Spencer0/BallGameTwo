@@ -1,0 +1,32 @@
+{
+  "name": "ballgametwo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "dev": "node tools/build.mjs --dev",
+    "test": "node --test tests/unit/",
+    "pack": "node tools/pack.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Spencer0/BallGameTwo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Spencer0/BallGameTwo/issues"
+  },
+  "homepage": "https://github.com/Spencer0/BallGameTwo#readme",
+  "dependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "esbuild": "^0.28.2",
+    "meshoptimizer": "^1.3.0",
+    "three": "^0.170.0"
+  },
+  "type": "module"
+}

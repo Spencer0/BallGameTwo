@@ -1,0 +1,38 @@
+// GENERATED from tools/blender/lib/palette.py by tools/gen_palette.py — do not edit.
+export const PALETTE = [
+  ['ink', '#2A1E3F'],
+  ['ink_soft', '#4A3B66'],
+  ['snow', '#FFFFFF'],
+  ['cloud', '#DDE2EE'],
+  ['stone', '#9AA0B5'],
+  ['charcoal', '#4A4458'],
+  ['paper', '#FFF6E6'],
+  ['butter', '#FFE48A'],
+  ['sun', '#FFC830'],
+  ['tangerine', '#FF8A1F'],
+  ['tomato', '#F0412F'],
+  ['flamingo', '#FF5C8A'],
+  ['bubblegum', '#FFA6C6'],
+  ['grape', '#7B4FD0'],
+  ['lavender', '#B9A6EE'],
+  ['cobalt', '#3457D5'],
+  ['sky', '#5BC0F5'],
+  ['teal', '#19B3A6'],
+  ['lime', '#9AD94A'],
+  ['leaf', '#3DAA5C'],
+  ['pine', '#1F7A55'],
+  ['sand', '#EBC894'],
+  ['caramel', '#D98A4E'],
+  ['cocoa', '#8A4B2F'],
+  ['skin1', '#F6CDA8'],
+  ['skin2', '#E0A47A'],
+  ['skin3', '#B9784E'],
+  ['skin4', '#7A4A2E'],
+  ['glass', '#BDEBFA'],
+  ['brick', '#C2513A'],
+  ['navy', '#283A8F'],
+  ['mint', '#A8E6C8'],
+];
+export const PAL = Object.fromEntries(PALETTE.map(([n], i) => [n, i]));
+export const HEX = Object.fromEntries(PALETTE);
+export const SHADOW_TINT = '#C9BCEB';
