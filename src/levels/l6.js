@@ -45,6 +45,8 @@ for (const z of BRIDGES_Z) if (!BORO_Z.includes(z)) BORO_Z.push(z);
 BORO_Z.sort((a, b) => a - b);
 const ELEVATED_X = 1500; // the elevated train runs above this borough avenue
 const SHORE_RD_X = WEST_X0 - 70;
+// Jersey City runs north past the bridge landing (a bridge into a meadow read as a bridge to nowhere)
+const JC_N = -2050;
 const JC_X = SHORE_RD_X - 130; // Jersey City: a second avenue behind the waterfront towers...
 const JC2_X = JC_X - 110; // ...and a third, of rowhouses, before the rail yard
 const RWY_X = -2080; // the airport's runway, west of the town, its rail yard and a fence
@@ -348,7 +350,7 @@ function buildNet() {
   const wNodes = SHORE_RD_Z.map((z, k) => N(SHORE_RD_X, z, k === 0 ? { exit: true } : k === SHORE_RD_Z.length - 1 ? { bulb: 18 } : {}));
   for (let j = 0; j < wNodes.length - 1; j++) net.edge(wNodes[j], wNodes[j + 1], { cls: 'arterial', name: 'Shore Road', walk: 3, verge: 0 });
   // Jersey City behind the towers: Washington Blvd and short cross streets back to Shore Road
-  const jz = SHORE_RD_Z.filter((z) => z >= -1300 && z <= FREIGHT_Z);
+  const jz = SHORE_RD_Z.filter((z) => z >= JC_N && z <= FREIGHT_Z);
   for (const [x, name] of [[JC_X, 'Washington Blvd'], [JC2_X, 'Grove St']]) {
     const jNodes = jz.map((z) => N(x, z));
     for (let j = 0; j < jNodes.length - 1; j++) net.edge(jNodes[j], jNodes[j + 1], { cls: 'street', name, w: 14, walk: 4, verge: 0 });
@@ -439,7 +441,7 @@ function landPolys(b) {
   for (let x = -S - 100; x >= -9000; x -= 100) west.push([x, coastW(x)]);
   b.poly([[(WEST_X0 - 9000) / 2, 0], ...west, west[0]], SK.solid, { C: ['leaf'], y: -1.2, origin: [0, 0] });
   // the Jersey shore: paved where the towers and the port stand, parkland and woods elsewhere
-  b.rect((WEST_X0 + JC2_X - 40) / 2, -245, WEST_X0 - JC2_X + 40, 2010, 0, SK.solid, { C: ['concrete'], y: -1.15 });
+  b.rect((WEST_X0 + JC2_X - 40) / 2, (JC_N - 20 + 760) / 2, WEST_X0 - JC2_X + 40, 780 - JC_N, 0, SK.solid, { C: ['concrete'], y: -1.15 });
   b.rect(-1500, 1040, 500, 520, 0, SK.solid, { C: ['concrete'], y: -1.15 });
   // the borough's waterfront park
   b.rect((EAST_X0 + BORO_AVE[0] - 10) / 2, -470, BORO_AVE[0] - 10 - EAST_X0 - 4, 3440, 0, SK.solid, { C: ['leaf'], y: -1.15 });
@@ -622,7 +624,7 @@ export function layout(lib, seed = 606) {
     if (Math.abs(ix) > SHORE + 5 && ix < EAST_X0 && ix > WEST_X0) return true; // over water
     if (iz > BAT_Z && Math.abs(ix) < SHORE) return true; // Battery Park
     const jc = e.name === 'Shore Road' || e.name === 'Washington Blvd' || e.name === 'Grove St' || e.name === 'Jersey St';
-    if (ix < WEST_X0 && (!jc || iz < -1300 || iz > FREIGHT_Z - 20 || ix < JC2_X - 40)) return true; // airport, port, woods
+    if (ix < WEST_X0 && (!jc || iz < JC_N || iz > FREIGHT_Z - 20 || ix < JC2_X - 40)) return true; // airport, port, woods
     return false;
   };
   for (const f of order) {
@@ -1466,7 +1468,7 @@ function westBank(ctx, life) {
   for (let k = 0; k < 6; k++) L.put('harbour_crane', WEST_X0 - 20, 850 + k * 70, { yaw: Math.PI / 2 });
   for (let k = 0; k < 24; k++) L.put('container_stack', -1450 - (k % 4) * 60, 820 + Math.floor(k / 4) * 70, { yaw: (Math.PI / 2) * (k % 2) });
   L.put('cargo_ship', WEST_X0 + 40, 1000, { yaw: L.along('cargo_ship', 0) });
-  woods(ctx, { minX: -S, maxX: WEST_X0 - 120, minZ: -S, maxZ: -1500 }, { count: 200, ids: ['pine_tree', 'tree_round'], scale: [2.5, 4] });
+  woods(ctx, { minX: -S, maxX: WEST_X0 - 120, minZ: -S, maxZ: JC_N - 60 }, { count: 200, ids: ['pine_tree', 'tree_round'], scale: [2.5, 4] });
   // the Jersey waterfront: a lawn strip with a riverside walk and a row of trees between the towers and the water
   paint.push((b) => {
     b.rect((WEST_X0 + SHORE_RD_X) / 2 + 2, -270, WEST_X0 - SHORE_RD_X - 20, 2040, 0, SK.solid, { C: ['leaf'], y: -1.12 });

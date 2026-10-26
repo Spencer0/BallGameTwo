@@ -184,13 +184,18 @@ function buildNet() {
   // --- the east bank: River Road along the bank from Mill Road to Route 9; a grid east of it
   const EZ = [MILL_Z, ...MAIN_Z, HWY_Z];
   for (let k = 0; k < EZ.length - 1; k++) net.edge(N(riverRoadX(EZ[k]), EZ[k]), N(riverRoadX(EZ[k + 1]), EZ[k + 1]), { cls: 'street', name: 'River Road', tag: 'river', pts: follow(riverRoadX, EZ[k], EZ[k + 1]) });
+  // Walnut Street: where the bank swings west the blocks between River Road and Pine Street are too wide to
+  // fill from their edges, so a street runs down the middle of them (not through the school's block)
+  const WALNUT = 200;
+  const walnut = [[-430, -300], [-170, -40]];
   for (const z of MAIN_Z) {
-    const xs = [riverRoadX(z), ...EAST_X.filter((x) => x > riverRoadX(z) + 60)];
+    const xs = [riverRoadX(z), ...(walnut.some((r) => r.includes(z)) ? [WALNUT] : []), ...EAST_X.filter((x) => x > riverRoadX(z) + 60)].sort((a, b) => a - b);
     for (let k = 0; k < xs.length - 1; k++) net.edge(N(xs[k], z), N(xs[k + 1], z), { cls: 'street', name: 'Bank Street', tag: 'bank' });
   }
   EAST_X.forEach((x, i) => {
     for (let k = 0; k < EZ.length - 1; k++) net.edge(N(x, EZ[k]), N(x, EZ[k + 1]), { cls: 'street', name: EAST_NAMES[i], tag: 'eastave' });
   });
+  for (const [z0, z1] of walnut) net.edge(N(WALNUT, z0), N(WALNUT, z1), { cls: 'street', name: 'Walnut Street', tag: 'eastave' });
   // --- county roads through the farms (narrow, no sidewalks)
   const lane = { cls: 'lane', name: 'County Road 12', tag: 'county', w: 7, draw: 0.4 };
   net.edge(N(-640, -S - 450, { exit: true }), N(-640, MILL_Z), lane);
@@ -331,6 +336,7 @@ export function layout(lib, seed = 505) {
 
   // ---- alleys down the middle of the residential blocks (garages open onto them)
   alleys(ctx);
+  eastSchool(ctx, life);
 
   // ---- houses: avenue lots are deep (the houses face the avenues), then whatever fits elsewhere
   const RES = { ave: 46, eastave: 46, water: 34, river: 40, depot: 40, cross: 50, bank: 44, mainS: 34 }; // deep enough that back yards meet mid-block
@@ -354,7 +360,7 @@ export function layout(lib, seed = 505) {
     for (let k = 0; k < n; k++) {
       const s = pad + W * (k + 0.5);
       const fr = frameAt(f, s);
-      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: RES[e.tag], first: k === 0, last: k === n - 1, setback: [4.5, 6.5], pool, fenceP: 0.3, fenceIds: ['picket_fence', 'privacy_fence'], fenceTint: 'paper', fenceMode: 'box', yardPaint: false }) });
+      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: RES[e.tag], first: k === 0, last: k === n - 1, setback: [4.5, 6.5], pool, fenceP: 0.55, fenceIds: ['picket_fence', 'privacy_fence'], fenceTint: 'paper', fenceMode: 'box', yardPaint: false }) });
     }
     // (fenced back yards are closed boxes behind the house: suburbLot fenceMode 'box')
   }
@@ -815,9 +821,10 @@ function highwayStrip(ctx, life) {
   place('grain_silo', 640, S1 + 14);
 }
 
-function eastBank(ctx, life) {
+/** The high school on Second Street with its ball field behind it: placed before the houses so the block is
+ *  the school's, not a field of leftover lawn between house rows */
+function eastSchool(ctx, life) {
   const { L, occ, paint } = ctx;
-  // the high school on Second Street with its ball field behind it
   const sch = L.lib.byId.get('school_building');
   if (sch) {
     const sx = 205,
@@ -829,7 +836,7 @@ function eastBank(ctx, life) {
       L.put(pickId(L, ['flagpole', 'street_lamp']), sx, sz + sch.dims[2] / 2 + 5);
       // ball diamond and outfield
       const fz = sz - sch.dims[2] / 2 - 46;
-      const fr = { x: sx, z: fz, hw: 40, hd: 40, yaw: 0 };
+      const fr = { x: sx, z: fz, hw: 40, hd: 36, yaw: 0 };
       if (!occ.hits(fr)) {
         occ.add(fr, 'park');
         paint.push((b) => {
@@ -845,6 +852,10 @@ function eastBank(ctx, life) {
       }
     }
   }
+}
+
+function eastBank(ctx, life) {
+  const { L, occ, paint } = ctx;
   // the fairground north of Mill Road: midway, rides, the big top, 4-H barns, a crowd
   const F = FAIR;
   const fcx = (F.minX + F.maxX) / 2,

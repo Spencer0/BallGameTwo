@@ -164,6 +164,7 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
     if (yardPaint) paint.push((b) => b.rect(yx, yz, W - 0.4, D + backStart, fr.yaw, SK.solid, { C: ['lime'], y: -0.06 }));
   }
   let rightRun = null;
+  let box = null; // the fenced yard, when it is a box: the family's things go inside it
   const sideDriveGate = (sg) => typeof info.drive !== 'number' && Math.sign(gx) === sg;
   if (fenced && fenceMode === 'box') {
     // a closed yard right behind the house: out from its back corners, a dozen metres back, across.
@@ -181,6 +182,7 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       fenceLine2(L, fence, P2(-1, zb), P2(-1, zb - dep), fences, fenceTint, occ);
       fenceLine2(L, fence, P2(-1, zb - dep), P2(1, zb - dep), fences, fenceTint, occ);
       fenceLine2(L, fence, P2(1, zb - dep), P2(1, zb), fences, fenceTint, occ);
+      box = { xl: -half(-1), xr: half(1), z0: zb, z1: zb - dep };
       for (const sg of [-1, 1]) if (half(sg) - hw > 0.8) fenceLine2(L, fence, local(fr, sg * (hw - 0.4), zb), P2(sg, zb), fences, fenceTint, occ);
     }
   } else if (fenced && !pie && fenceMode === 'frontage') {
@@ -259,10 +261,17 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       const yw = yt.dims[0] / 2 + 0.4,
         yd = yt.dims[2] / 2 + 0.4;
       if (yd * 2 > depth - 1 || yw * 2 > W - 2) continue;
-      // keep play things well off the fence lines
-      const rx = L.range(-W / 2 + yw + 1.6, W / 2 - yw - 1.6);
-      // near the house: on a deep lot the far end is lawn, not a trampoline in the middle of nowhere
-      const rz = L.range(backStart - yd - 1.2, Math.max(-D + yd + 1.8, backStart - 16));
+      // keep play things well off the fence lines; inside the fenced yard when there is one, otherwise close
+      // behind the house (on a deep lot the far end is lawn, not a trampoline in the middle of nowhere)
+      let rx, rz;
+      if (box) {
+        if (box.xr - box.xl < yw * 2 + 1.6 || box.z0 - box.z1 < yd * 2 + 1.6) continue;
+        rx = L.range(box.xl + yw + 0.8, box.xr - yw - 0.8);
+        rz = L.range(box.z1 + yd + 0.8, box.z0 - yd - 0.8);
+      } else {
+        rx = L.range(-W / 2 + yw + 1.6, W / 2 - yw - 1.6);
+        rz = L.range(backStart - yd - 1.2, Math.max(-D + yd + 1.8, backStart - yd - 7));
+      }
       const [x, z] = local(fr, rx, rz);
       const yaw = fr.yaw + (L.rand() < 0.5 ? 0 : Math.PI / 2);
       const r = { x, z, hw: yw, hd: yd, yaw };
