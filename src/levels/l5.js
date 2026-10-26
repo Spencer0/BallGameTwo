@@ -231,14 +231,16 @@ export const env = {
     const pts = RIVER.map((p) => [p[0], p[1]]);
     b.ribbon(pts, RIVER.map((p) => p[2] / 2 + BANK), SK.solid, { C: ['pine'], y: -0.33 });
     b.ribbon(pts, RIVER.map((p) => p[2] / 2), SK.water, { C: ['teal', 'sky'], y: -0.2 });
-    for (const [z, side] of [[-265, -1], [10, -1], [-880, 1], [-1180, -1], [130, 1]]) {
+    // (three, each its own size, tucked against the bank: long pointed lenses, not identical ovals mid-channel)
+    for (const [z, side, len, wid, ph] of [[-265, -1, 52, 0.22, 0.4], [-880, 1, 28, 0.3, 2.1], [130, 1, 40, 0.17, 4.3]]) {
       const r = riverAt(z);
       const bar = [];
-      for (let k = 0; k < 16; k++) {
-        const a = (k / 16) * Math.PI * 2;
-        bar.push([r.x + side * r.hw * 0.62 + Math.sin(a) * r.hw * 0.28, z + Math.cos(a) * 30]);
+      for (let k = 0; k < 20; k++) {
+        const a = (k / 20) * Math.PI * 2;
+        const w = r.hw * wid * Math.abs(Math.sin(a)) ** 0.8 * (1 + 0.18 * Math.sin(3 * a + ph));
+        bar.push([r.x + side * (r.hw * (0.98 - wid) - w * Math.sign(Math.sin(a)) * 0.9), z + Math.cos(a) * len * (1 + 0.1 * Math.sin(2 * a + ph))]);
       }
-      b.poly([[r.x + side * r.hw * 0.62, z], ...bar, bar[0]], SK.solid, { C: ['sand'], y: -0.17 });
+      b.poly([[r.x + side * r.hw * (0.98 - wid), z], ...bar, bar[0]], SK.solid, { C: ['sand'], y: -0.17 });
     }
     // the lake: grassy shore all round, a sand beach on the north side, then the water
     const shore = lakePts(14);

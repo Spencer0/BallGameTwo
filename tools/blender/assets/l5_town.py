@@ -665,6 +665,15 @@ def shop_a():
     for y in (-1.5, 1.5):
         _win(W / 2, y, 5.4, 1.6, 2.0, face="+x", sill="snow")
         _win(W / 2, y, 1.2, 1.6, 2.0, face="+x")
+    # the back and the other side aren't blank: windows (kept in every LOD), a back door, a brick chimney stack
+    by = D / 2
+    for x in (-3.5, 0, 3.5):
+        _win(x, by + 0.02, 5.4, 1.6, 2.0, face="+y", sill="snow", lod0=False)
+    _win(-3.2, by + 0.02, 1.2, 1.6, 2.0, face="+y", lod0=False)
+    box((1.3, 0.3, 2.6), at=(2.6, by + 0.05, 0), base=True, color="navy")
+    box((W, 0.3, 0.5), at=(0, by + 0.05, 3.9), base=True, color="navy")
+    for y in (-1.5, 1.5):
+        _win(-W / 2, y, 5.4, 1.6, 2.0, face="-x", sill="snow", lod0=False)
 
 
 @asset("shop_b", "Gabled Boutique", "Fancy gable, fancier prices. Mostly sells candles.", L, "stone", "large",

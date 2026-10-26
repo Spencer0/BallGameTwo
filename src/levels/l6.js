@@ -519,7 +519,6 @@ const HIGH = ['highrise_glass', 'highrise_stone', 'office_block', 'apartment_tow
 const MID = ['midrise_prewar', 'midrise_modern', 'midrise_deco', 'office_block'];
 const WALKUP = ['brownstone', 'brownstone', 'brownstone', 'tenement', 'tenement'];
 const SHOPS = ['storefront_a', 'storefront_b'];
-const JERSEY = ['highrise_glass', 'apartment_tower', 'midrise_modern', 'office_block'];
 const CORES = [
   { x: 0, z: -150, r: 420 }, // midtown
   { x: 120, z: 1420, r: 340 }, // the financial district
@@ -545,7 +544,9 @@ function zone(x, z, e) {
     if (e.name.endsWith(' Ave')) return { row: true, tiers: [[['storefront_a', 'storefront_b', 'storefront_c'], 2], [['tenement'], 1]], gap: 0 };
     return { row: true, tiers: [[['brownstone'], 3], [['tenement'], 1.4]], gap: 0 };
   }
-  if (x < WEST_X0 && x > SHORE_RD_X - 30 && e.name === 'Shore Road') return { tiers: [[JERSEY, 1]], gap: 16 };
+  // the waterfront towers: glass, brick and stone, the odd taller one, so the row isn't one model stamped down the shore
+  if (x < WEST_X0 && x > SHORE_RD_X - 30 && e.name === 'Shore Road')
+    return { tiers: [[['highrise_glass', 'apartment_tower'], 1], [['highrise_stone', 'office_block', 'midrise_modern', 'midrise_deco'], 1.2], [['skyscraper_deco', 'skyscraper_spire'], 0.12]], gap: 10 + 14 * hash(x, z) };
   if (x < JC_X - 30) return { row: true, tiers: [[['brownstone'], 2], [['tenement'], 1.4], [['storefront_a', 'storefront_b'], 0.4]], gap: 0 };
   if (x < WEST_X0) return { tiers: [[['midrise_modern', 'midrise_prewar', 'office_block'], 1], [['apartment_tower'], 0.3]], gap: 6 };
   if (cls === 'highway') return { tiers: [[MID, 1], [HIGH, 0.4]], gap: 18 };
@@ -633,7 +634,8 @@ export function layout(lib, seed = 606) {
       rowTint = null;
     if (z.row) {
       rowId = zonePick(z, 99);
-      rowTint = muted(rowId);
+      // (a third of the borough's terraces in grey and white, so its warm brick doesn't melt into the sunset haze)
+      rowTint = ix > EAST_X0 && L.rand() < 0.35 ? L.pick(['slate', 'cloud', 'concrete']) : muted(rowId);
     }
     fillFrontage(L, occ, f, {
       pick: (rem) => {
@@ -719,6 +721,7 @@ export function layout(lib, seed = 606) {
     const [x, z] = net.edges[l.e].poly[0];
     let core = 0;
     for (const c of CORES) core = Math.max(core, gauss(x, z, c));
+    if (e.cls === 'highway') return 3.2; // the riverside drives are busy end to end, not just by the cores
     return base * (x > EAST_X0 || x < WEST_X0 ? 1.4 : 0.5 + 5 * core); // thickest in midtown and the financial district; the borough and Jersey have their own
   };
   spawnTraffic(L, life, net, 1700, [['taxi', 14], ['car', 4], ['suv', 3], ['hatchback', 2], ['city_bus', 1.4], ['delivery_van', 2.4], ['food_truck', 0.4], ['police_car', 0.7], ['ambulance', 0.3], ['limo', 0.6], ['garbage_truck', 0.4], ['fire_truck', 0.2], ['pickup_truck', 0.8]], { laneWeight: laneW, speed: 1 });
@@ -1098,7 +1101,7 @@ function centralPark(ctx, life) {
     wind([60, -1090], [-20, -1200], -20, 3),
     wind([P.maxX - E, -1950], [150, -1930], 20),
   ];
-  for (const w of walks) spawnLoopWalkers(L, life, [...w, ...w.slice().reverse()], 12, ['person_adult', 'person_adult2', 'person_jogger', 'person_kid', 'person_grandpa']);
+  for (const w of walks) spawnLoopWalkers(L, life, [...w, ...w.slice().reverse()], 18, ['person_adult', 'person_adult2', 'person_jogger', 'person_kid', 'person_grandpa']);
   // the Great Lawn: open grass with ball fields and people on blankets; Sheep Meadow likewise
   for (const [cx, cz] of [[-60, -1310], [60, -1310]]) paint.push((b) => b.disc(cx, cz + 22, 22, SK.dirt, { C: ['sand', 'caramel'], segs: 4, a0: Math.PI * 0.75, a1: Math.PI * 1.25, y: -0.08 }));
   for (const [cx, cz, hw, hd, n] of [[0, -1310, 110, 32, 30], [-175, -720, 42, 55, 40]]) {
@@ -1196,6 +1199,14 @@ function batteryPark(ctx, life) {
   for (let z = TIP1 - 16 - ((TIP1 - 16 - BAT_Z) % 8); z >= BAT_Z; z -= 8) prom.push([Math.max(0, islandHalf(z) - 14), z]);
   paint.push((b) => b.ribbon(prom, prom.map(() => 3), SK.path, { P: [3], C: ['concrete', 'stone'], y: -0.08 }));
   spawnLoopWalkers(L, life, [...prom, ...prom.slice().reverse()], 24);
+  // the seawall: a dark rail along the water's edge, lamps and benches facing the harbour on the inner side
+  paint.push((b) => b.ribbon(prom.map(([x, z]) => [x + Math.sign(x) * 1.7, z]), prom.map(() => 0.35), SK.solid, { C: ['charcoal'], y: -0.04 }));
+  prom.forEach(([x, z], k) => {
+    if (!x || k % 3) return;
+    const ix = x - Math.sign(x) * 2.8;
+    if (k % 6) L.put('park_bench', ix, z, { yaw: x < 0 ? -Math.PI / 2 : Math.PI / 2 });
+    else L.put(pickId(L, ['park_lamp', 'street_lamp']), ix, z);
+  });
   L.put(pickId(L, ['pier_shed', 'container_stack']), 0, TIP1 - 8, { yaw: 0, scale: 0.6 });
   flock(L, life, 120, BAT_Z + 60, 9, { r: 5 });
 }
@@ -1359,18 +1370,29 @@ function westBank(ctx, life) {
   const RX = RWY_X,
     R0 = -1300,
     R1 = 500;
+  const GATES_Z = [-560, -440, -320, -200];
   paint.push((b) => {
     b.rect(RX, (R0 + R1) / 2, 60, R1 - R0, 0, SK.runway, { P: [30, R1 - R0], C: ['charcoal', 'paper'], uv0: [0, (R1 - R0) / 2] });
     b.rect(RX + 120, (R0 + R1) / 2, 25, R1 - R0, 0, SK.asphalt, { C: ['charcoal'] });
     for (const z of [R0 + 20, -400, R1 - 20]) b.rect(RX + 60, z, 95, 22, 0, SK.asphalt, { C: ['charcoal'], y: -0.01 }); // taxiway links
-    b.rect(RX + 260, -350, 240, 600, 0, SK.asphalt, { C: ['charcoal'] }); // apron
+    // the apron, running right up to the parallel taxiway (and past the taxiing jet's turns)
+    b.rect(RX + 255, -345, 250, 670, 0, SK.asphalt, { C: ['charcoal'] });
+    // markings: taxiway centre lines, a lead-in line to each gate and a stand box round it
+    const ln = (x, z, w, d) => b.rect(x, z, w, d, 0, SK.solid, { C: ['butter'], y: 0.02 });
+    ln(RX + 120, (R0 + R1) / 2, 0.6, R1 - R0 - 10);
+    ln(RX + 195, -340, 0.6, 600);
+    for (const z of [R0 + 20, -400, R1 - 20]) ln(RX + 72, z, 72, 0.6);
+    for (const z of GATES_Z) {
+      ln(RX + 250, z, 150, 0.6);
+      for (const dz of [-27, 27]) ln(RX + 285, z + dz, 70, 0.5);
+    }
   });
   L.put(pickId(L, ['airport_terminal', 'parking_garage']), RX + 350, -350, { yaw: Math.PI / 2 }); // jet bridges towards the apron
   L.put(pickId(L, ['control_tower', 'radio_mast']), RX + 270, -720);
   for (const z of [-1050, -950]) L.put(pickId(L, ['hangar', 'garage']), RX + 230, z, { yaw: -Math.PI / 2 });
   const term = L.lib.byId.get('airport_terminal');
   const gateX = RX + 350 - (term ? term.dims[2] / 2 : 20) - 26;
-  for (const z of [-560, -440, -320, -200]) L.put('airliner', gateX, z, { yaw: L.along('airliner', Math.PI / 2) }); // nose-in at the gates
+  for (const z of GATES_Z) L.put('airliner', gateX, z, { yaw: L.along('airliner', Math.PI / 2) }); // nose-in at the gates
   // one taxiing round the apron edge to the runway hold and back
   {
     // (on the apron's outer lane, clear of the taxiway the departing jets use)
