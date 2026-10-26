@@ -10,7 +10,7 @@ import { Network } from './city/network.js';
 import { paintNetwork } from './city/surface.js';
 import { Occupancy, occupyNetwork, frameAt, local, fenceLine, tidyFences } from './city/frontage.js';
 import { SK } from '../render/streets.js';
-import { suburbLot, closeFences, frontageFences, pickId, woods, parkingLot, court, countryside } from './city/suburb.js';
+import { suburbLot, closeFences, pickId, woods, parkingLot, court, countryside } from './city/suburb.js';
 import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock, ducks } from './city/lifespec.js';
 
 // buildings a fence may stop against (a yard fence returns to the house; a paddock ends at the barn)
@@ -183,7 +183,7 @@ export function layout(lib, seed = 404) {
     for (let k = 0; k < lots; k++) {
       const a = mouth + gap + (span * (k + 0.5)) / lots;
       const fr = { x: n.x + Math.sin(a) * R, z: n.z + Math.cos(a) * R, fx: -Math.sin(a), fz: -Math.cos(a), yaw: Math.atan2(-Math.sin(a), -Math.cos(a)) };
-      suburbLot(ctx, fr, e, { W: 14, D: 30, pie: { cx: n.x, cz: n.z, a, half: span / lots / 2, R }, first: true, last: true });
+      suburbLot(ctx, fr, e, { W: 14, D: 30, pie: { cx: n.x, cz: n.z, a, half: span / lots / 2, R }, first: true, last: true, fenceMode: 'box', fenceP: 0.8 });
     }
     (ctx.courts || (ctx.courts = [])).push({ x: n.x, z: n.z, r: n.bulb });
     // a basketball hoop at the kerb of most courts
@@ -216,9 +216,9 @@ export function layout(lib, seed = 404) {
       const fr = frameAt(f, s);
       const [ix, iz] = local(fr, 0, -6);
       const outside = ((ix - LOOP.cx) / LOOP.rx) ** 2 + ((iz - LOOP.cz) / LOOP.rz) ** 2 > 1;
-      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: outside ? 36 : 30, first: k === 0, last: k === n - 1, fenceMode: 'frontage' }) });
+      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: outside ? 36 : 30, first: k === 0, last: k === n - 1, fenceMode: 'box', fenceP: 0.8 }) });
     }
-    frontageFences(ctx, f, recs, frameAt);
+    // (yards are fenced as closed boxes behind each house: see suburbLot fenceMode 'box')
   }
   closeFences(ctx);
   birchGreen(ctx);
@@ -233,7 +233,7 @@ export function layout(lib, seed = 404) {
   gaps.sort((a, b) => a - b);
   const wallSegs = [-S, ...gaps.flatMap((x) => [x - 9, x + 9]), S];
   for (let k = 0; k < wallSegs.length; k += 2) {
-    fenceLine(L, pickId(L, ['privacy_fence', 'picket_fence']), wallSegs[k], wallZ, wallSegs[k + 1], wallZ, { dedupe: fences, opts: { tint: 'cocoa' } });
+    fenceLine(L, pickId(L, ['privacy_fence', 'picket_fence']), wallSegs[k], wallZ, wallSegs[k + 1], wallZ, { dedupe: fences, opts: { tint: 'cocoa', keep: true } });
   }
   for (let x = -S + 8; x < S; x += 16) {
     if (gaps.some((g) => Math.abs(x - g) < 14)) continue;
@@ -331,7 +331,7 @@ export function layout(lib, seed = 404) {
   woods(ctx, { minX: -S, maxX: S, minZ: -S, maxZ: S }, { count: 900, ids: ['pine_tree', 'tree_round', 'pine_tree', 'bush'], minRoadDist: 50, net });
   L.debugLots = ctx.debugLots;
   // last of all: no fence run may end in the air
-  L.fenceTidy = tidyFences(L, (id) => FENCE_STOPS.test(id));
+  L.fenceTidy = globalThis.process?.env?.NO_TIDY ? 0 : tidyFences(L, (id) => FENCE_STOPS.test(id));
   return L;
 }
 
@@ -424,7 +424,7 @@ function school(ctx) {
       b.rect(fx, fz + hd - inf * 0.75, inf * 0.62, inf * 0.62, Math.PI / 4, SK.solid, { C: ['leaf'], y: 0.01 });
     });
     const fence = pickId(L, ['chainlink_fence', 'picket_fence']);
-    fenceLine(L, fence, fx - 9, fz + hd - 1, fx + 9, fz + hd - 1, { opts: { tint: 'stone' } });
+    fenceLine(L, fence, fx - 9, fz + hd - 1, fx + 9, fz + hd - 1, { opts: { tint: 'stone', keep: true } });
     ctx.ballField = { x: fx, z: fz, hw, hd };
     break;
   }

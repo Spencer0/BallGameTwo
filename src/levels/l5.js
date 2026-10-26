@@ -16,7 +16,7 @@ import { Network } from './city/network.js';
 import { paintNetwork } from './city/surface.js';
 import { Occupancy, occupyNetwork, frameAt, local, fillFrontage, fenceLine, tidyFences } from './city/frontage.js';
 import { SK } from '../render/streets.js';
-import { suburbLot, closeFences, frontageFences, pickId, woods, parkingLot, countryside } from './city/suburb.js';
+import { suburbLot, closeFences, pickId, woods, parkingLot, countryside } from './city/suburb.js';
 import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock, ducks } from './city/lifespec.js';
 
 // buildings a fence may stop against (a yard fence returns to the house; a paddock ends at the barn)
@@ -352,10 +352,9 @@ export function layout(lib, seed = 505) {
     for (let k = 0; k < n; k++) {
       const s = pad + W * (k + 0.5);
       const fr = frameAt(f, s);
-      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: RES[e.tag], first: k === 0, last: k === n - 1, setback: [4.5, 6.5], pool, fenceP: 0.3, fenceIds: ['picket_fence', 'privacy_fence'], fenceTint: 'paper', fenceMode: 'frontage', yardPaint: false }) });
+      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: RES[e.tag], first: k === 0, last: k === n - 1, setback: [4.5, 6.5], pool, fenceP: 0.3, fenceIds: ['picket_fence', 'privacy_fence'], fenceTint: 'paper', fenceMode: 'box', yardPaint: false }) });
     }
-    // fenced back yards close on the lot lines and return to the house corners
-    frontageFences(ctx, f, recs, frameAt);
+    // (fenced back yards are closed boxes behind the house: suburbLot fenceMode 'box')
   }
   closeFences(ctx);
   // old towns are full of big trees: one more in most back yards
@@ -430,7 +429,7 @@ export function layout(lib, seed = 505) {
   trains(ctx, life);
   life.crossings = ctx.crossings || [];
   // last of all: no fence run may end in the air
-  L.fenceTidy = tidyFences(L, (id) => FENCE_STOPS.test(id));
+  L.fenceTidy = globalThis.process?.env?.NO_TIDY ? 0 : tidyFences(L, (id) => FENCE_STOPS.test(id));
   return L;
 }
 

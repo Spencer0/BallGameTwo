@@ -223,7 +223,11 @@ export function fenceLine(L, id, x0, z0, x1, z1, { dedupe = null, opts = {}, ski
       if (dedupe.has(key)) continue;
       dedupe.add(key);
     }
-    if (L.put(id, x, z, { ...opts, yaw, scale: s })) placed++;
+    const it = L.put(id, x, z, { ...opts, yaw, scale: s });
+    if (it) {
+      if (opts.keep) it.keep = true;
+      placed++;
+    }
   }
   return placed;
 }
@@ -235,11 +239,11 @@ export function fenceLine(L, id, x0, z0, x1, z1, { dedupe = null, opts = {}, ski
  * loose end across a gate-sized gap. Runs that end in a lawn are taken back panel by panel; lone panels go.
  * `anchors` tests an item id for "a building a fence may stop against".
  */
-export function tidyFences(L, anchors, { fence = /fence/, gate = 9, stop = 1.6 } = {}) {
+export function tidyFences(L, anchors, { fence = /fence/, gate = 13, stop = 1.6 } = {}) {
   const lib = L.lib;
   const P = [];
   for (const it of L.items) {
-    if (!fence.test(it.id)) continue;
+    if (!fence.test(it.id) || it.keep) continue; // runs placed on purpose on their own (a sound wall, a backstop)
     const t = lib.byId.get(it.id);
     const along0 = t.dims[0] >= t.dims[2];
     const half = (Math.max(t.dims[0], t.dims[2]) * (it.scale || 1)) / 2;
