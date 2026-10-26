@@ -38,7 +38,8 @@ for (const level of LEVELS) {
   const full = simulate(level, 1);
   const typical = simulate(level, 0.55, 7);
   const three = level.target * starRatios(level)[2];
-  const ok = full.d >= three * 1.25 && typical.d >= level.target && full.startCollectible >= 40;
+  // custom star ladders (outdoor levels) put 3★ near the full sweep on purpose; tests/calibrate.mjs checks them in play
+  const ok = full.d >= three * (level.stars ? 0.95 : 1.25) && typical.d >= level.target && full.startCollectible >= 40;
   if (!ok) fail++;
   console.log(
     `${ok ? 'ok ' : 'BAD'} L${level.n} ${level.name.padEnd(15)} objects ${String(full.total).padStart(5)}  start-collectible ${String(full.startCollectible).padStart(4)}  ` +
