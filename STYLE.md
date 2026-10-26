@@ -44,6 +44,12 @@ Source of truth: `tools/blender/lib/palette.py` and `src/render/palette.js` (gen
 | `caramel` | `#D98A4E` | wood, crust |
 | `cocoa` | `#8A4B2F` | dark wood, chocolate |
 | `skin1..4` | `#F6CDA8` `#E0A47A` `#B9784E` `#7A4A2E` | people |
+| `glass` | `#BDEBFA` | windows, glass |
+| `brick` | `#C2513A` | brick buildings |
+| `navy` | `#283A8F` | uniforms, dark blue paint |
+| `mint` | `#A8E6C8` | pale green |
+| `concrete` | `#CFCAC0` | warm concrete, limestone, render (city buildings, sidewalks) |
+| `slate` | `#5F6F8C` | slate roofs, tower glass in shade, steel |
 
 Rules: adjacent parts must differ in value (light/dark), not just hue. Each object uses at most
 4 palette colours (+ ink for eyes/details).

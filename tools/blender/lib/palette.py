@@ -37,6 +37,8 @@ PALETTE = [
     ("brick", "#C2513A"),
     ("navy", "#283A8F"),
     ("mint", "#A8E6C8"),
+    ("concrete", "#CFCAC0"),
+    ("slate", "#5F6F8C"),
 ]
 
 INDEX = {name: i for i, (name, _) in enumerate(PALETTE)}
