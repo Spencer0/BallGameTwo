@@ -419,6 +419,7 @@ export class Life {
       const turn = Math.abs(Math.sin((l.outAng0 - lane.inAng) / 2));
       let w = turn < 0.3 ? 3 : turn > 0.95 ? 0.15 : 1;
       if (l.j !== lane.j && net.edges[l.e].laneIds[l.dir].length > lane.j) w *= 0.3;
+      w *= net.edges[l.e].draw ?? 1; // busy streets pull traffic (Main Street, the highway)
       weights.push(w);
       total += w;
     }

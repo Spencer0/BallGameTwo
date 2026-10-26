@@ -27,6 +27,14 @@ export function paintNetwork(b, net, style = {}) {
         s = Math.max(s, g1);
       }
       if (s < e.len) b.strip(e.poly, e.L, -1.7, 1.7, s, e.len, SK.rail, { C: ['stone', 'cocoa', 'cloud'], y: e.y });
+      // across the road: a concrete crossing panel with the rails running through it
+      for (const [g0, g1] of gaps) {
+        const a = Math.max(0, g0),
+          c = Math.min(e.len, g1);
+        if (c - a < 0.5) continue;
+        b.strip(e.poly, e.L, -2.4, 2.4, a, c, SK.solid, { C: ['stone'], y: e.y + 0.03 });
+        b.strip(e.poly, e.L, -1.7, 1.7, a, c, SK.rail, { C: ['stone', 'stone', 'cloud'], y: e.y + 0.05 });
+      }
       continue;
     }
     if (e.cls === 'path') {

@@ -24,9 +24,9 @@ const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'hous
  * One suburban lot. fr = frame on the property line at the lot's centre (yaw faces the road).
  * e = the street edge (for verge/walk widths). opts: W (frontage), D (depth), first/last (fence ends), pie.
  */
-export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false } = {}) {
+export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'caramel' } = {}) {
   const { L, occ, fences, paint } = ctx;
-  const pool = HOUSE_POOL.filter((id) => L.lib.byId.has(id));
+  const pool = (poolIds || HOUSE_POOL).filter((id) => L.lib.byId.has(id));
   if (!pool.length) return false;
   // reserve the whole lot first: skip it if it would overlap a road, another lot or a building
   // pie lots widen away from the bulb: reserve the rectangle that fits inside the wedge's middle
@@ -51,7 +51,7 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   const t = L.lib.byId.get(house);
   const hw = t.dims[0] / 2,
     hd = t.dims[2] / 2;
-  const setback = 7.5 + L.rand() * 2;
+  const setback = sb ? sb[0] + L.rand() * (sb[1] - sb[0]) : 7.5 + L.rand() * 2;
   const mirror = L.rand() < 0.5 ? -1 : 1; // flip the plan so the street isn't a copy-paste
   const info = HOUSES[house] || { drive: 'side' };
   // the house: front facade at `setback` behind the property line, facing the road
@@ -123,16 +123,24 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
     L.put(id, ox, oz, { yaw: fr.yaw + L.range(-0.6, 0.6) });
   }
   // back yard: fence the sides behind the house and the rear line; fill with the family's stuff
-  const fence = pickId(L, ['privacy_fence', 'picket_fence']);
+  const fence = pickId(L, fenceIds || ['privacy_fence', 'picket_fence']);
   const backStart = -(setback + hd * 2 + 0.8);
-  const fenceTint = 'caramel';
-  if (!pie) {
+  const fenceTint = ft;
+  const fenced = L.rand() < fenceP;
+  let rightRun = null;
+  if (!fenced) {
+    // an open back yard
+  } else if (!pie) {
+    rightRun = [local(fr, W / 2, backStart), local(fr, W / 2, -D)];
     const left = local(fr, -W / 2, backStart),
       leftEnd = local(fr, -W / 2, -D),
       right = local(fr, W / 2, backStart),
       rightEnd = local(fr, W / 2, -D);
     fenceLine2(L, fence, left, leftEnd, fences, fenceTint);
-    if (last) fenceLine2(L, fence, right, rightEnd, fences, fenceTint);
+    if (last) {
+      fenceLine2(L, fence, right, rightEnd, fences, fenceTint);
+      rightRun = null;
+    }
     fenceLine2(L, fence, leftEnd, rightEnd, fences, fenceTint);
   } else {
     // pie lot: radial side fences along the wedge edges, the rear line across the wide end
@@ -194,8 +202,20 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
     const dog = L.put('dog', x, z);
     if (dog) (ctx.yardDogs || (ctx.yardDogs = [])).push({ it: dog, fr, W, z0: backStart, z1: -D });
   }
-  (ctx.lots || (ctx.lots = [])).push({ fr, W, D, setback, gx, driveLen, house });
+  (ctx.lots || (ctx.lots = [])).push({ fr, W, D, setback, gx, driveLen, house, fence, fenceTint, leftAt: fenced && !pie ? local(fr, -W / 2, backStart) : null, rightRun });
   return true;
+}
+
+/** After all lots are down: close the right-hand side fence of any lot whose neighbour never got built. */
+export function closeFences(ctx) {
+  const lots = ctx.lots || [];
+  for (const a of lots) {
+    if (!a.rightRun) continue;
+    const [r0, r1] = a.rightRun;
+    const shared = lots.some((b) => b !== a && b.leftAt && Math.hypot(b.leftAt[0] - r0[0], b.leftAt[1] - r0[1]) < 3);
+    if (!shared) fenceLine2(ctx.L, a.fence, r0, r1, ctx.fences, a.fenceTint);
+    a.rightRun = null;
+  }
 }
 
 function fenceLine2(L, id, [x0, z0], [x1, z1], dedupe, tint) {
@@ -221,7 +241,7 @@ function fenceLine2(L, id, [x0, z0], [x1, z1], dedupe, tint) {
 }
 
 /** A parking lot: stalls painted and filled. Local frame: u across the rows (local x), v along them (local z). */
-export function parkingLot(ctx, cx, cz, w, d, yaw, { fill = 0.6, ids = ['car', 'suv', 'hatchback', 'pickup_truck'], stall = 2.7, depth = 5.4 } = {}) {
+export function parkingLot(ctx, cx, cz, w, d, yaw, { fill = 0.6, ids = ['car', 'suv', 'hatchback', 'pickup_truck'], stall = 2.7, depth = 5.4, tints = null } = {}) {
   const { L, paint } = ctx;
   paint.push((b) => b.rect(cx, cz, w, d, yaw, SK.parking, { P: [stall, depth], C: ['charcoal', 'paper'], uv0: [w / 2, d / 2] }));
   const period = 2 * depth + 6;
@@ -240,7 +260,7 @@ export function parkingLot(ctx, cx, cz, w, d, yaw, { fill = 0.6, ids = ['car', '
         const x = cx + c * lx + s * lz,
           z = cz - s * lx + c * lz;
         // car long axis along the stall (local x); nose in or out
-        cars.push(L.put(id, x, z, { yaw: L.along(id, yaw + Math.PI / 2) + (L.rand() < 0.5 ? Math.PI : 0) }));
+        cars.push(L.put(id, x, z, { yaw: L.along(id, yaw + Math.PI / 2) + (L.rand() < 0.5 ? Math.PI : 0), tint: tints ? L.pick(tints) : undefined }));
       }
     }
   }

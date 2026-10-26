@@ -62,6 +62,20 @@ for (const n of levels) {
       window.__game.debugView = { pos: v.pos, look: v.look, fov: v.fov ?? 50, near: 0.5, far: 5000, noFog: false };
     }, v);
     await page.waitForTimeout(800);
+    if (v.waitTrain) {
+      // time the strip to a train coming through (up to ~4 minutes of game time)
+      await page
+        .waitForFunction(
+          ([x, z]) => {
+            const life = window.__game.session.life,
+              w = window.__game.session.world;
+            return (life?.trains || []).some((m) => m.its.some((i) => i >= 0 && Math.hypot(w.x[i] - x, w.z[i] - z) < 45));
+          },
+          v.waitTrain,
+          { timeout: 240000, polling: 250 },
+        )
+        .catch(() => console.log(`L${n}: no train reached ${v.name}`));
+    }
     for (let k = 0; k < 4; k++) {
       await shot(`motion_${v.name}_${k}`);
       await page.waitForTimeout(500);

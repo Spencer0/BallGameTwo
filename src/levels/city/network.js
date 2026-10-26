@@ -144,6 +144,8 @@ export class Network {
       markings: opts.markings ?? true,
       sidewalks: opts.sidewalks ?? 'both',
       name: opts.name || '',
+      tag: opts.tag || '', // free-form district tag for level code
+      draw: opts.draw ?? 1, // how strongly traffic turns into this street
       y: opts.y ?? 0,
       traffic: opts.traffic ?? true,
       plaza: opts.plaza ?? false,
@@ -239,6 +241,7 @@ export class Network {
     const big = new Set(['arterial', 'avenue', 'crosstown', 'boulevard', 'main']);
     for (const n of N) {
       if (n.deg < 3 || n.signal === 'none') {
+        n.stop = n.deg >= 3; // an unsignalised junction is an all-way stop
         n.signal = false;
         continue;
       }

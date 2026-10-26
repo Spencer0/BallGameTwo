@@ -92,7 +92,7 @@ function satOverlap(a, b) {
 /** Block every road/sidewalk band of the network so buildings stay off them. */
 export function occupyNetwork(occ, net, extra = 0.5) {
   for (const e of net.edges) {
-    const half = e.cls === 'rail' ? 3 : e.cls === 'path' ? e.w / 2 + 0.3 : e.w / 2 + e.verge + e.walk + extra;
+    const half = e.cls === 'rail' ? 6 : e.cls === 'path' ? e.w / 2 + 0.3 : e.w / 2 + e.verge + e.walk + extra;
     const p = e.poly;
     for (let k = 1; k < p.length; k++) {
       const dx = p[k][0] - p[k - 1][0],

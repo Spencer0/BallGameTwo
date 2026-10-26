@@ -10,7 +10,7 @@ import { Network } from './city/network.js';
 import { paintNetwork } from './city/surface.js';
 import { Occupancy, occupyNetwork, frameAt, local, fenceLine } from './city/frontage.js';
 import { SK } from '../render/streets.js';
-import { suburbLot, pickId, woods, parkingLot, court } from './city/suburb.js';
+import { suburbLot, closeFences, pickId, woods, parkingLot, court } from './city/suburb.js';
 import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock } from './city/lifespec.js';
 
 const S = 240;
@@ -197,6 +197,7 @@ export function layout(lib, seed = 404) {
       suburbLot(ctx, fr, e, { W, D: outside ? 36 : 30, first: k === 0, last: k === n - 1 });
     }
   }
+  closeFences(ctx);
   birchGreen(ctx);
   greenbelt(ctx);
   school(ctx);
