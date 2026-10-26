@@ -110,7 +110,8 @@ export class Life {
       const its = m.its.map(inst);
       const pts = m.route;
       const L = cumul(pts);
-      this.movers.push({ its, offs: m.offs, pts, L, len: L[L.length - 1], s: m.s ?? 0, v: m.speed, loop: m.loop ?? true, pause: m.pause || null, pt: 0, y: m.y ?? 0, pitch: m.pitch ?? false, kind: m.kind || 'mover', seg: 1, segs: its.map(() => 1), dead: false, air: m.air ?? false });
+      const pause = m.pause ? { at: [...(m.pause.at || []), ...(m.pause.points || []).map((k) => Math.max(0.01, L[k]))], time: m.pause.time } : null;
+      this.movers.push({ its, offs: m.offs, pts, L, len: L[L.length - 1], s: m.s ?? 0, v: m.speed, loop: m.loop ?? true, pause, pt: 0, y: m.y ?? 0, pitch: m.pitch ?? false, kind: m.kind || 'mover', seg: 1, segs: its.map(() => 1), dead: false, air: m.air ?? false });
     }
     for (const sp of spec.spinners || []) {
       const i = inst(sp.it);

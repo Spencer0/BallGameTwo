@@ -28,6 +28,12 @@ export function paintNetwork(b, net, style = {}) {
     const hw = e.w / 2;
     const s0 = e.trimA || 0,
       s1 = e.len - (e.trimB || 0);
+    if (e.plaza) {
+      // pedestrianised: paved kerb to kerb, sidewalks included
+      const z = hw + e.verge + e.walk;
+      b.strip(e.poly, e.L, -z, z, s0, s1, SK.plaza, { P: [2.2], C: [S.plazaA || 'tomato', S.plazaB || 'flamingo', 'ink_soft'], y: e.y });
+      continue;
+    }
     const centre = e.oneway ? 3 : e.markings ? e.center : 0;
     const park = e.parking === 'angled' ? 5.5 : 0;
     const kind = e.cls === 'lane' && e.dirt ? SK.dirt : SK.road;

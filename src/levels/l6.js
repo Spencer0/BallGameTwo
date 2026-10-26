@@ -1,27 +1,198 @@
-// Level 6 — The Big Tidy: the whole city. Downtown towers, port, airport, stadium, space centre,
-// a ring of outer districts, and clouds overhead for the very end. 4.4 x 4.4 km.
+// Level 6 — The Big Tidy: a city modelled on Manhattan (CITY.md §2).
+// A long island between two rivers: one-way avenues north-south, cross streets every 150 m, a diagonal
+// "Broadway" from the park's south-west corner making bow-tie squares (the midtown one is a plaza of
+// screens), a 600 x 900 m central park, two height peaks (midtown, downtown) with brownstones and
+// tenements on the side streets between, shore drives, piers, three bridges to a row-house borough with
+// an elevated train and a stadium, a container port and an airport across the west river, a harbour with
+// a statue island. Everything is on one connected road network; traffic, crowds, ferries, planes move.
 import { Layout } from './layout.js';
-import { roadPlanes, lotsAlong, streetFurniture } from './streets.js';
+import { Network } from './city/network.js';
+import { paintNetwork } from './city/surface.js';
+import { Occupancy, occupyNetwork, frameAt, local, fillFrontage, fenceLine } from './city/frontage.js';
+import { SK } from '../render/streets.js';
+import { pickId, woods, parkingLot } from './city/suburb.js';
+import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, flock } from './city/lifespec.js';
 
 const S = 2200;
-const OUTER = [
-  { x0: -2100, z0: -1500, x1: 2100, z1: -1500 },
-  { x0: -2100, z0: 1500, x1: 2100, z1: 1500 },
-  { x0: -1500, z0: -2100, x1: -1500, z1: 2100 },
-  { x0: 1500, z0: -2100, x1: 1500, z1: 2100 },
-  { x0: -2100, z0: -500, x1: -1500, z1: -500 },
-  { x0: 1500, z0: 500, x1: 2100, z1: 500 },
-  { x0: -500, z0: 1500, x1: -500, z1: 2100 },
-  { x0: 500, z0: -2100, x1: 500, z1: -1500 },
-];
-const OUT_RW = 36;
-const RW = 34;
-const GRID = [-600, -400, -200, 0, 200, 400, 600];
+const SHORE = 800; // island half-width
+const TIP0 = 1250,
+  TIP1 = 1860; // the island narrows to its tip between these
+const DRIVE_IN = 55; // shore drive distance inside the shoreline
+const AVE_X = [-600, -300, 0, 300, 600];
+const STREET_Z = [];
+for (let z = -2150; z <= 1700; z += 150) STREET_Z.push(z);
+const PARK = { minX: -300, maxX: 300, minZ: -1550, maxZ: -650 };
+const TRANSVERSE = [-1250, -950];
+const PD = 45; // park drive inset
+const BROADWAY = { x0: -300, z0: -650, x1: 600, z1: 1500 };
+const EAST_X0 = 1200; // east bank shoreline
+const WEST_X0 = -1250; // west bank shoreline
+const BRIDGES_Z = [1150, 550, -200];
+const BORO_AVE = [1300, 1500, 1700, 1900, 2100];
+const BORO_Z = [];
+for (let z = -2125; z <= 1250; z += 125) BORO_Z.push(z);
+for (const z of BRIDGES_Z) if (!BORO_Z.includes(z)) BORO_Z.push(z);
+BORO_Z.sort((a, b) => a - b);
+const ELEVATED_X = 1500; // the elevated train runs above this borough avenue
 
-const roads = [];
-for (const g of GRID) {
-  roads.push({ x: 0, z: g, w: 1500, d: RW, y: 0.02, pattern: 'roadx', a: 'charcoal', b: 'paper', cell: RW, offset: [0, -g] });
-  roads.push({ x: g, z: 0, w: RW, d: 1500, y: 0.01, pattern: 'roadz', a: 'charcoal', b: 'paper', cell: RW, offset: [-g, 0] });
+export const islandHalf = (z) => (z < TIP0 ? SHORE : SHORE * Math.sqrt(Math.max(0, 1 - ((z - TIP0) / (TIP1 - TIP0)) ** 2)));
+const driveX = (z) => Math.max(0, islandHalf(z) - DRIVE_IN);
+
+function buildNet() {
+  const net = new Network();
+  const N = (x, z, o) => net.at(x, z, 0.5, o);
+  // --- shore drives: chains through every street end, round the tip
+  const zs = STREET_Z.filter((z) => driveX(z) > 120);
+  const west = [N(-driveX(-2300), -2300, { exit: true })],
+    east = [N(driveX(-2300), -2300, { exit: true })];
+  for (const z of zs) {
+    west.push(N(-driveX(z), z));
+    east.push(N(driveX(z), z));
+  }
+  // tip arc: points round the end of the island, inside the shore
+  const zLast = zs[zs.length - 1];
+  const tipPts = [];
+  const steps = 14;
+  for (let k = 1; k < steps; k++) {
+    const a = -Math.PI / 2 + (Math.PI * k) / steps; // -90..+90 deg
+    const rz = TIP1 - DRIVE_IN - zLast;
+    tipPts.push([Math.sin(a) * driveX(zLast), zLast + Math.cos(a) * rz]);
+  }
+  for (let k = 0; k < west.length - 1; k++) net.edge(west[k], west[k + 1], { cls: 'highway', name: 'West Side Highway', walk: 0 });
+  for (let k = 0; k < east.length - 1; k++) net.edge(east[k + 1], east[k], { cls: 'highway', name: 'East River Drive', walk: 0 });
+  net.edge(west[west.length - 1], east[east.length - 1], { cls: 'highway', name: 'Battery Drive', pts: tipPts, walk: 0 });
+  // --- Broadway crossings
+  const bw = (t) => [BROADWAY.x0 + (BROADWAY.x1 - BROADWAY.x0) * t, BROADWAY.z0 + (BROADWAY.z1 - BROADWAY.z0) * t];
+  const bwZ = (x) => BROADWAY.z0 + ((x - BROADWAY.x0) / (BROADWAY.x1 - BROADWAY.x0)) * (BROADWAY.z1 - BROADWAY.z0);
+  const bwX = (z) => BROADWAY.x0 + ((z - BROADWAY.z0) / (BROADWAY.z1 - BROADWAY.z0)) * (BROADWAY.x1 - BROADWAY.x0);
+  const onBw = (z) => z >= BROADWAY.z0 - 1 && z <= BROADWAY.z1 + 1;
+  // --- avenues: one-way, alternating; stop at the park
+  AVE_X.forEach((x, k) => {
+    const pts = [];
+    for (const z of STREET_Z) {
+      if (Math.abs(x) > driveX(z) - 30) continue;
+      if (x > PARK.minX && x < PARK.maxX && z > PARK.minZ && z < PARK.maxZ && !TRANSVERSE.includes(z)) continue;
+      pts.push(z);
+    }
+    for (const xx of [x]) if (xx > BROADWAY.x0 && xx <= BROADWAY.x1) pts.push(bwZ(xx));
+    pts.sort((a, b) => a - b);
+    const nodes = [N(x, -2300, { exit: true }), ...pts.map((z) => N(x, z))];
+    const north = k % 2 === 0; // alternate: even avenues run north (towards -z)
+    for (let j = 0; j < nodes.length - 1; j++) {
+      const za = net.nodes[nodes[j]].z,
+        zb = net.nodes[nodes[j + 1]].z;
+      // the park interrupts the middle avenue
+      if (x > PARK.minX && x < PARK.maxX && za >= PARK.minZ - 1 && zb <= PARK.maxZ + 1) continue;
+      const a = nodes[j],
+        b = nodes[j + 1];
+      if (north) net.edge(b, a, { cls: 'avenue', name: `${['Eleventh', 'Ninth', 'Fifth', 'Third', 'First'][k]} Avenue` });
+      else net.edge(a, b, { cls: 'avenue', name: `${['Eleventh', 'Ninth', 'Fifth', 'Third', 'First'][k]} Avenue` });
+    }
+  });
+  // --- cross streets: one-way alternating, every fourth two-way crosstown; stop at the park except transverses
+  STREET_Z.forEach((z, k) => {
+    const half = driveX(z);
+    if (half < 120) return;
+    const xs = [-half, half, ...AVE_X.filter((x) => Math.abs(x) < half - 30)];
+    if (TRANSVERSE.includes(z)) xs.push(PARK.minX + PD, PARK.maxX - PD); // they cross the park drive
+    if (onBw(z)) xs.push(bwX(z));
+    xs.sort((a, b) => a - b);
+    const two = k % 4 === 0;
+    const eastbound = k % 2 === 0;
+    for (let j = 0; j < xs.length - 1; j++) {
+      const xa = xs[j],
+        xb = xs[j + 1];
+      const inPark = z > PARK.minZ && z < PARK.maxZ && xa >= PARK.minX - 1 && xb <= PARK.maxX + 1;
+      if (inPark && !TRANSVERSE.includes(z)) continue;
+      const a = N(xa, z),
+        b = N(xb, z);
+      const opts = two || TRANSVERSE.includes(z) ? { cls: 'street', w: 14, walk: 5, verge: 0, name: `${k + 10}th St` } : { cls: 'crosstown', name: `${k + 10}th St` };
+      if (two || TRANSVERSE.includes(z) || eastbound) net.edge(a, b, opts);
+      else net.edge(b, a, opts);
+    }
+  });
+  // --- Broadway: two-way boulevard through all its crossings
+  const cross = [];
+  for (const z of STREET_Z) if (onBw(z) && Math.abs(bwX(z)) < driveX(z) - 20) cross.push(bw((z - BROADWAY.z0) / (BROADWAY.z1 - BROADWAY.z0)));
+  for (const x of AVE_X) if (x > BROADWAY.x0 && x <= BROADWAY.x1) cross.push([x, bwZ(x)]);
+  cross.push([BROADWAY.x0, BROADWAY.z0]);
+  cross.sort((p, q) => p[1] - q[1]);
+  const bwNodes = [];
+  for (const [x, z] of cross) {
+    const id = N(x, z);
+    if (bwNodes[bwNodes.length - 1] !== id) bwNodes.push(id);
+  }
+  // the blocks of Broadway either side of the Fifth Avenue crossing are a pedestrian plaza (Times Square)
+  const px = 0,
+    pz = bwZ(0);
+  for (let j = 0; j < bwNodes.length - 1; j++) {
+    const A = net.nodes[bwNodes[j]],
+      B = net.nodes[bwNodes[j + 1]];
+    const plaza = Math.hypot((A.x + B.x) / 2 - px, (A.z + B.z) / 2 - pz) < 110;
+    net.edge(bwNodes[j], bwNodes[j + 1], { cls: 'boulevard', name: plaza ? 'Broadway Plaza' : 'Broadway', w: 18, traffic: !plaza, plaza });
+  }
+  // --- the park drive: a loop inside the park, crossed by the transverses, joined to the avenues at two gates
+  const xw = PARK.minX + PD,
+    xe = PARK.maxX - PD,
+    zn = PARK.minZ + PD,
+    zsth = PARK.maxZ - PD;
+  const westSide = [zsth, -800, ...TRANSVERSE.slice().sort((a, b) => b - a), zn].map((z) => N(xw, z));
+  const eastSide = [zn, -1400, ...TRANSVERSE.slice().sort((a, b) => a - b), zsth].map((z) => N(xe, z));
+  const drive = { cls: 'lane', w: 9, walk: 0 };
+  for (let j = 0; j < westSide.length - 1; j++) net.edge(westSide[j], westSide[j + 1], { ...drive, name: 'West Drive' });
+  net.edge(westSide[westSide.length - 1], eastSide[0], { ...drive, name: 'Park Drive North' });
+  for (let j = 0; j < eastSide.length - 1; j++) net.edge(eastSide[j], eastSide[j + 1], { ...drive, name: 'East Drive' });
+  net.edge(eastSide[eastSide.length - 1], westSide[0], { ...drive, name: 'Park Drive South' });
+  net.edge(N(PARK.minX, -800), N(xw, -800), { ...drive, name: 'Park Gate' });
+  net.edge(N(xe, -1400), N(PARK.maxX, -1400), { ...drive, name: 'Park Gate' });
+  // --- bridges to the east bank and the borough grid
+  BRIDGES_Z.forEach((z, k) => {
+    net.edge(N(driveX(z), z), N(BORO_AVE[0], z), { cls: 'boulevard', name: ['Brooklyn Bridge', 'Manhattan Bridge', 'Queensboro Bridge'][k], w: 20, walk: 0, y: 0.6 });
+  });
+  BORO_AVE.forEach((x, k) => {
+    const nodes = [N(x, -2300, { exit: true }), ...BORO_Z.filter((z) => z < 1300).map((z) => N(x, z))];
+    for (let j = 0; j < nodes.length - 1; j++) net.edge(nodes[j], nodes[j + 1], { cls: 'street', w: 12, walk: 3, verge: 0, name: `${k + 1} Ave (Boro)` });
+  });
+  for (const z of BORO_Z.filter((z) => z < 1300)) {
+    const nodes = [...BORO_AVE.map((x) => N(x, z)), N(S + 100, z, { exit: true })];
+    for (let j = 0; j < nodes.length - 1; j++) net.edge(nodes[j], nodes[j + 1], { cls: 'street', w: 10, walk: 3, verge: 0, name: 'Boro St' });
+  }
+  // --- west bank: shore road, airport road, port road
+  const wNodes = [];
+  for (let z = -2300; z <= 1250; z += 250) wNodes.push(N(WEST_X0 - 70, z, z === -2300 ? { exit: true } : z + 250 > 1250 ? { bulb: 18 } : {}));
+  for (let j = 0; j < wNodes.length - 1; j++) net.edge(wNodes[j], wNodes[j + 1], { cls: 'arterial', name: 'Shore Road', walk: 0, verge: 0 });
+  net.edge(N(WEST_X0 - 70, -800), N(-1440, -800, { bulb: 20 }), { cls: 'arterial', name: 'Airport Road', walk: 0, verge: 0 });
+  net.edge(N(WEST_X0 - 70, -800 + 1000), N(-2100, 200), { cls: 'street', name: 'Freight Road', walk: 0, verge: 0 });
+  net.edge(N(-2100, 200), N(-S - 100, 200, { exit: true }), { cls: 'street', name: 'Freight Road', walk: 0, verge: 0 });
+  return net.build();
+}
+
+export const net = buildNet();
+
+// ------------------------------------------------------------------ ground: water, island, banks, park
+function landPolys(b) {
+  const pts = [];
+  for (let z = -S - 150; z < TIP0; z += 200) pts.push([-SHORE, z]);
+  for (let k = 0; k <= 24; k++) {
+    const a = -Math.PI / 2 + (Math.PI * k) / 24;
+    pts.push([Math.sin(a) * SHORE, TIP0 + Math.cos(a) * (TIP1 - TIP0)]);
+  }
+  for (let z = TIP0 - 1; z > -S - 150; z -= 200) pts.push([SHORE, z]);
+  // fan from the island's centre (convex enough per half: split into strips)
+  for (let z = -S - 150; z < TIP0; z += 400) {
+    const z1 = Math.min(TIP0, z + 400);
+    b.poly([[-SHORE, z], [SHORE, z], [SHORE, z1], [-SHORE, z1]], SK.solid, { C: ['stone'], y: -1.2 });
+  }
+  const tip = [[-SHORE, TIP0]];
+  for (let k = 0; k <= 24; k++) {
+    const a = -Math.PI / 2 + (Math.PI * k) / 24;
+    tip.push([Math.sin(a) * SHORE, TIP0 + Math.cos(a) * (TIP1 - TIP0)]);
+  }
+  b.poly(tip, SK.solid, { C: ['stone'], y: -1.2 });
+  // banks
+  b.poly([[-S - 400, -S - 400], [WEST_X0, -S - 400], [WEST_X0, 1300], [-S - 400, 1300]], SK.solid, { C: ['stone'], y: -1.2 });
+  b.poly([[EAST_X0, -S - 400], [S + 400, -S - 400], [S + 400, 1350], [EAST_X0, 1350]], SK.solid, { C: ['stone'], y: -1.2 });
+  b.disc(320, 2050, 70, SK.solid, { C: ['leaf'], y: -1.2 });
 }
 
 export const env = {
@@ -31,28 +202,23 @@ export const env = {
     [0.75, 'tangerine'],
     [1, 'butter'],
   ],
-  fog: { near: 1000, far: 2800, k: 70, color: '#FF9E7A' },
+  fog: { near: 600, far: 1700, k: 70, color: '#FF9E7A' },
   groundY: 0,
   planes: [
-    { x: 0, z: 0, w: 20000, d: 20000, y: -2, pattern: 'lawn', a: 'pine', b: '#2A8A5E', cell: 120 },
-    { x: 0, z: 0, w: 2 * S, d: 2 * S, y: -1.5, pattern: 'lawn', a: 'leaf', b: '#47B064', cell: 60 },
-    { x: 0, z: 0, w: 1440, d: 1440, y: -1, pattern: 'tiles', a: '#7A7390', b: '#837C99', c: 'charcoal', cell: 25 },
-    ...roads,
-    // central park
-    { x: -100, z: 100, w: 160, d: 160, y: -0.5, pattern: 'lawn', a: 'lime', b: '#8DCE47', cell: 10 },
-    { x: -100, z: 100, r: 40, y: -0.4, pattern: 'water', a: 'sky', b: '#8AD2F7', cell: 8 },
-    // port water (south)
-    { x: 0, z: 1050, w: 2 * S, d: 500, y: -0.6, pattern: 'water', a: 'cobalt', b: '#5B7BE4', cell: 30 },
-    { x: 0, z: 790, w: 1500, d: 40, y: 0.03, pattern: 'boards', a: 'stone', b: '#A9AEC1', c: 'charcoal', cell: 8 },
-    // airport (west)
-    { x: -1000, z: -100, w: 500, d: 700, y: -0.8, pattern: 'tiles', a: '#7A7390', b: '#837C99', c: 'charcoal', cell: 40 },
-    { x: -1000, z: -100, w: 70, d: 650, y: 0.04, pattern: 'roadz', a: 'charcoal', b: 'snow', cell: 70, offset: [1000, 100] },
-    // stadium plaza (north)
-    { x: 0, z: -950, r: 230, y: -0.6, pattern: 'tiles', a: 'cloud', b: '#E6E9F1', c: 'stone', cell: 20 },
-    ...roadPlanes(OUTER, OUT_RW, { y: -1.2, walkColor: 'stone' }),
-    // space centre (east)
-    { x: 1050, z: -300, w: 400, d: 500, y: -0.7, pattern: 'checks', a: 'sand', b: '#F2D9AE', cell: 50 },
+    { x: 0, z: 0, w: 20000, d: 20000, y: -2.5, pattern: 'water', a: 'cobalt', b: '#5B7BE4', cell: 30 },
+    // central park lawns and lakes
+    { x: (PARK.minX + PARK.maxX) / 2, z: (PARK.minZ + PARK.maxZ) / 2, w: PARK.maxX - PARK.minX - 12, d: PARK.maxZ - PARK.minZ - 12, y: -0.6, pattern: 'lawn', a: 'leaf', b: '#4DB86A', cell: 14 },
+    { x: -60, z: -1380, r: 95, y: -0.4, pattern: 'water', a: 'sky', b: '#8AD2F7', cell: 12 },
+    { x: 120, z: -820, r: 55, y: -0.4, pattern: 'water', a: 'sky', b: '#8AD2F7', cell: 10 },
+    // borough park + stadium plaza
+    { x: 1800, z: -1500, w: 300, d: 360, y: -0.6, pattern: 'lawn', a: 'leaf', b: '#4DB86A', cell: 14 },
+    // airport grass
+    { x: -1830, z: -350, w: 560, d: 2000, y: -0.6, pattern: 'lawn', a: 'lime', b: '#8DCE47', cell: 20 },
   ],
+  streets: (b) => {
+    landPolys(b);
+    paintNetwork(b, net);
+  },
   blocks: [
     { min: [-S - 50, -10, -S - 50], max: [S + 50, 10000, -S], visible: false },
     { min: [-S - 50, -10, S], max: [S + 50, 10000, S + 50], visible: false },
@@ -61,231 +227,390 @@ export const env = {
   ],
 };
 
-// Madame Prudence, city-sized, supervising from beyond the stadium
-env.decor = [{ id: 'char__prudence', x: 400, y: 0, z: -2700, yaw: -0.15, scale: 300, size: 800 }];
+// Madame Prudence, city-sized, supervising from beyond the north end of the island
+env.decor = [{ id: 'char__prudence', x: 400, y: 0, z: -2750, yaw: -0.15, scale: 300, size: 800 }];
 
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
-export const spawn = { x: 300, z: 520, yaw: Math.PI };
+export const spawn = { x: 170, z: 470, yaw: Math.PI };
 
-const TOWERS = ['skyscraper_deco', 'skyscraper_spire', 'skyscraper_twist', 'office_block', 'apartment_tower', 'office_block'];
-const MID = ['office_block', 'apartment_tower', 'apartment_block', 'parking_garage', 'shop_a', 'shop_b', 'cafe', 'bakery'];
-const LOW = ['house_a', 'house_b', 'house_c', 'shop_a', 'shop_b', 'apartment_block', 'garage'];
+// ------------------------------------------------------------------ zoning
+const TOWERS = ['skyscraper_spire', 'skyscraper_deco', 'skyscraper_twist', 'highrise_glass', 'highrise_stone', 'office_block', 'apartment_tower', 'highrise_glass'];
+const MIDRISE = ['midrise_prewar', 'midrise_modern', 'midrise_deco', 'office_block', 'apartment_block', 'tenement', 'midrise_prewar'];
+const WALKUP = ['brownstone', 'brownstone', 'brownstone', 'tenement', 'tenement', 'shop_a', 'cafe', 'bakery'];
+const BORO = ['brownstone', 'brownstone', 'tenement', 'house_c', 'apartment_block', 'shop_a', 'shop_b'];
+
+function zone(x, z, cls) {
+  const midtown = z > -620 && z < 360;
+  const downtown = z > 1000;
+  const parkSide = z > PARK.minZ - 150 && z < PARK.maxZ + 150;
+  const avenue = cls === 'avenue' || cls === 'boulevard';
+  if (x > EAST_X0) return { ids: BORO, gap: 0 };
+  if (downtown) return { ids: avenue ? TOWERS : [...TOWERS, ...MIDRISE], gap: 0 };
+  if (midtown) return { ids: avenue ? TOWERS : [...MIDRISE, 'highrise_glass', 'highrise_stone'], gap: 0 };
+  if (parkSide) return { ids: avenue ? ['midrise_prewar', 'midrise_prewar', 'midrise_deco', 'highrise_stone'] : WALKUP.slice(0, 5), gap: 0 };
+  if (cls === 'highway') return { ids: MIDRISE, gap: 18 };
+  return { ids: avenue ? MIDRISE : WALKUP, gap: 0 };
+}
 
 export function layout(lib, seed = 606) {
   const L = new Layout(lib, seed, { minX: -S + 20, maxX: S - 20, minZ: -S + 20, maxZ: S - 20 });
-  L.clear(spawn.x, spawn.z, 70);
-  // ---- city blocks: towers in the middle, mid-rise around, low-rise at the edge
-  for (let bx = 0; bx < GRID.length - 1; bx++) {
-    for (let bz = 0; bz < GRID.length - 1; bz++) {
-      const cx = (GRID[bx] + GRID[bx + 1]) / 2,
-        cz = (GRID[bz] + GRID[bz + 1]) / 2;
-      if (Math.abs(cx + 100) < 10 && Math.abs(cz - 100) < 10) continue; // central park
-      const x0 = GRID[bx] + RW / 2 + 8,
-        x1 = GRID[bx + 1] - RW / 2 - 8;
-      const z0 = GRID[bz] + RW / 2 + 8,
-        z1 = GRID[bz + 1] - RW / 2 - 8;
-      const ring = Math.max(Math.abs(cx), Math.abs(cz));
-      const kinds = ring < 250 ? TOWERS : ring < 450 ? MID : LOW;
-      const inset = ring < 250 ? 30 : 20;
-      L.row(kinds, x0, z0 + inset, x1, z0 + inset, Math.PI, 10);
-      L.row(kinds, x0, z1 - inset, x1, z1 - inset, 0, 10);
-      L.row(kinds, x0 + inset, z0 + 2 * inset + 10, x0 + inset, z1 - 2 * inset - 10, -Math.PI / 2, 10);
-      L.row(kinds, x1 - inset, z0 + 2 * inset + 10, x1 - inset, z1 - 2 * inset - 10, Math.PI / 2, 10);
-      L.scatterTable(
-        [
-          ['tree_round', 6],
-          ['car', 6],
-          ['city_bus', 1],
-          ['person_adult', 3],
-          ['person_adult2', 3],
-          ['park_bench', 2],
-          ['street_lamp', 3],
-        ],
-        { minX: x0 + 2 * inset, maxX: x1 - 2 * inset, minZ: z0 + 2 * inset, maxZ: z1 - 2 * inset },
-        { pad: 0.6 },
-      );
-    }
-  }
-  // ---- landmarks
-  L.put('observation_tower', 0, 0);
-  L.put('museum_dome', 300, -300, { yaw: 0 });
-  L.put('cathedral', -300, -300, { yaw: 0 });
-  L.put('giant_statue', -100, 100, { yaw: Math.PI });
-  L.put('obelisk', 300, 300);
-  L.put('donut_shop', 500, 100, { yaw: -Math.PI / 2 });
-  L.put('big_wheel', 520, 740, { yaw: 0.4 });
-  L.put('stadium', 0, -950, { yaw: 0 });
-  L.put('rocket_pad', 1100, -350);
-  L.put('factory_chimneys', 900, 200, { yaw: Math.PI / 2 });
-  L.put('factory_chimneys', 1000, 380, { yaw: 0.3 });
-  L.put('radio_mast', 1150, -650);
-  L.put('water_tower', 950, -50);
-  L.put('grain_silo', 880, 520);
-  L.put('lighthouse', -1200, 860, { scale: 1.5 });
-  L.put('bridge_tower', -350, 960, { tint: 'sky' });
-  L.put('bridge_tower', -350, 1160, { tint: 'sky' });
-  // ---- central park
-  L.scatterTable(
-    [
-      ['tree_round', 40],
-      ['pine_tree', 12],
-      ['park_bench', 10],
-      ['person_adult', 14],
-      ['person_kid', 14],
-      ['dog', 8],
-      ['gazebo', 2],
-      ['town_fountain', 1],
-      ['carousel', 1],
-      ['ice_cream_van', 2],
-      ['lemonade_stand', 4],
-    ],
-    { minX: -175, maxX: -25, minZ: 25, maxZ: 175 },
-    { pad: 0.5 },
-  );
-  // ---- port
-  L.put('cruise_ship', -200, 900, { yaw: L.along('cruise_ship', Math.PI / 2) });
-  L.put('cargo_ship', 250, 880, { yaw: L.along('cargo_ship', -Math.PI / 2) });
-  L.put('cargo_ship', 700, 1000, { yaw: L.along('cargo_ship', Math.PI / 2) + 0.2 });
-  for (const x of [-60, 60, 380, 480]) L.put('harbour_crane', x, 830, { yaw: 0 });
-  L.scatterTable(
-    [
-      ['container_stack', 40],
-      ['delivery_van', 10],
-      ['garbage_truck', 4],
-      ['dumpster', 10],
-      ['person_adult', 10],
-    ],
-    { minX: -700, maxX: 700, minZ: 640, maxZ: 775 },
-    { pad: 0.4 },
-  );
-  L.scatterTable(
-    [
-      ['sailboat', 26],
-      ['fishing_boat', 16],
-    ],
-    { minX: -1250, maxX: 1250, minZ: 850, maxZ: 1280 },
-    { pad: 1 },
-  );
-  // ---- airport
-  for (let k = 0; k < 6; k++) L.put('airliner', -900 + (k % 2) * 30, -380 + k * 110, { yaw: -Math.PI / 2 + (k % 2) * 0.3 });
-  L.put('airliner', -1000, -300, { yaw: Math.PI });
-  L.row(['parking_garage', 'office_block'], -780, -420, -780, 220, -Math.PI / 2, 25);
-  L.scatterTable(
-    [
-      ['helicopter', 4],
-      ['delivery_van', 12],
-      ['city_bus', 6],
-      ['traffic_cone', 30],
-      ['container_stack', 6],
-    ],
-    { minX: -1240, maxX: -760, minZ: -440, maxZ: 240 },
-    { pad: 1 },
-  );
-  // ---- stadium surroundings + suburbs + space centre
-  L.scatterTable(
-    [
-      ['person_adult', 30],
-      ['person_adult2', 30],
-      ['person_kid', 20],
-      ['car', 60],
-      ['city_bus', 10],
-      ['ice_cream_van', 4],
-      ['tree_round', 20],
-    ],
-    { minX: -230, maxX: 230, minZ: -1180, maxZ: -720 },
-    { pad: 0.6 },
-  );
-  L.scatterTable(
-    [
-      ['container_stack', 10],
-      ['water_tower', 2],
-      ['grain_silo', 3],
-      ['delivery_van', 8],
-      ['traffic_cone', 20],
-      ['radio_mast', 1],
-    ],
-    { minX: 860, maxX: 1240, minZ: -540, maxZ: -60 },
-    { pad: 1 },
-  );
-  for (const [x0, x1, z0, z1] of [
-    [-1250, -760, 260, 760],
-    [-1250, -760, -1250, -460],
-    [-740, -260, -1250, -700],
-    [260, 1250, -1250, -700],
-    [760, 1250, 40, 760],
-  ])
-    L.scatterTable(
-      [
-        ['house_a', 14],
-        ['house_b', 14],
-        ['house_c', 14],
-        ['apartment_block', 6],
-        ['red_barn', 1],
-        ['tree_round', 50],
-        ['pine_tree', 40],
-        ['car', 20],
-        ['school_bus', 2],
-        ['church', 1],
-        ['shop_a', 4],
-        ['petrol_station', 1],
-        ['windmill', 1],
-        ['person_adult', 8],
-        ['cow', 6],
-      ],
-      { minX: x0, maxX: x1, minZ: z0, maxZ: z1 },
-      { pad: 0.5 },
-    );
-  // ---- the sky: helicopters, blimps, balloons, clouds (the final course)
-  for (let k = 0; k < 6; k++) L.put('helicopter', L.range(-900, 900), L.range(-900, 700), { y: L.range(80, 160) });
-  for (let k = 0; k < 4; k++) L.put('blimp', L.range(-900, 900), L.range(-900, 700), { y: L.range(170, 260), yaw: L.range(0, 6.28) });
-  for (let k = 0; k < 6; k++) L.put('hot_air_balloon', L.range(-1100, 1100), L.range(-1100, 700), { y: L.range(90, 200), scale: L.range(1, 1.6) });
-  // ---- outer districts on the ring roads (the city keeps going)
-  const avoid = [{ x: 0, z: 0, r: 1350 }];
-  const mix = ['house_a', 'house_b', 'house_c', 'apartment_block', 'apartment_block', 'office_block', 'shop_a', 'shop_b', 'apartment_tower', 'parking_garage', 'factory_chimneys', 'red_barn'];
-  lotsAlong(L, OUTER, {
-    spacing: 70,
-    setback: 60,
-    radius: 32,
-    bounds,
-    avoid,
-    lotFn: (L2, x, z, yaw) => {
-      L2.put(L2.pick(mix), x, z, { yaw });
-      const fx = Math.sin(yaw),
-        fz = Math.cos(yaw);
-      const rx = Math.cos(yaw),
-        rz = -Math.sin(yaw);
-      L2.put(L2.pick(['tree_round', 'pine_tree', 'tree_round']), x + fx * 30 - rx * 26, z + fz * 30 - rz * 26, { scale: 1.3 });
-      if (L2.rand() < 0.6) L2.put(L2.pick(['car', 'city_bus', 'delivery_van', 'fire_truck']), x + fx * 34 + rx * 20, z + fz * 34 + rz * 20, { yaw: L2.along('car', yaw) });
-      if (L2.rand() < 0.4) L2.put(L2.pick(['house_a', 'house_b', 'garage', 'shop_b']), x - fx * 34 + rx * 26, z - fz * 34 + rz * 26, { yaw });
-    },
+  L.setCell(60);
+  const occ = new Occupancy(60);
+  occupyNetwork(occ, net, 0.1);
+  L.clear(spawn.x, spawn.z, 45);
+  occ.add({ x: spawn.x, z: spawn.z, hw: 30, hd: 30, yaw: 0 }, 'spawn');
+  const ctx = { L, occ, paint: L.paint, rand: L.rand, lib };
+  const life = (L.life = lifeSpec(net));
+  // reserved: the park, the plaza at the Broadway x Fifth crossing, the airport, the port, the stadium
+  occ.add({ x: (PARK.minX + PARK.maxX) / 2, z: (PARK.minZ + PARK.maxZ) / 2, hw: (PARK.maxX - PARK.minX) / 2 - 4, hd: (PARK.maxZ - PARK.minZ) / 2 - 4, yaw: 0 }, 'park');
+
+  // ---- street walls on every frontage
+  const avail = (ids) => ids.filter((id) => lib.byId.has(id));
+  const order = [...net.frontages].sort((a, b) => {
+    const r = (f) => ({ avenue: 0, boulevard: 0, crosstown: 1, street: 1, highway: 2 })[net.edges[f.e].cls] ?? 3;
+    return r(a) - r(b);
   });
-  streetFurniture(L, OUTER, OUT_RW, { lampEvery: 80, parked: 0.3, hydrants: false, vehicles: ['car', 'city_bus', 'delivery_van', 'garbage_truck'] });
-  // hills of forest and lakeside landmarks beyond the ring
-  L.scatterTable(
-    [
-      ['pine_tree', 220],
-      ['tree_round', 160],
-      ['windmill', 6],
-      ['water_tower', 6],
-      ['radio_mast', 4],
-      ['lighthouse', 2],
-      ['church', 4],
-      ['grain_silo', 6],
-      ['ferris_wheel', 2],
-      ['circus_tent', 2],
-      ['stadium', 1],
-      ['observation_tower', 1],
-      ['big_wheel', 1],
-      ['cathedral', 1],
-      ['museum_dome', 1],
-      ['skyscraper_spire', 3],
-      ['skyscraper_twist', 2],
-      ['skyscraper_deco', 3],
-    ],
-    { minX: -S + 60, maxX: S - 60, minZ: -S + 60, maxZ: S - 60 },
-    { pad: 0.6 },
-  );
-  for (let k = 0; k < 40; k++) L.put('fluffy_cloud', L.range(-S, S), L.range(-S, S), { y: L.range(220, 480), scale: L.range(0.8, 1.8), yaw: L.range(0, 6.28) });
-  for (let k = 0; k < 6; k++) L.put('blimp', L.range(-S, S), L.range(-S, S), { y: L.range(170, 300), yaw: L.range(0, 6.28) });
+  const roofTanks = [];
+  for (const f of order) {
+    const e = net.edges[f.e];
+    if (e.cls === 'lane' || e.y > 0.1) continue; // park drives, bridges
+    const mid = frameAt(f, f.L[f.L.length - 1] / 2);
+    const [ix, iz] = local(mid, 0, -20);
+    if (ix > PARK.minX && ix < PARK.maxX && iz > PARK.minZ && iz < PARK.maxZ) continue;
+    if (Math.abs(ix) > SHORE + 5 && ix < EAST_X0) continue; // over water
+    if (ix < WEST_X0) continue; // the west bank is port and airport
+    const z = zone(ix, iz, e.cls);
+    const ids = avail(z.ids);
+    if (!ids.length) continue;
+    // keep the Broadway plaza open
+    fillFrontage(L, occ, f, {
+      pick: (rem) => {
+        const fit = ids.filter((id) => lib.byId.get(id).dims[0] <= rem + 0.5);
+        return fit.length ? L.pick(fit) : null;
+      },
+      setback: 0.3,
+      gap: () => z.gap + (L.rand() < 0.08 ? 4 : 0.4),
+      step: 6,
+      onPlace: (it) => {
+        if ((it.id === 'tenement' || it.id === 'midrise_prewar') && L.rand() < 0.6) roofTanks.push(it);
+      },
+    });
+  }
+  for (const it of roofTanks) {
+    const t = lib.byId.get(it.id);
+    const tank = pickId(L, ['rooftop_water_tank', 'water_tower']);
+    if (tank === 'water_tower') continue;
+    const c = Math.cos(it.yaw),
+      s = Math.sin(it.yaw);
+    const ox = (L.rand() - 0.5) * t.dims[0] * 0.5,
+      oz = -t.dims[2] * 0.25;
+    L.putOn(it, tank, c * ox + s * oz, -s * ox + c * oz);
+  }
+
+  plaza(ctx, life);
+  centralPark(ctx, life);
+  waterfront(ctx, life);
+  borough(ctx, life);
+  westBank(ctx, life);
+  streetFurniture(ctx);
+
+  // ---- life
+  trafficLights(L, life, net);
+  const laneW = (l) => {
+    const e = net.edges[l.e];
+    return e.cls === 'avenue' || e.cls === 'boulevard' ? 3 : e.cls === 'highway' ? 2.5 : e.cls === 'lane' ? 0.6 : 1;
+  };
+  spawnTraffic(L, life, net, 420, [['taxi', 9], ['car', 4], ['suv', 3], ['hatchback', 2], ['city_bus', 1.2], ['delivery_van', 2], ['food_truck', 0.4], ['police_car', 0.6], ['ambulance', 0.3], ['limo', 0.5], ['garbage_truck', 0.4], ['fire_truck', 0.2], ['pickup_truck', 1]], { laneWeight: laneW, speed: 1 });
+  const walkW = (w) => {
+    const e = net.edges[w.e];
+    const p = w.pts[0];
+    const busy = p[1] > -700 && p[1] < 400 ? 3 : p[1] > 1000 ? 2 : 1;
+    return (e.cls === 'avenue' || e.cls === 'boulevard' ? 1.6 : 1) * busy;
+  };
+  spawnWalkers(L, life, net, 560, { dogs: 0.08, joggers: 0.05, walkWeight: walkW });
+  // the sky: helicopters circling midtown, a blimp over the stadium, the odd balloon, clouds for the end
+  const ring = (cx, cz, r, n = 24) => {
+    const p = [];
+    for (let k = 0; k <= n; k++) p.push([cx + Math.sin((k / n) * Math.PI * 2) * r, cz + Math.cos((k / n) * Math.PI * 2) * r]);
+    return p;
+  };
+  for (const [cx, cz, r, y, s] of [[0, -100, 380, 150, 0], [300, 1350, 300, 130, 900], [-100, -1100, 500, 180, 400]]) {
+    const it = L.put('helicopter', cx + r, cz, { y });
+    if (it) life.movers.push({ its: [it], offs: [0], route: ring(cx, cz, r), speed: 32, y, s, air: true, kind: 'heli' });
+  }
+  const blimp = L.put('blimp', 1800, -800, { y: 260 });
+  if (blimp) life.movers.push({ its: [blimp], offs: [0], route: ring(1800, -1000, 260, 32), speed: 9, y: 260, air: true, kind: 'blimp' });
+  for (let k = 0; k < 40; k++) L.put('fluffy_cloud', L.range(-S, S), L.range(-S, S), { y: L.range(260, 520), scale: L.range(0.8, 1.8), yaw: L.range(0, 6.28) });
   return L;
 }
+
+// ------------------------------------------------------------------ districts
+function plaza(ctx, life) {
+  const { L } = ctx;
+  // Broadway Plaza: crowds milling on the pedestrianised blocks, carts, pigeons
+  for (const e of net.edges) {
+    if (!e.plaza) continue;
+    const [ax, az] = e.poly[0],
+      [bx, bz] = e.poly[e.poly.length - 1];
+    const cx = (ax + bx) / 2,
+      cz = (az + bz) / 2;
+    const yaw = Math.atan2(bx - ax, bz - az);
+    const hd = Math.max(4, e.len / 2 - (e.trimA + e.trimB) / 2 - 6),
+      hw = e.w / 2 + e.walk - 1;
+    const c = Math.cos(yaw),
+      s = Math.sin(yaw);
+    const at = (lx, lz) => [cx + c * lx + s * lz, cz - s * lx + c * lz];
+    for (let k = 0; k < 3; k++) {
+      const [x, z] = at(L.range(-hw * 0.6, hw * 0.6), L.range(-hd * 0.8, hd * 0.8));
+      L.put(pickId(L, ['hot_dog_cart', 'newsstand', 'phone_booth']), x, z, { yaw: yaw + (L.rand() < 0.5 ? 0 : Math.PI) });
+    }
+    const [fx, fz] = at(0, 0);
+    flock(L, life, fx, fz, 8, { r: 5 });
+    for (let k = 0; k < 22; k++) {
+      const id = L.pick(['person_adult', 'person_adult2', 'person_kid', 'person_business', 'person_teen'].filter((i) => L.lib.byId.has(i)));
+      const [x, z] = at(L.range(-hw, hw), L.range(-hd, hd));
+      const it = L.put(id, x, z);
+      if (it) life.grazers.push({ it, cx, cz, yaw, hw, hd, speed: 1.1, still: 0.5 });
+    }
+  }
+}
+
+function centralPark(ctx, life) {
+  const { L, paint, occ } = ctx;
+  const P = PARK;
+  // paths: a looping footpath ring inside the drive, meadow paths, the lakes
+  const ring = [];
+  const inset = 75;
+  const x0 = P.minX + inset,
+    x1 = P.maxX - inset,
+    z0 = P.minZ + inset,
+    z1 = P.maxZ - inset;
+  for (let k = 0; k <= 40; k++) {
+    const t = k / 40;
+    const a = t * Math.PI * 2;
+    ring.push([(x0 + x1) / 2 + Math.sin(a) * (x1 - x0) / 2 * 1.02, (z0 + z1) / 2 + Math.cos(a) * (z1 - z0) / 2 * 1.02]);
+  }
+  paint.push((b) => {
+    const L2 = [0];
+    for (let k = 1; k < ring.length; k++) L2.push(L2[k - 1] + Math.hypot(ring[k][0] - ring[k - 1][0], ring[k][1] - ring[k - 1][1]));
+    b.strip(ring, L2, -3, 3, 0, L2[L2.length - 1], SK.path, { P: [3], C: ['sand', 'caramel'], y: 0 });
+    // the great lawn's ball fields
+    for (const [cx, cz] of [[60, -1080], [150, -1080]]) b.disc(cx, cz, 26, SK.solid, { C: ['caramel'], segs: 4, a0: Math.PI * 0.75, a1: Math.PI * 1.25 + Math.PI * 1.0, y: 0 });
+  });
+  spawnLoopWalkers(L, life, ring.slice(0, -1), 40);
+  // trees in groves, avoiding lakes, paths and fields
+  for (let k = 0; k < 300; k++) {
+    const x = L.range(P.minX + 15, P.maxX - 15),
+      z = L.range(P.minZ + 15, P.maxZ - 15);
+    if (Math.hypot(x + 60, z + 1380) < 105 || Math.hypot(x - 120, z + 820) < 65) continue;
+    if (x > 20 && x < 190 && z > -1120 && z < -1040) continue;
+    if (TRANSVERSE.some((tz) => Math.abs(z - tz) < 14)) continue;
+    if (Math.abs(x - (P.minX + 45)) < 9 || Math.abs(x - (P.maxX - 45)) < 9 || Math.abs(z - (P.minZ + 45)) < 9 || Math.abs(z - (P.maxZ - 45)) < 9) continue;
+    const id = L.rand() < 0.75 ? 'tree_round' : L.rand() < 0.5 ? 'pine_tree' : pickId(L, ['street_tree', 'tree_round']);
+    L.put(id, x, z, { scale: L.range(1.5, 2.4) });
+  }
+  L.put(pickId(L, ['bandshell', 'gazebo']), 0, -980, { yaw: 0 });
+  L.put('carousel', -150, -760);
+  L.put('statue', -60, -1270, { yaw: 0 });
+  for (let k = 0; k < 6; k++) L.put(pickId(L, ['rowboat', 'canoe']), -60 + L.range(-60, 60), -1380 + L.range(-50, 50), { yaw: L.range(0, 6) });
+  for (let k = 0; k < 30; k++) L.put('park_bench', L.range(P.minX + 80, P.maxX - 80), L.range(P.minZ + 80, P.maxZ - 80), { yaw: L.range(0, 6) });
+  flock(L, life, -150, -700, 9, { r: 6 });
+  flock(L, life, 100, -1460, 8, { r: 5 });
+  // horses and carriages on the park drive? a few horses grazing by the stables
+  for (let k = 0; k < 4; k++) {
+    const it = L.put('horse', 220 + L.range(-10, 10), -1480 + L.range(-10, 10));
+    if (it) life.grazers.push({ it, cx: 220, cz: -1480, yaw: 0, hw: 18, hd: 14, speed: 1, still: 0.6 });
+  }
+}
+
+function waterfront(ctx, life) {
+  const { L, paint, occ } = ctx;
+  // piers on the west shore, ferry terminal at the tip, the statue island, ships and ferries
+  for (const z of [-1700, -1100, -500, 100, 700]) {
+    paint.push((b) => b.rect(-SHORE - 60, z, 120, 34, 0, SK.plaza, { P: [4], C: ['stone', 'concrete', 'charcoal'], y: 0 }));
+    L.put(pickId(L, ['pier_shed', 'container_stack']), -SHORE - 62, z, { yaw: -Math.PI / 2 });
+  }
+  L.put('cruise_ship', -SHORE - 70, -1410, { yaw: L.along('cruise_ship', Math.PI / 2) + Math.PI / 2 });
+  L.put('giant_statue', 320, 2050, { yaw: Math.PI + 0.3 });
+  L.put('lighthouse', -1200, 1500, { scale: 1.5 });
+  // ferries: island tip <-> statue island <-> west bank, and across the east river
+  const ferry = pickId(L, ['ferry', 'fishing_boat']);
+  const routes = [
+    { pts: [[0, TIP1 + 40], [200, 1980], [320, 1960], [200, 1980], [0, TIP1 + 40]], speed: 9 },
+    { pts: [[-SHORE - 30, 400], [-1020, 420], [WEST_X0 + 30, 400], [-1020, 380], [-SHORE - 30, 400]], speed: 10 },
+    { pts: [[SHORE + 30, 900], [1000, 920], [EAST_X0 - 30, 900], [1000, 880], [SHORE + 30, 900]], speed: 10 },
+  ];
+  for (const r of routes) {
+    const it = L.put(ferry, r.pts[0][0], r.pts[0][1]);
+    if (it) life.movers.push({ its: [it], offs: [0], route: r.pts, speed: r.speed, loop: true, pause: { points: [0, 2], time: 7 }, kind: 'boat' });
+  }
+  // the harbour: a cargo ship and tugs on slow loops, sailboats
+  const harbour = [];
+  for (let k = 0; k <= 32; k++) harbour.push([-200 + Math.sin((k / 32) * Math.PI * 2) * 700, 2050 + Math.cos((k / 32) * Math.PI * 2) * 120]);
+  const cargo = L.put('cargo_ship', 500, 2050);
+  if (cargo) life.movers.push({ its: [cargo], offs: [0], route: harbour, speed: 7, kind: 'boat' });
+  for (let k = 0; k < 3; k++) {
+    const tug = L.put(pickId(L, ['tugboat', 'fishing_boat']), 0, 2000);
+    if (tug) life.movers.push({ its: [tug], offs: [0], route: harbour, speed: 6, s: 700 + k * 900, kind: 'boat' });
+  }
+  for (let k = 0; k < 10; k++) {
+    const cx = L.range(-900, 900),
+      cz = L.range(1950, 2150);
+    const loop = [];
+    for (let j = 0; j <= 12; j++) loop.push([cx + Math.sin((j / 12) * Math.PI * 2) * 60, cz + Math.cos((j / 12) * Math.PI * 2) * 30]);
+    const it = L.put('sailboat', cx, cz);
+    if (it) life.movers.push({ its: [it], offs: [0], route: loop, speed: 3, kind: 'boat' });
+  }
+  // river traffic: barges and tugs up and down both rivers
+  for (const [x, dir] of [[-1020, 1], [1000, -1]]) {
+    const route = [];
+    for (let z = -2350; z <= 1700; z += 200) route.push([x + dir * 40, z]);
+    for (let z = 1700; z >= -2350; z -= 200) route.push([x - dir * 40, z]);
+    const its = [];
+    for (let k = 0; k < 3; k++) {
+      const it = L.put(pickId(L, ['river_barge', 'fishing_boat']), x, 0);
+      if (it) life.movers.push({ its: [it], offs: [0], route, speed: 6, s: k * 2700, kind: 'boat' });
+    }
+  }
+  // the bridges themselves
+  const bridge = pickId(L, ['suspension_bridge', 'bridge_tower']);
+  BRIDGES_Z.forEach((z) => {
+    if (bridge === 'suspension_bridge') L.put(bridge, (SHORE + EAST_X0) / 2, z, { y: -5.4, yaw: 0 });
+    else for (const x of [880, 1120]) L.put(bridge, x, z, { tint: 'sky' });
+  });
+  // a pier with a ferris wheel and a carousel on the east bank
+  const fw = L.lib.byId.get('ferris_wheel_frame') ? 'split' : null;
+  if (fw) {
+    const frame = L.put('ferris_wheel_frame', EAST_X0 + 80, 1250, { yaw: Math.PI / 2 });
+    const ringT = L.lib.byId.get('ferris_wheel_ring');
+    const axle = L.lib.byId.get('ferris_wheel_frame').axle ?? 19;
+    const ringIt = L.put('ferris_wheel_ring', EAST_X0 + 80, 1250, { yaw: Math.PI / 2, y: axle - ringT.dims[1] / 2 });
+    if (ringIt) life.spinners.push({ it: ringIt, axis: 'z', rate: 0.12 });
+  } else L.put('big_wheel', EAST_X0 + 90, 1250, { yaw: Math.PI / 2 });
+}
+
+function borough(ctx, life) {
+  const { L, paint, occ } = ctx;
+  // stadium + park in the north of the borough, factories by the water, the elevated train
+  L.put('stadium', 1800, -1500, { yaw: 0 });
+  occ.add({ x: 1800, z: -1500, hw: 150, hd: 180, yaw: 0 }, 'stadium');
+  L.put('factory_chimneys', 1330, -600, { yaw: Math.PI / 2 });
+  L.put('factory_chimneys', 1330, 200, { yaw: Math.PI / 2 });
+  L.put('observation_tower', 1650, 300);
+  L.put('museum_dome', 1900, 800, { yaw: -Math.PI / 2 });
+  L.put('rocket_pad', 2050, -400);
+  // elevated train: viaduct segments along the borough avenue, a train looping on top
+  const via = L.lib.byId.get('elevated_viaduct');
+  if (via) {
+    const segL = via.dims[0];
+    for (let z = -S + segL / 2; z < 1250; z += segL) L.put('elevated_viaduct', ELEVATED_X + 9, z, { yaw: Math.PI / 2 });
+    const car = L.lib.byId.get('subway_car');
+    if (car) {
+      const route = [[ELEVATED_X + 6, -S - 200], [ELEVATED_X + 6, 1240], [ELEVATED_X + 12, 1240], [ELEVATED_X + 12, -S - 200]];
+      for (const s0 of [0, 3300]) {
+        const its = [],
+          offs = [];
+        for (let k = 0; k < 4; k++) {
+          its.push(L.put('subway_car', ELEVATED_X + 6, 0, { y: 8.5 }));
+          offs.push(k * (car.dims[0] + 0.8));
+        }
+        life.movers.push({ its, offs, route, speed: 16, s: s0, y: 8.5, kind: 'train' });
+      }
+    }
+  }
+  // borough street walls handled by the frontage fill (zone BORO); people and pigeons in the park
+  flock(L, life, 1800, -1240, 8, { r: 5 });
+}
+
+function westBank(ctx, life) {
+  const { L, paint, occ } = ctx;
+  // airport: runway, taxiway, terminal, tower, hangars, planes at the gates, one taking off on a loop
+  const RX = -1830,
+    R0 = -1300,
+    R1 = 500;
+  paint.push((b) => {
+    b.rect(RX, (R0 + R1) / 2, 60, R1 - R0, 0, SK.runway, { P: [30, R1 - R0], C: ['charcoal', 'paper'], uv0: [0, (R1 - R0) / 2] });
+    b.rect(RX + 120, (R0 + R1) / 2, 25, R1 - R0, 0, SK.asphalt, { C: ['charcoal'] });
+    b.rect(RX + 260, -350, 240, 600, 0, SK.asphalt, { C: ['charcoal'] }); // apron
+  });
+  L.put(pickId(L, ['airport_terminal', 'parking_garage']), -1480, -350, { yaw: -Math.PI / 2 });
+  L.put(pickId(L, ['control_tower', 'radio_mast']), -1560, -720);
+  for (const z of [-1050, -950]) L.put(pickId(L, ['hangar', 'garage']), -1600, z, { yaw: -Math.PI / 2 });
+  for (const z of [-560, -440, -320, -200]) L.put('airliner', -1600, z, { yaw: L.along('airliner', -Math.PI / 2) });
+  // take-off loop: taxi up the taxiway, roll down the runway, climb out over the north, come round again
+  const route = [
+    [RX + 120, 450, 0],
+    [RX + 120, -1250, 0],
+    [RX, -1290, 0],
+    [RX, 300, 0],
+    [RX, 520, 25],
+    [RX, 900, 160],
+    [RX - 300, 1800, 420],
+    [RX + 600, 2600, 600],
+    [RX + 900, 3200, 600],
+  ];
+  for (const s0 of [0, 2200]) {
+    const it = L.put('airliner', RX, 0);
+    if (it) life.movers.push({ its: [it], offs: [0], route, speed: 38, s: s0, loop: false, pitch: true, kind: 'plane' });
+  }
+  // port: cranes on the quay, container stacks, ships at berth
+  for (let k = 0; k < 6; k++) L.put('harbour_crane', WEST_X0 - 20, 850 + k * 70, { yaw: Math.PI / 2 });
+  for (let k = 0; k < 24; k++) L.put('container_stack', -1450 - (k % 4) * 60, 820 + Math.floor(k / 4) * 70, { yaw: Math.PI / 2 * (k % 2) });
+  L.put('cargo_ship', WEST_X0 + 40, 1000, { yaw: L.along('cargo_ship', 0) });
+  L.put('container_stack', -1700, -1700);
+  woods(ctx, { minX: -S, maxX: WEST_X0 - 120, minZ: -S, maxZ: -1500 }, { count: 160, ids: ['pine_tree', 'tree_round'], scale: [2.5, 4] });
+}
+
+function streetFurniture(ctx) {
+  const { L } = ctx;
+  // lamps on every avenue, trees on the side streets, hydrants, subway entrances at avenue corners
+  for (const e of net.edges) {
+    if (e.y > 0.1 || e.walk <= 0) continue;
+    const big = e.cls === 'avenue' || e.cls === 'boulevard';
+    const step = big ? 60 : 32;
+    for (let s = step / 2; s < e.len - 10; s += step) {
+      for (const side of [1, -1]) {
+        const wk = side > 0 ? e.walkR : e.walkL;
+        if (!wk || !wk.has || s < wk.s0 + 4 || s > wk.s1 - 4) continue;
+        let k = 1;
+        while (k < e.L.length - 1 && e.L[k] < s) k++;
+        const t = (s - e.L[k - 1]) / (e.L[k] - e.L[k - 1] || 1);
+        const dx = (e.poly[k][0] - e.poly[k - 1][0]) / (e.L[k] - e.L[k - 1] || 1),
+          dz = (e.poly[k][1] - e.poly[k - 1][1]) / (e.L[k] - e.L[k - 1] || 1);
+        const x = e.poly[k - 1][0] + (e.poly[k][0] - e.poly[k - 1][0]) * t,
+          z = e.poly[k - 1][1] + (e.poly[k][1] - e.poly[k - 1][1]) * t;
+        const off = side * (e.w / 2 + 1.1);
+        const px = x - dz * off,
+          pz = z + dx * off;
+        if (Math.abs(px) > SHORE && px < EAST_X0 && px > WEST_X0) continue;
+        if (big) L.put('street_lamp', px, pz, { yaw: Math.atan2(dz * side, -dx * side) });
+        else L.put(pickId(L, ['street_tree', 'tree_round']), px, pz, { scale: 0.9 });
+        if (L.rand() < 0.08) L.put('fire_hydrant', px + dx * 3, pz + dz * 3);
+      }
+    }
+  }
+  for (const n of net.nodes) {
+    if (n.deg < 4 || !n.signal || L.rand() > 0.35) continue;
+    if (Math.abs(n.x) > SHORE) continue;
+    L.put(pickId(L, ['subway_entrance', 'phone_booth']), n.x + 22, n.z + 16, { yaw: 0 });
+  }
+}
+
+// review views (tests/city_review.mjs)
+export const review = {
+  play: [
+    { name: 'village', x: 170, z: 470, yaw: Math.PI },
+    { name: 'avenue', x: 300, z: 300, yaw: Math.PI },
+    { name: 'plaza', x: 40, z: 120, yaw: Math.PI * 0.85, d: 60 },
+    { name: 'park', x: -300, z: -700, yaw: Math.PI, d: 80 },
+    { name: 'downtown', x: 150, z: 1250, yaw: 0, d: 120 },
+    { name: 'bridge', x: 760, z: 550, yaw: Math.PI / 2, d: 200 },
+  ],
+  aerial: [
+    { name: 'midtown', pos: [700, 700, 900], look: [0, 0, -100] },
+    { name: 'downtown', pos: [-900, 500, 2300], look: [100, 0, 1200] },
+    { name: 'park', pos: [900, 900, -300], look: [0, 0, -1100] },
+  ],
+  map: { cx: 0, cz: 0, half: 2250 },
+  motion: [{ name: 'fifth_ave', pos: [60, 90, 300], look: [0, 0, 180] }],
+};

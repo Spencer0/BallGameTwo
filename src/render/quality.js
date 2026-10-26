@@ -1,8 +1,8 @@
 // Graphics quality tiers + automatic fallback (TECH.md §7).
 export const TIERS = {
-  low: { name: 'low', dpr: 1.0, outlines: false, lodPx: 60, cullPx: 3.0, particles: 0.4, view: 0.6, shadows: false },
-  medium: { name: 'medium', dpr: 1.5, outlines: true, lodPx: 36, cullPx: 2.0, particles: 0.7, view: 0.8, shadows: true },
-  high: { name: 'high', dpr: 2.0, outlines: true, lodPx: 22, cullPx: 1.3, particles: 1.0, view: 1.0, shadows: true },
+  low: { name: 'low', dpr: 1.0, outlines: false, lodPx: 110, cullPx: 3.0, particles: 0.4, view: 0.6, shadows: false },
+  medium: { name: 'medium', dpr: 1.5, outlines: true, lodPx: 70, cullPx: 2.0, particles: 0.7, view: 0.8, shadows: true },
+  high: { name: 'high', dpr: 2.0, outlines: true, lodPx: 45, cullPx: 1.3, particles: 1.0, view: 1.0, shadows: true },
 };
 export const ORDER = ['low', 'medium', 'high'];
 

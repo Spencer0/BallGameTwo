@@ -135,6 +135,7 @@ export class Network {
       name: opts.name || '',
       y: opts.y ?? 0,
       traffic: opts.traffic ?? true,
+      plaza: opts.plaza ?? false,
       pts: opts.pts || [],
     };
     this.edges.push(e);
