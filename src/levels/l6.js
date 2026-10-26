@@ -719,19 +719,19 @@ export function layout(lib, seed = 606) {
     const [x, z] = net.edges[l.e].poly[0];
     let core = 0;
     for (const c of CORES) core = Math.max(core, gauss(x, z, c));
-    return base * (x > EAST_X0 ? 1.4 : 0.5 + 5 * core); // thickest in midtown and the financial district; the borough has its own
+    return base * (x > EAST_X0 || x < WEST_X0 ? 1.4 : 0.5 + 5 * core); // thickest in midtown and the financial district; the borough and Jersey have their own
   };
   spawnTraffic(L, life, net, 1700, [['taxi', 14], ['car', 4], ['suv', 3], ['hatchback', 2], ['city_bus', 1.4], ['delivery_van', 2.4], ['food_truck', 0.4], ['police_car', 0.7], ['ambulance', 0.3], ['limo', 0.6], ['garbage_truck', 0.4], ['fire_truck', 0.2], ['pickup_truck', 0.8]], { laneWeight: laneW, speed: 1 });
   const walkW = (w) => {
     const e = net.edges[w.e];
     const [x, z] = w.pts[0];
     if (x > EAST_X0) return 1.0;
-    if (x < WEST_X0) return 0.15;
+    if (x < WEST_X0) return 0.8;
     let core = 0;
     for (const c of CORES) core = Math.max(core, gauss(x, z, c));
     return (e.cls === 'avenue' || e.cls === 'boulevard' ? 1.6 : 1) * (0.5 + 4 * core + 1.5 * gauss(x, z, VILLAGE));
   };
-  spawnWalkers(L, life, net, 1250, { dogs: 0.07, joggers: 0.05, walkWeight: walkW });
+  spawnWalkers(L, life, net, 1900, { dogs: 0.07, joggers: 0.05, walkWeight: walkW });
   // the sky: helicopters circling, a blimp over the stadium
   const ring = (cx, cz, r, n = 24) => {
     const p = [];
@@ -1256,15 +1256,21 @@ function borough(ctx, life) {
   // cars parked along both curbs of the rowhouse streets
   const parked = ['car', 'suv', 'hatchback', 'car', 'delivery_van'].filter((id) => L.lib.byId.has(id));
   for (const e of net.edges) {
-    if (e.name !== 'Boro St') continue;
+    // every borough street parked up along both kerbs (the avenues a little less: bus stops, hydrants)
+    const boro = e.name === 'Boro St' || (e.name.endsWith(' Ave') && net.nodes[e.a].x > EAST_X0);
+    if (!boro || e.poly.length !== 2) continue;
+    const fill = e.name === 'Boro St' ? 0.55 : 0.35;
     const dx = (e.poly[1][0] - e.poly[0][0]) / e.len,
       dz = (e.poly[1][1] - e.poly[0][1]) / e.len;
     for (const side of [1, -1])
       for (let v = (e.trimA || 0) + 8; v < e.len - (e.trimB || 0) - 8; v += 6.5) {
-        if (L.rand() > 0.2) continue;
-        const u = side * (e.w / 2 - 0.8); // tight to the kerb, clear of the traffic lane
+        if (L.rand() > fill) continue;
+        const u = side * (e.w / 2 - 0.65); // tight to the kerb, clear of the traffic lane
         const id = L.pick(parked);
-        L.put(id, e.poly[0][0] + dx * v - dz * u, e.poly[0][1] + dz * v + dx * u, { yaw: L.along(id, Math.atan2(dx * side, dz * side)), tint: L.pick(['paper', 'cloud', 'stone', 'slate', 'cocoa', 'tomato', 'sky', 'navy']) });
+        const px = e.poly[0][0] + dx * v - dz * u,
+          pz = e.poly[0][1] + dz * v + dx * u;
+        if (!L.fits(px, pz, 1.3)) continue; // a car park's edge, a bus stop: leave the kerb free
+        L.put(id, px, pz, { yaw: L.along(id, Math.atan2(dx * side, dz * side)), tint: L.pick(['paper', 'cloud', 'stone', 'slate', 'cocoa', 'tomato', 'sky', 'navy']) });
       }
   }
   // the stadium in its car park, the park with its lake, factories on the water, the museum, the El
@@ -1281,7 +1287,7 @@ function borough(ctx, life) {
     }
   paint.push((b) => b.rect((px0 + px1) / 2, -460, 4, 3380, 0, SK.path, { P: [2], C: ['concrete', 'stone'], y: -1.1 }));
   spawnLoopWalkers(L, life, [[(px0 + px1) / 2, -2140], [(px0 + px1) / 2, 1220], [(px0 + px1) / 2 + 1, 1220], [(px0 + px1) / 2 + 1, -2140]], 40, ['person_adult', 'person_adult2', 'person_jogger', 'person_kid']);
-  parkingLot(ctx, 1800, -1300, 280, 40, Math.PI / 2, { fill: 0.5 });
+  parkingLot(ctx, 1800, -1300, 172, 40, 0, { fill: 0.5 }); // between the avenues and the streets either side
   L.put('factory_chimneys', 1330, -900, { yaw: Math.PI / 2 });
   L.put('factory_chimneys', 1330, 200, { yaw: Math.PI / 2 });
   L.put('museum_dome', 1900, 800, { yaw: -Math.PI / 2 });
@@ -1406,7 +1412,7 @@ function westBank(ctx, life) {
   // a riverside walk along the Jersey shore
   paint.push((b) => b.rect(WEST_X0 - 12, -250, 6, 2000, 0, SK.path, { P: [3], C: ['concrete', 'stone'], y: -0.08 }));
   const walk = [[WEST_X0 - 12, -1240], [WEST_X0 - 12, 740]];
-  spawnLoopWalkers(L, life, [...walk, [WEST_X0 - 11, 740], [WEST_X0 - 11, -1240]], 30);
+  spawnLoopWalkers(L, life, [...walk, [WEST_X0 - 11, 740], [WEST_X0 - 11, -1240]], 60, ['person_adult', 'person_adult2', 'person_jogger', 'person_kid', 'person_business']);
 }
 
 function streetFurniture(ctx) {

@@ -785,7 +785,6 @@ function highwayStrip(ctx, life) {
   place(pickId(L, ['motel', 'shop_a']), -400, S1 + 6 + 6, Math.PI);
   parkingLot(ctx, -400, S1 + 6 + 12 + 10, 40, 14, 0, { fill: 0.4, tints: PARKED_TINTS });
   place('water_tower', -520, S1 + 40, 0);
-  place('billboard', -680, HWY_Z - 20, Math.PI / 2 + 0.55); // angled to face eastbound drivers
   place('billboard', 640, HWY_Z + 20, -Math.PI / 2 + 0.55);
   // the farm co-op and the feed store on the east edge of town
   place(pickId(L, ['red_barn', 'shop_b']), 600, S1 + 14, Math.PI);
