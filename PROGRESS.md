@@ -1,25 +1,25 @@
 # Progress
 
-_Last updated: during the main build session._
+_Last updated: end of the main build session._
 
 ## Done
 - **Docs**: DESIGN.md (pitch, story, rules, levels, object lists), TECH.md (scale plan), STYLE.md, DECISIONS.md, README.md.
 - **Asset pipeline** (`tools/blender`): palette, part helpers, LOD-by-rebuild, EEVEE toon + Freestyle thumbnails,
   GLB export, budgets; `tools/pack.mjs` (meshopt packs + WASM-free fallback packs, merged catalog);
   `tools/sheet.py` (contact sheet, icon atlas, ASSETS.md).
-- **Assets**: L1 (67), L2 (50), L3 (39) done and reviewed; L4–L6 in progress. Characters: Lint rig, Prudence
-  portraits (3 moods), full-body + in-world Prudence.
+- **Assets**: 248 types across six packs (L1 67, L2 50, L3 39, L4 35, L5 32, L6 25), reviewed on the contact
+  sheet. Characters: Lint rig, Prudence portraits (3 moods), full-body + in-world Prudence.
 - **Engine**: instanced world + grid culling + LOD + blob shadows; crust (merged stuck objects, burial,
   knock-off); ball physics (climb low things from any angle, bumps); follow camera (auto-yaw, quick turn,
   wall collision, scaling fog/view distance); particles; Lint rig; set dressing; inward-facing room walls.
-- **Levels**: layouts for all six (L1–L3 playable and balanced; L4–L6 waiting on their asset packs).
+- **Levels**: all six playable and calibrated in both modes (balance tool + timed bot runs).
 - **UI**: title over a live attract-mode scene, level select, mode sheet, story dialogue, HUD (size bar with
   star ticks, timer, pickup cards with NEW badges, milestone stamps, title card, time warnings), pause,
   settings, results (stars, items, verdict), collection + skins, postcard, ending, rotate prompt,
   perf overlay (triple-tap size readout).
 - **Audio**: synth engine, 7 original songs, material-aware pickup SFX in key, fanfares, UI, Prudence babble.
-- **Tests**: unit (23), audio render check, balance tool, screen tour (3 viewports), playthrough bot,
-  persistence across reload, long-session profiler.
+- **Tests**: unit (23), audio render check, balance tool, screen tour (3 viewports), level tour, playthrough
+  bot (6 levels × 2 modes), timed calibration, finale flow, persistence across reload, long-session profiler.
 
 ## Polish pass 1 (wow / jank review)
 Wow:
@@ -39,11 +39,22 @@ Jank fixed:
 - Release single-page build was corrupted by `$'` sequences in the minified JS → function replacements.
 - Pickup-card strobing during tiny-item bursts → rate-limited, NEW/big pickups always shown.
 
+## Polish pass 2 (wow / jank review)
+Wow:
+- Results count up from the start size while the items pop in one by one; Prudence babbles her verdict.
+- Big pickups (over ~40 % of the ball) give the camera a little kick on top of the shake + fanfare.
+- The finale floats over the tidied city instead of a flat card; first city clear offers "See the finale".
+- Fonts gate the first paint, so the title never flashes in a fallback face.
+Jank fixed:
+- A big ball could hang on the top edge of a thin wall (neither climbing nor standing on it): the bot spent
+  four minutes trapped in the House kitchen. Climbing now continues until the ball is on top.
+- With walls passable the House was far too quick (goal at 15 % of the timer): walls 1.1 → 1.5 m, pace 0.9,
+  growth 0.75, new star ladder; the bot now reaches the goal at ~30 %.
+- Finale used to pop over the City results after 2.6 s, hiding them.
+- Outdoor levels were exhausted in a minute: bigger maps, per-level pace/growth/stars (see DESIGN.md).
+
 ## Next
-- Integrate L4–L6 packs, balance, playthrough all levels both modes.
-- Regenerate icon atlas + ASSETS.md with all assets.
-- 30-minute soak profile; performance pass on the city.
-- Two polish passes; publish artifact.
+- 30-minute soak profile across levels; publish artifact.
 
 ## Known issues
 - Performance numbers come from desktop Chromium + SwiftShader, not a physical iPhone.

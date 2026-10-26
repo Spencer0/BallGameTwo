@@ -20,8 +20,9 @@ seven pieces of music and all sound effects synthesised with Web Audio, rendered
 ### Modes
 - **Zen**: no timer. Roll as long as you like and finish from the pause menu. Reaching the goal size
   passes the level.
-- **Timed**: reach the goal size before time runs out. Stars for going bigger: ★ goal, ★★ 1.4× goal,
-  ★★★ 1.9× goal. After the goal you can keep rolling or tap **Finish**.
+- **Timed**: reach the goal size before time runs out (4 to 10 minutes per level, about 45 in all).
+  ★ for the goal; ★★ and ★★★ for going bigger. The tick marks on the size bar show where they are. After
+  the goal you can keep rolling or tap **Finish**.
 
 Passing a level in either mode unlocks the next. There are six: Crumb Patrol (breakfast table),
 Bedroom Bedlam, House Party, Cul-de-Sac, Small Town and The Big Tidy (the city).
@@ -58,6 +59,8 @@ npm test                        # rules, growth, stars, save/load, songs
 node tools/balance.mjs          # every level reachable at a "typical player" pace, 3★ possible
 node tests/screens.mjs          # screenshots of every screen at iPhone sizes
 node tests/playthrough.mjs      # autopilot plays all 6 levels in both modes
+node tests/calibrate.mjs 3      # timed run to the buzzer: when the goal falls, final stars
+node tests/ending.mjs           # clear the city, watch the finale, check it's saved
 node tests/profile.mjs 30 1,3,6 # 30-minute soak: heap, GPU resources, frame time
 node tests/audio.mjs            # offline-render all music + SFX, check levels/clipping
 ```
