@@ -169,6 +169,7 @@ export function layout(lib, seed = 404) {
       const fr = { x: n.x + Math.sin(a) * R, z: n.z + Math.cos(a) * R, fx: -Math.sin(a), fz: -Math.cos(a), yaw: Math.atan2(-Math.sin(a), -Math.cos(a)) };
       suburbLot(ctx, fr, e, { W: 14, D: 30, pie: { cx: n.x, cz: n.z, a, half: span / lots / 2, R }, first: true, last: true });
     }
+    (ctx.courts || (ctx.courts = [])).push({ x: n.x, z: n.z, r: n.bulb });
     // a basketball hoop at the kerb of most courts
     if (L.rand() < 0.6) {
       const a = mouth + Math.PI + L.range(-0.5, 0.5);
@@ -246,6 +247,13 @@ export function layout(lib, seed = 404) {
     const { fr, W, z0, z1 } = d;
     const [x, z] = local(fr, 0, (z0 + z1) / 2);
     life.grazers.push({ it: d.it, cx: x, cz: z, yaw: fr.yaw, hw: W / 2 - 1.2, hd: Math.max(1, (z0 - z1) / 2 - 1), speed: 1.4, still: 0.5 });
+  }
+  // kids riding and running round the turning circles; a parent watching from a driveway
+  for (const c of ctx.courts || []) {
+    const ring = [];
+    for (let k = 0; k < 16; k++) ring.push([c.x + Math.sin((k / 16) * Math.PI * 2) * (c.r - 2.2), c.z + Math.cos((k / 16) * Math.PI * 2) * (c.r - 2.2)]);
+    spawnLoopWalkers(L, life, ring, 2 + Math.floor(L.rand() * 2), ['person_kid', 'person_kid', 'person_teen'], { speed: [1.6, 2.8], dogs: 0.2 });
+    if (L.rand() < 0.5) L.put(pickId(L, ['bicycle', 'tricycle']), c.x + L.range(-3, 3), c.z + L.range(-3, 3), { yaw: L.range(0, 6.28) });
   }
   // kids playing in a few front yards
   for (const lot of (ctx.lots || []).filter(() => L.rand() < 0.12)) {

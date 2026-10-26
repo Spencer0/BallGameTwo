@@ -97,3 +97,32 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
   real phone.
 - The finale isn't forced on the player: the first City clear adds a "See the finale" button to the results
   screen (instead of the story popping over the results after a delay).
+
+## Living cities (owner feedback round 2: "make the cities feel real and alive")
+- **Definition of done** is a four-reviewer panel (urban planner, art director, life & simulation, QA skeptic)
+  reading the same evidence (`tests/city_review.mjs`: gameplay views, aerials, maps, motion strips, stats)
+  against `tests/review_panel.md`; every reviewer must PASS L4–L6. Round reports are kept in `build/panel/`.
+- **Everything sits on a road network** (`src/levels/city/network.js`): edges with road classes, junction
+  trims and patches, cul-de-sac bulbs, lanes with connectors, sidewalks with crossings and lot frontages.
+  Buildings, lots and fences are placed against frontages with an oriented-rectangle occupancy map, so
+  nothing overlaps a road or another lot, and no street simply stops (dead ends are bulbs or map exits).
+- **Each level is modelled on a real kind of place** (CITY.md §2): L4 a 1990s curvilinear subdivision
+  (collector loop, lollipop, crescent, courts with pie lots, one signalised entrance off the arterial);
+  L5 a Midwestern county seat (courthouse square, Main Street, river with three bridges, double-track
+  main line, farms on section roads); L6 Manhattan (grid north of Houston, older angled streets downtown,
+  Central Park as one superblock, bridges to a rowhouse borough and the Jersey shore).
+- **Life is simulated, not animated**: cars follow lanes, keep gaps, queue at signals and all-way stops,
+  wait at level crossings while trains pass, stop for the ball; walkers use sidewalks and crosswalks;
+  grazers (dogs, kids, crowds, stock) wander bounded areas; movers run trains, boats, planes, horses.
+  Streets carry a `draw` weight so traffic concentrates where a real town's would (Main Street, Route 9,
+  the avenues) instead of spreading evenly.
+- **Crosswalk policy**: suburbs and towns paint zebras only at signals (or where marked); other corners get
+  a stop line. Small-town Main Street has one light (at the square) and four-way stops elsewhere.
+- **Colour**: buildings in the city take only stone/brick/glass variants; pastel variants stay for props.
+  Parked cars use a muted palette so a full street doesn't read as confetti.
+- **Water is one language**: the same streak shader on rivers, lakes and park ponds; banks are sand
+  ribbons; rivers are spline ribbons with varying width, narrowing and squaring up at bridges.
+- **Fences**: suburban back yards are fenced; old-town lots mostly open (a quarter fenced, white pickets).
+  A post-pass closes the side fence of any lot whose neighbour was never built, so runs never end in the air.
+- **Performance**: far-box impostors now also cover vehicles, sheds, bins and fence panels (anything box-like
+  that fills its box), which halved the triangle count of the farm/town level.
