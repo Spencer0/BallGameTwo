@@ -464,6 +464,28 @@ function stripMall(ctx) {
     const apron = art.verge + art.walk;
     paint.push((b) => b.rect(p.x + (p.lot ? t.dims[0] / 2 - 2 : 0), prop - apron / 2, 6, apron, 0, SK.drive, { C: ['cloud', 'cloud', 'stone'], y: 0.01 }));
   }
+  // past the subdivision Maple Avenue is commercial strip on both sides as far as the haze: pads, lots,
+  // a gas station or two, each building behind its own parking in front
+  const strip = ['strip_mall', 'supermarket', 'diner', 'cafe', 'shop_a', 'shop_b', 'post_office', 'bakery', 'petrol_station', 'strip_mall'].filter((id) => L.lib.byId.has(id));
+  const apron = art.verge + art.walk;
+  for (const side of [1, -1])
+    for (const dir of [-1, 1]) {
+      let x = dir * (S + 14);
+      while (Math.abs(x) < 640) {
+        const id = L.pick(strip);
+        const t = L.lib.byId.get(id);
+        const w = t.dims[0],
+          cx = x + (dir * w) / 2;
+        const lot = id !== 'petrol_station' && L.rand() < 0.8;
+        const deep = 16;
+        const off = prop - ART_Z + (lot ? deep + 1 : 4) + t.dims[2] / 2;
+        L.put(id, cx, ART_Z + side * off, { yaw: side > 0 ? Math.PI : 0 });
+        paint.push((b) => b.rect(cx, ART_Z + side * off, w + 6, t.dims[2] + 6, 0, SK.solid, { C: ['concrete'], y: -0.06 }));
+        if (lot) parkingLot(ctx, cx, ART_Z + side * (prop - ART_Z + 0.5 + deep / 2), deep, Math.max(w, 14), Math.PI / 2, { fill: 0.45, tints: ['paper', 'cloud', 'stone', 'slate', 'cocoa', 'tomato', 'sky'] });
+        paint.push((b) => b.rect(cx, ART_Z + side * (prop - ART_Z - apron / 2), 6, apron, 0, SK.drive, { C: ['cloud', 'cloud', 'stone'], y: 0.01 }));
+        x += dir * (w + 6 + L.rand() * 10);
+      }
+    }
 }
 
 // review views (tests/city_review.mjs)
