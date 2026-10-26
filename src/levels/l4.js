@@ -261,7 +261,7 @@ export function layout(lib, seed = 404) {
   }
 
   // farmland and woodlots round the subdivision, out to the horizon
-  countryside(ctx, net, { inner: S, outer: S + 780, cell: 120, trees: 0.3 });
+  countryside(ctx, net, { inner: S, outer: S + 780, cell: 120, trees: 0.3, y: -0.1 });
   // woods beyond the back fences, to the map edge (and beyond, in the fog)
   woods(ctx, { minX: -S, maxX: S, minZ: -S, maxZ: S }, { count: 900, ids: ['pine_tree', 'tree_round', 'pine_tree', 'bush'], minRoadDist: 46, net });
   return L;

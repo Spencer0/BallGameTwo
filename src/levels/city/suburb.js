@@ -337,7 +337,7 @@ const FARM_CROPS = [['sun', 'butter'], ['leaf', 'lime'], ['caramel', 'sand'], ['
  * Farmland beyond the play area, out to the horizon: a grid of fields (painted), hedgerows and woodlots,
  * clear of the roads that leave the map. avoid(x, z, half) -> true skips a cell (rivers, lakes).
  */
-export function countryside(ctx, net, { inner, outer, cell = 130, trees = 0.18, avoid = null } = {}) {
+export function countryside(ctx, net, { inner, outer, cell = 130, trees = 0.18, avoid = null, y = -0.15 } = {}) {
   const { L, paint } = ctx;
   for (let x = -outer; x < outer; x += cell)
     for (let z = -outer; z < outer; z += cell) {
@@ -355,7 +355,7 @@ export function countryside(ctx, net, { inner, outer, cell = 130, trees = 0.18, 
       }
       if (r > 0.2) {
         const [a, b] = L.pick(FARM_CROPS);
-        paint.push((bb) => bb.rect(cx, cz, w, w, L.rand() < 0.5 ? 0 : Math.PI / 2, SK.field, { P: [2.4], C: [a, b], y: -0.15 }));
+        paint.push((bb) => bb.rect(cx, cz, w, w, L.rand() < 0.5 ? 0 : Math.PI / 2, SK.field, { P: [2.4], C: [a, b], y }));
       }
       if (L.rand() < trees) {
         const along = L.rand() < 0.5;
