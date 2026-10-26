@@ -6,7 +6,7 @@ import path from 'node:path';
 import * as esbuild from 'esbuild';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const DIST = path.join(ROOT, 'dist');
+const DIST = process.env.DIST ? path.resolve(process.env.DIST) : path.join(ROOT, 'dist');
 const dev = process.argv.includes('--dev');
 fs.mkdirSync(DIST, { recursive: true });
 
@@ -31,7 +31,10 @@ const full = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8">\n${t
   .replace('<!--STYLE-->', '<link rel="stylesheet" href="style.css">')
   .replace(/<div id="app">[\s\S]*<!--SCRIPT-->/, (m) => `</head><body>\n${m.replace('<!--SCRIPT-->', '<script src="game.js"></script>')}`)}\n</body></html>\n`;
 fs.writeFileSync(path.join(DIST, 'index.html'), full);
-const frag = tpl.replace('<!--STYLE-->', `<style>\n${css}</style>`).replace('<!--SCRIPT-->', `<script>${js.replace(/<\/script/g, '<\\/script')}</script>`);
+// function replacements: the minified JS contains `$'`/`$&` sequences that string replacements would expand
+const frag = tpl
+  .replace('<!--STYLE-->', () => `<style>\n${css}</style>`)
+  .replace('<!--SCRIPT-->', () => `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`);
 fs.writeFileSync(path.join(DIST, 'artifact.html'), frag);
 
 // assets

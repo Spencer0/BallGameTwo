@@ -36,11 +36,13 @@ export class FollowCamera {
     this.clip = 1; // smoothed camera-collision distance factor
   }
 
-  reset(ball, yaw) {
+  reset(ball, yaw, intro = 2.6) {
     this.yaw = yaw;
     this.camR = ball.r;
     this.first = true;
     this.turnLeft = 0;
+    this.introT = intro; // level-start swoop from high above
+    this.introLen = intro;
   }
 
   quickTurn() {
@@ -106,6 +108,22 @@ export class FollowCamera {
     }
     // keep the camera above the ground plane
     if (cam.position.y < this.target.y + R * 0.6) cam.position.y = this.target.y + R * 0.6;
+    // intro swoop: start high and far, ease down into the follow position
+    if (this.introT > 0) {
+      this.introT -= dt;
+      const t = Math.max(0, Math.min(1, 1 - this.introT / this.introLen));
+      const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const k = 1 - e;
+      const a = this.yaw + k * 1.2; // swing around a little as it descends
+      const hx = bx - Math.sin(a) * R * 34,
+        hy = by + R * 30,
+        hz = bz - Math.cos(a) * R * 34;
+      cam.position.x = hx + (cam.position.x - hx) * e;
+      cam.position.y = hy + (cam.position.y - hy) * e;
+      cam.position.z = hz + (cam.position.z - hz) * e;
+      this.target.x = bx + (this.target.x - bx) * e;
+      this.target.z = bz + (this.target.z - bz) * e;
+    }
     if (this.shakeT > 0) {
       this.shakeT -= dt;
       const a = this.shakeAmp * this.camR * Math.max(0, this.shakeT / 0.35);

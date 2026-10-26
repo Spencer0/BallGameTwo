@@ -24,7 +24,7 @@ export const env = {
     { x: 0, z: -35, w: ROAD, d: 170, y: 0, pattern: 'roadz', a: 'charcoal', b: 'paper', cell: ROAD, offset: [0, 35] },
     { x: 0, z: -60, w: 2 * S, d: ROAD, y: 0.002, pattern: 'roadx', a: 'charcoal', b: 'paper', cell: ROAD, offset: [0, 60] },
     { x: 0, z: 55, r: 16, y: 0.001, pattern: 'solid', a: 'charcoal' },
-    { x: 0, z: 55, r: 5.5, y: 0.004, pattern: 'lawn', a: 'lime', b: '#8DCE47', cell: 2 },
+    { x: 0, z: 55, r: 5.5, y: 0.004, pattern: 'solid', a: 'lime' },
     // park
     { x: -75, z: -95, w: 80, d: 40, y: -0.01, pattern: 'lawn', a: '#7FCB4E', b: 'lime', cell: 4 },
     { x: -80, z: -95, r: 10, y: -0.005, pattern: 'solid', a: 'sand' },

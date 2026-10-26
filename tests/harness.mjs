@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.glb': 'model/gltf-binary', '.png': 'image/png' };
 
-export function serve(dir = path.join(ROOT, 'dist'), port = 0) {
+export function serve(dir = process.env.TEST_DIST ? path.resolve(process.env.TEST_DIST) : path.join(ROOT, 'dist'), port = 0) {
   return new Promise((resolve) => {
     const srv = http.createServer((req, res) => {
       const u = decodeURIComponent(new URL(req.url, 'http://x').pathname);
