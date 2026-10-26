@@ -20,6 +20,11 @@ export class Autopilot {
     this.wanderT = 0;
     this.banned = new Map(); // instance -> time until which it is ignored (unreachable)
     this.t = 0;
+    this.bestD = 0;
+    this.bestT = 0;
+    this.explore = 0; // seconds left heading to a far exploration point
+    this.ex = 0;
+    this.ez = 0;
   }
 
   update(dt) {
@@ -45,9 +50,26 @@ export class Autopilot {
       this.lastPos.z = b.pos.z;
       this.stuckT = 0;
     }
+    // frustration: no growth for a while -> go exploring somewhere far away
+    if (b.diameter > this.bestD * 1.02) {
+      this.bestD = b.diameter;
+      this.bestT = this.t;
+    } else if (this.t - this.bestT > 40 && this.explore <= 0) {
+      const B = s.level.mod.bounds;
+      this.ex = B.minX + Math.random() * (B.maxX - B.minX);
+      this.ez = B.minZ + Math.random() * (B.maxZ - B.minZ);
+      this.explore = 10;
+      this.bestT = this.t;
+      this.banned.clear();
+    }
     let dirX = 0,
       dirZ = 0;
-    if (this.escape > 0) {
+    if (this.explore > 0 && this.escape <= 0) {
+      this.explore -= dt;
+      dirX = this.ex - b.pos.x;
+      dirZ = this.ez - b.pos.z;
+      if (Math.hypot(dirX, dirZ) < b.r * 3) this.explore = 0;
+    } else if (this.escape > 0) {
       this.escape -= dt;
       dirX = Math.sin(this.escapeDir);
       dirZ = Math.cos(this.escapeDir);
