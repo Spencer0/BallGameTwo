@@ -766,9 +766,9 @@ export class Life {
               if (this.nearAgent(this.carHash, sx, sz, 11, (c) => c.v > 0.6) || this.railBusy(sx, sz)) wait = true;
             }
           }
-          if (wait) {
-            p.next = lk; // keep the same crossing in mind; look again in a moment
-            p.pause = 0.35;
+          if (wait || (Math.random() < 0.15 && !scared)) {
+            p.next = lk; // keep the same crossing in mind; look again in a moment (or after a dawdle)
+            p.pause = wait ? 0.35 : 1 + Math.random() * 3;
           } else {
             p.next = null;
             p.cross = { x0: w.x[i], z0: w.z[i], x1: q[0], z1: q[1], t: 0, len: Math.max(0.5, len2), walk: lk.w, end: lk.end };
@@ -776,8 +776,8 @@ export class Life {
         } else {
           p.dir = -p.dir; // turn around (or loop paths)
           if (p.path && p.path.loop) p.s = end === 0 ? len : 0;
+          if (Math.random() < 0.15 && !scared) p.pause = 1 + Math.random() * 3;
         }
-        if (Math.random() < 0.15 && !scared) p.pause = 1 + Math.random() * 3;
       }
       if (!p.cross) {
         at(wk.pts, wk.L, p.s, p);
@@ -789,7 +789,7 @@ export class Life {
       }
     }
     this.pose(p, speed * dt);
-    if (!scared && Math.random() < dt * 0.02) p.pause = 2 + Math.random() * 4;
+    if (!scared && !p.cross && Math.random() < dt * 0.02) p.pause = 2 + Math.random() * 4; // never stop for a chat in the road
   }
 
   /** waddle: tilt side to side and bob as they walk */
