@@ -178,7 +178,7 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       fenceLine2(L, fence, P2(1, backStart - dep), P2(1, backStart), fences, fenceTint, occ);
       // returns from the house's back corners out to the box (the driveway side has none: the box hugs the
       // wall there, and the gap between them is the gate)
-      for (const sg of [-1, 1]) if (!sideDriveGate(sg) && half(sg) - hw > 1.2) fenceLine2(L, fence, local(fr, sg * (hw + 0.1), backStart), P2(sg, backStart), fences, fenceTint, occ);
+      for (const sg of [-1, 1]) if (!sideDriveGate(sg) && half(sg) - hw > 1.6) fenceLine2(L, fence, local(fr, sg * (hw + 0.5), backStart), P2(sg, backStart), fences, fenceTint, occ);
     }
   } else if (fenced && !pie && fenceMode === 'frontage') {
     // the block's fences are drawn once all its lots are down (frontageFences); here just the returns from

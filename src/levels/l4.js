@@ -229,14 +229,15 @@ export function layout(lib, seed = 404) {
   const art = net.edges.find((e) => e.cls === 'arterial');
   const wallZ = ART_Z - (art.w / 2 + art.verge + art.walk) - 0.6;
   const gaps = [];
-  for (const n of net.nodes) if (Math.abs(n.z - ART_Z) < 1 && n.deg >= 3) gaps.push(n.x);
-  gaps.sort((a, b) => a - b);
-  const wallSegs = [-S, ...gaps.flatMap((x) => [x - 9, x + 9]), S];
+  for (const n of net.nodes) if (Math.abs(n.z - ART_Z) < 1 && n.deg >= 3) gaps.push([n.x, 9]);
+  gaps.push([willow[0][0] + 0.4, 2.2]); // a gate where Willow Walk comes through to the avenue
+  gaps.sort((a, b) => a[0] - b[0]);
+  const wallSegs = [-S, ...gaps.flatMap(([x, h]) => [x - h, x + h]), S];
   for (let k = 0; k < wallSegs.length; k += 2) {
     fenceLine(L, pickId(L, ['privacy_fence', 'picket_fence']), wallSegs[k], wallZ, wallSegs[k + 1], wallZ, { dedupe: fences, opts: { tint: 'cocoa', keep: true } });
   }
   for (let x = -S + 8; x < S; x += 16) {
-    if (gaps.some((g) => Math.abs(x - g) < 14)) continue;
+    if (gaps.some(([g]) => Math.abs(x - g) < 14)) continue;
     const r = { x, z: wallZ - 3.5, hw: 1.5, hd: 1.5, yaw: 0 };
     if (occ.hits(r)) continue;
     occ.add(r, 'tree');
@@ -280,7 +281,7 @@ export function layout(lib, seed = 404) {
   trafficLights(L, life, net);
   stopSigns(L, net);
   const artW = (l) => (net.edges[l.e].cls === 'arterial' ? 2.6 : net.edges[l.e].name === 'Maple Loop' ? 3 : 1.4);
-  spawnTraffic(L, life, net, 150, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 3], ['delivery_van', 1.5], ['mail_truck', 1], ['motorcycle', 1], ['police_car', 0.4], ['garbage_truck', 0.4], ['ice_cream_van', 0.4], ['school_bus', 0.3]], { laneWeight: artW });
+  spawnTraffic(L, life, net, 150, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 3], ['delivery_van', 1.5], ['mail_truck', 1], ['police_car', 0.4], ['garbage_truck', 0.4], ['ice_cream_van', 0.4], ['school_bus', 0.3]], { laneWeight: artW });
   spawnWalkers(L, life, net, 110, { dogs: 0.3, walkWeight: (w) => (net.edges[w.e].cls === 'arterial' ? 0.4 : net.edges[w.e].name.endsWith('Court') ? 2 : 1) });
   if (ctx.pondPath) spawnLoopWalkers(L, life, ctx.pondPath, 10);
   if (ctx.pondC) {

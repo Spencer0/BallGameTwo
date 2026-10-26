@@ -828,6 +828,35 @@ function blockYard(ctx, x0, x1, z0, z1, boro = false) {
         b.rect(px, pz, along ? 0.3 : dep, along ? dep : 0.3, 0, SK.solid, { C: ['cocoa'], y: -0.18 });
       }
     });
+    // deep blocks get a mews down the spine: a cobbled lane lined both sides with small houses, so the
+    // block reads built-up rather than as a field of back gardens
+    if (dep > 70) {
+      const ids = ['brownstone', 'brownstone', 'tenement'].filter((id) => L.lib.byId.has(id));
+      L.paint.push((b) => b.rect(cx, cz, along ? len - 4 : 7, along ? 7 : len - 4, 0, SK.plaza, { P: [1.4], C: ['stone', 'concrete', 'ink_soft'], y: -0.15 }));
+      for (const side of [-1, 1])
+        for (let t = -len / 2 + 6; t < len / 2 - 6; ) {
+          const id = L.pick(ids);
+          const tt = L.lib.byId.get(id);
+          const sc = id === 'tenement' ? 0.6 : 0.75;
+          const w = tt.dims[0] * sc,
+            d = tt.dims[2] * sc;
+          if (t + w > len / 2 - 6) break;
+          if (L.rand() < 0.15) {
+            t += w + 3; // a gap: a garden gate onto the lane
+            continue;
+          }
+          const u = side * (3.5 + d / 2);
+          const [px, pz] = at(t + w / 2, u);
+          // facing the lane: the houses on the +u side face -u and vice versa
+          const yaw = along ? (side > 0 ? Math.PI : 0) : side > 0 ? -Math.PI / 2 : Math.PI / 2;
+          const r = { x: px, z: pz, hw: along ? w / 2 : d / 2, hd: along ? d / 2 : w / 2, yaw: 0 };
+          if (!occ.hits(r)) {
+            occ.add(r, 'bld');
+            L.put(id, px, pz, { yaw, scale: sc, tint: L.pick(['brick', 'cocoa', 'sand', 'caramel', 'concrete']) });
+          }
+          t += w + 0.2;
+        }
+    }
     for (const y of yards) {
       const r = L.rand();
       const u = (y.side * dep) / 4 + L.range(-dep / 10, dep / 10);

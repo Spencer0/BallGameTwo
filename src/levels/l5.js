@@ -405,7 +405,7 @@ export function layout(lib, seed = 505) {
     if (bySquare(e)) return 9;
     return e.cls === 'arterial' ? 2 : e.cls === 'main' ? 6 : e.cls === 'lane' ? 0.35 : e.tag === 'river' || e.tag === 'water' ? 1.4 : 1;
   };
-  spawnTraffic(L, life, net, 260, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 6], ['delivery_van', 1.5], ['mail_truck', 0.6], ['tractor', 0.6], ['school_bus', 0.4], ['police_car', 0.3], ['motorcycle', 0.8], ['garbage_truck', 0.3], ['fire_truck', 0.15]], { laneWeight: laneW });
+  spawnTraffic(L, life, net, 260, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 6], ['delivery_van', 1.5], ['mail_truck', 0.6], ['tractor', 0.6], ['school_bus', 0.4], ['police_car', 0.3], ['garbage_truck', 0.3], ['fire_truck', 0.15]], { laneWeight: laneW });
   spawnWalkers(L, life, net, 280, {
     dogs: 0.2,
     walkWeight: (w) => {
@@ -436,7 +436,7 @@ export function layout(lib, seed = 505) {
 // ------------------------------------------------------------------ downtown
 function storeTint(L) {
   // brick, painted brick and stone: the warm range of a Main Street, not a candy shop
-  const T = ['tomato', 'brick', 'caramel', 'cocoa', 'sand', 'stone', 'paper', 'tomato', 'brick'];
+  const T = ['brick', 'brick', 'caramel', 'cocoa', 'sand', 'stone', 'brick', 'cocoa'];
   return () => {
     const t = L.pick(T);
     return t;
@@ -1127,7 +1127,7 @@ function field(ctx, life, cx, cz, w, d) {
     // crop rows; a combine working some of them
     const [a, b] = L.pick(CROPS);
     const rot = w > d ? Math.PI / 2 : 0;
-    paint.push((bb) => bb.rect(cx, cz, w, d, rot, SK.field, { P: [2.2], C: [a, b], y: -0.15 }));
+    paint.push((bb) => bb.rect(cx, cz, w, d, rot, SK.field, { P: [4.4], C: [a, b], y: -0.15 }));
     if (L.rand() < 0.15) L.put('scarecrow', cx + L.range(-w / 4, w / 4), cz + L.range(-d / 4, d / 4), { yaw: L.range(0, 6) });
     if ((ctx.combines || 0) < 6 && L.rand() < 0.22 && L.lib.byId.has('combine_harvester')) {
       ctx.combines = (ctx.combines || 0) + 1;

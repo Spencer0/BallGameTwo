@@ -120,9 +120,10 @@ export const sharedTime = { value: 0 };
 /** Soft ink blob (shadow) material for flat decals. */
 export function makeBlobMaterial(opacity = 0.22) {
   return new THREE.ShaderMaterial({
-    uniforms: { uInk: shared.uInk, uOpacity: { value: opacity } },
+    uniforms: { uInk: shared.uInk, uOpacity: { value: opacity }, uFogNear: shared.uFogNear, uFogFar: shared.uFogFar },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
+      varying float vFogDepth;
       #ifdef USE_INSTANCING
       #endif
       void main() {
@@ -131,15 +132,22 @@ export function makeBlobMaterial(opacity = 0.22) {
         #ifdef USE_INSTANCING
         p = instanceMatrix * p;
         #endif
-        gl_Position = projectionMatrix * modelViewMatrix * p;
+        vec4 mv = modelViewMatrix * p;
+        vFogDepth = -mv.z;
+        gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
       uniform vec3 uInk;
       uniform float uOpacity;
+      uniform float uFogNear;
+      uniform float uFogFar;
       varying vec2 vUv;
+      varying float vFogDepth;
       void main() {
         float d = length(vUv);
-        float a = (1.0 - smoothstep(0.55, 1.0, d)) * uOpacity;
+        // shadows fade out into the haze with everything else (a far stadium's blob was a dark dash
+        // hanging on the horizon)
+        float a = (1.0 - smoothstep(0.55, 1.0, d)) * uOpacity * (1.0 - smoothstep(uFogNear, uFogFar, vFogDepth));
         if (a < 0.003) discard;
         gl_FragColor = vec4(uInk, a);
         #include <colorspace_fragment>
