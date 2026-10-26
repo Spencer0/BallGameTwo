@@ -30,7 +30,7 @@ const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'hous
  * One suburban lot. fr = frame on the property line at the lot's centre (yaw faces the road).
  * e = the street edge (for verge/walk widths). opts: W (frontage), D (depth), first/last (fence ends), pie.
  */
-export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'cocoa', fenceMode = 'lot' } = {}) {
+export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'sand', fenceMode = 'lot' } = {}) {
   const { L, occ, fences, paint } = ctx;
   const pool = (poolIds || HOUSE_POOL).filter((id) => L.lib.byId.has(id));
   if (!pool.length) return false;
@@ -38,7 +38,7 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   // pie lots widen away from the bulb: reserve the rectangle that fits inside the wedge's middle
   const lotW = pie ? Math.min(W * 1.6, 2 * (pie.R + D * 0.4) * Math.sin(pie.half) * 0.92) : W;
   let lotRect = null;
-  for (const dd of [D, D - 4, D - 8]) {
+  for (const dd of [D, D - 4, D - 8, D - 12, D - 16].filter((d) => d >= 17)) {
     // shallower lots squeeze in where blocks end or curve
     // start a little behind the property line and a little narrower than the lot, so curved
     // frontages (where a straight rectangle's front corners swing back into the road) still fit
@@ -50,7 +50,10 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       break;
     }
   }
-  if (!lotRect) return false;
+  if (!lotRect) {
+    if (ctx.debugLots) ctx.debugLots.push({ x: fr.x, z: fr.z, why: occ.hits({ ...local2(fr, 0, -10), hw: lotW * 0.38, hd: 8, yaw: fr.yaw })?.tag || '?', e: e.name });
+    return false;
+  }
   occ.add(lotRect, 'lot');
   const IN_LOT = ctx.inLot || (ctx.inLot = new Set(['lot']));
   const house = L.pick(pool);

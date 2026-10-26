@@ -150,7 +150,7 @@ export function layout(lib, seed = 404) {
   occupyNetwork(occ, net);
   L.clear(spawn.x, spawn.z, 6);
   const fences = new Set();
-  const ctx = { L, occ, fences, rand, lib, paint: L.paint };
+  const ctx = { L, occ, fences, rand, lib, paint: L.paint, debugLots: globalThis.process?.env?.DEBUG_LOTS ? [] : null };
 
   // reserved land: the park, the school campus, the commercial strip, the green inside Birch Circle
   occ.add({ x: PARK.cx, z: PARK.cz, hw: PARK.rx + 6, hd: PARK.rz + 6, yaw: 0 }, 'park');
@@ -193,7 +193,7 @@ export function layout(lib, seed = 404) {
   // ---- lots: courts first (their stubs), then the inner streets, then the loop
   const prio = (f) => {
     const n = net.edges[f.e].name;
-    return n.endsWith('Court') ? 0 : n === 'Birch Circle' ? 1 : n === 'Aspen Way' ? 2 : n === 'Maple Loop' ? 3 : 4;
+    return n.endsWith('Court') ? 0 : n === 'Maple Loop' ? 1 : n === 'Birch Circle' ? 2 : n === 'Aspen Way' ? 3 : 4;
   };
   const order = [...net.frontages].sort((a, b) => prio(a) - prio(b));
   for (const f of order) {
@@ -310,7 +310,8 @@ export function layout(lib, seed = 404) {
   // farmland and woodlots round the subdivision, out to the horizon
   countryside(ctx, net, { inner: S, outer: S + 780, cell: 120, trees: 0.3, y: -0.1 });
   // woods beyond the back fences, to the map edge (and beyond, in the fog)
-  woods(ctx, { minX: -S, maxX: S, minZ: -S, maxZ: S }, { count: 900, ids: ['pine_tree', 'tree_round', 'pine_tree', 'bush'], minRoadDist: 46, net });
+  woods(ctx, { minX: -S, maxX: S, minZ: -S, maxZ: S }, { count: 900, ids: ['pine_tree', 'tree_round', 'pine_tree', 'bush'], minRoadDist: 50, net });
+  L.debugLots = ctx.debugLots;
   return L;
 }
 
