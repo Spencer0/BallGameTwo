@@ -126,3 +126,20 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
   A post-pass closes the side fence of any lot whose neighbour was never built, so runs never end in the air.
 - **Performance**: far-box impostors now also cover vehicles, sheds, bins and fence panels (anything box-like
   that fills its box), which halved the triangle count of the farm/town level.
+- **Broadway's bow-ties are pedestrian plazas** (round 7): where Broadway crosses an avenue at ~25° the two
+  18 m carriageways overlap for 80 m and read as one shapeless sheet of asphalt. As in the real city
+  (Times, Herald and Madison Squares), Broadway is pedestrianised for the block either side of each avenue
+  it crosses; the network treats a plaza crossing a straight road as a mid-block signalised zebra (the
+  road isn't trimmed, the plaza is drawn a hair under it). Broadway traffic turns off at the street before.
+- **Jersey City** gets a second avenue and cross streets behind its waterfront towers, then a freight rail
+  yard as the buffer before the airport fence; the airport moved 250 m west to make room.
+- **Rear yards are lots**: each 7 m yard is its own lawn, patio or gravel, with wooden fences between them
+  and down the block's spine, and a tree, shed or table in some. A single green block interior read as a
+  vacant field.
+- **Level packs must cover what a layout places**: L4 used the L5 pack's church, diner and gas station
+  without loading it. Those items were invisible but collectable, and picking one up crashed the renderer
+  (the pickup animation had no geometry). L4 now loads L5; the session skips any item whose pack isn't loaded.
+- **Ink outlines fade into the fog sooner than the surfaces they edge**, so distant clouds and towers
+  don't leave dark strokes hanging in the haze; spindly landmarks (statues, masts, cranes) never become
+  far-box impostors.
+- **Ducks** (a new asset) paddle in single file on the suburban pond, the town lake and the park lakes.
