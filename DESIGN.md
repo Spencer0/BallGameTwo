@@ -91,13 +91,25 @@ Each level is a separate world sized for its scale. Sizes are ball **diameter**.
 | 1 | Crumb Patrol | Farmhouse breakfast table, 2.4 × 1.4 m (Prudence supervises) | 4 cm | 22 cm | 4:00 | "Crumb Patrol" — bossa-funk, Rhodes + brushes + whistle |
 | 2 | Bedroom Bedlam | Kids' bedroom, 7.6 × 6.2 m | 20 cm | 1.1 m | 6:00 | "Sock Drawer Stomp" — clavinet toy-funk + glockenspiel |
 | 3 | House Party | Cut-away bungalow (low dollhouse walls) + garden, 34 × 26 m | 1 m | 5 m | 8:00 | "Household Shuffle" — swing, walking bass, muted horn |
-| 4 | Cul-de-Sac | Maple Loop: street, turning circle, park, 240 × 240 m | 4.5 m | 22 m | 8:00 | "Cul-de-Sac Strut" — disco-funk, octave bass, brass stabs |
-| 5 | Small Town | Puddleford: town grid, farm, harbour, fairground, railway, 900 × 900 m | 18 m | 90 m | 9:00 | "Main Street Mambo" — mambo/latin jazz, piano montuno, cowbell |
-| 6 | The Big Tidy | Downtown, port, airport, stadium, space centre, suburbs, sky, 2.6 × 2.6 km | 75 m | 400 m | 10:00 | "Skyline Shuffle" — big-band funk finale |
+| 4 | Cul-de-Sac | Maple Loop: a street network with three turning circles, park, school field, 480 × 480 m | 4.5 m | 22 m | 8:00 | "Cul-de-Sac Strut" — disco-funk, octave bass, brass stabs |
+| 5 | Small Town | Puddleford: town grid, suburbs ring, farms, harbour, fairground, railway, 1.5 × 1.5 km | 10 m | 90 m | 9:00 | "Main Street Mambo" — mambo/latin jazz, piano montuno, cowbell |
+| 6 | The Big Tidy | Downtown, port, airport, stadium, space centre, outer districts, sky, 4.4 × 4.4 km | 30 m | 400 m | 10:00 | "Skyline Shuffle" — big-band funk finale |
 
-Total timed play ≈ 45 min; Zen is open-ended. Balance (`tools/balance.mjs`) verifies each level
-contains enough collectible volume for 3★ with ≥ 2.5× margin and that the smallest objects are
-collectible at the start size.
+Total timed play ≈ 45 min; Zen is open-ended.
+
+**Balance & calibration.** Three tools keep this honest: `tools/balance.mjs` (enough material for ★★★),
+`tools/sweep.mjs` (a fast time-based model) and `tests/calibrate.mjs` (the real game + autopilot, played until
+the clock runs out). The target profile for every level: the bot reaches the goal at roughly 35–55 % of the
+timer, and ★★★ needs most of what the level holds. Outdoor levels grow explosively once the ball is big
+(sweep area grows with diameter × speed), so they have bigger maps, a slightly heavier pace and slower growth
+(per-level `speed`/`growth`), and star ladders set near the full-sweep size:
+
+| Level | Stars (× goal) | pace | growth | bot: goal reached at |
+|---|---|---|---|---|
+| 1–3 | 1 / 1.4 / 1.9 | 1 | 1 | 38–72 % |
+| 4 | 1 / 2.6 / 5 | 0.85 | 0.6 | 36 % |
+| 5 | 1 / 2.2 / 3.2 | 0.8 | 0.5 | 42 % |
+| 6 | 1 / 1.4 / 1.75 | 0.65 | 0.35 | 45 % |
 
 ### Level object lists (sizes are max dimension)
 

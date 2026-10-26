@@ -30,6 +30,14 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
 - Zen mode: "Finish & inspect" in the pause menu ends the level; reaching the target counts as completed.
 - Timed mode stars at 1×, 1.4×, 1.9× target; music tempo +7% in the last 30 s.
 
+- **Outdoor balance.** The first outdoor layouts were exhausted within a minute: once the ball is large it
+  sweeps area ∝ diameter × speed, and the streets were packed with things it could already eat (in the city,
+  96 % of objects were collectible at the start). Fixes, measured with the calibration bot: smaller start sizes
+  (town 18 → 10 m, city 75 → 30 m) so buildings gate progress; 3–4× larger maps (480 m, 1.5 km, 4.4 km) built
+  from street networks; per-level pace (0.85/0.8/0.65) and growth (0.6/0.5/0.35); and star ladders set near the
+  full-sweep size, because the post-goal snowball is the fun part.
+- Timers: L1 4:00, L2 6:00, L3 8:00, L4 8:00, L5 9:00, L6 10:00 (≈ 45 min), each roughly 2× the bot's time to goal.
+
 ## Rendering
 - Three.js r170, custom ShaderMaterials. Colours are a **palette index per vertex** (COLOR_0.r = index/255)
   looked up in a uniform array: exact flat colours, tiny vertex data, colour variants via one per-instance
