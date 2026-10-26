@@ -550,7 +550,7 @@ function angledParking(ctx) {
     for (const side of [1, -1]) {
       for (let v = (e.trimA || 0) + 6; v < e.len - (e.trimB || 0) - 6; v += 3.4) {
         // one car per painted bay, about three bays in five taken
-        if (L.rand() > 0.5) continue;
+        if (L.rand() > 0.4) continue;
         const u = inner + 2.75;
         const vc = v + 1.7 - 2.75 * 0.8;
         const x = e.poly[0][0] + dx * vc - dz * u * side,
@@ -1108,7 +1108,7 @@ function field(ctx, life, cx, cz, w, d) {
       hcz = cz + L.range(-d / 5, d / 5);
     for (let k = 0; k < n; k++) {
       // the herd stays together
-      const it = L.put(animal, hcx + L.range(-14, 14), hcz + L.range(-14, 14), { yaw: L.range(0, 6.28) });
+      const it = L.put(animal, hcx + L.range(-14, 14), hcz + L.range(-14, 14), { yaw: L.range(0, 6.28), tint: animal === 'horse' ? L.pick(['cocoa', 'caramel', 'charcoal']) : undefined });
       if (it) life.grazers.push({ it, cx, cz, yaw: 0, hw: w / 2 - 5, hd: d / 2 - 5, speed: animal === 'horse' ? 1.2 : 0.35, still: 0.75 });
     }
   } else if (kind < 0.94) {

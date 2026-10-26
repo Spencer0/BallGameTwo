@@ -378,7 +378,7 @@ function school(ctx) {
   parkingLot(ctx, bx - 52, ART_Z - 50, 22, 36, 0, { fill: 0.6 });
   paint.push((b) => {
     b.rect(bx, bz + t.dims[2] / 2 + 3, 26, 5, 0, SK.plaza, { P: [1.2], C: ['concrete', 'cloud', 'stone'] });
-    court(b, SK, bx + 52, ART_Z - 50, 22, 15, 0, 'cobalt');
+    court(b, SK, bx + 52, ART_Z - 50, 22, 15, 0, 'pine');
   });
   for (const dx of [-8, 8]) L.put('school_bus', bx + dx, ART_Z - 48 + 2, { yaw: L.along('school_bus', Math.PI / 2) });
   L.put('basketball_hoop', bx + 52 - 10, ART_Z - 50, { yaw: Math.PI / 2 });

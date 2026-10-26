@@ -230,8 +230,9 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       const yw = yt.dims[0] / 2 + 0.4,
         yd = yt.dims[2] / 2 + 0.4;
       if (yd * 2 > depth - 1 || yw * 2 > W - 2) continue;
-      const rx = L.range(-W / 2 + yw + 0.6, W / 2 - yw - 0.6);
-      const rz = L.range(backStart - yd - 0.5, -D + yd + 0.6);
+      // keep play things well off the fence lines
+      const rx = L.range(-W / 2 + yw + 1.6, W / 2 - yw - 1.6);
+      const rz = L.range(backStart - yd - 1.2, -D + yd + 1.8);
       const [x, z] = local(fr, rx, rz);
       const yaw = fr.yaw + (L.rand() < 0.5 ? 0 : Math.PI / 2);
       const r = { x, z, hw: yw, hd: yd, yaw };

@@ -555,7 +555,21 @@ export class Life {
     const acc = target > a.v ? 2.6 : 7;
     a.v += Math.max(-acc * dt, Math.min(acc * dt, target - a.v));
     if (a.v < 0) a.v = 0;
+    const sPrev = a.s;
     a.s += a.v * dt;
+    if (!a.conn) {
+      // never into the car ahead, even when it stopped harder than we can brake (it was told to wait)
+      const arr = this.laneCars[a.lane];
+      for (let k = 0; k < arr.length; k++) {
+        const o = arr[k];
+        if (o === a || o.s <= sPrev) continue;
+        const lim = o.s - (o.len + a.len) / 2 - 0.3;
+        if (a.s > lim) {
+          a.s = Math.max(sPrev, lim);
+          a.v = Math.min(a.v, o.v);
+        }
+      }
+    }
     // advance along lane / connector
     if (!a.conn) {
       if (a.s >= lane.len && a.hold && !net.nodes[lane.to].exit) {

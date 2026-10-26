@@ -459,7 +459,9 @@ export const env = {
 
 
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
-export const spawn = { x: 170, z: 470, yaw: Math.PI };
+// Union Square: the block Broadway cuts between Fifth and Third, 14th to 17th; the ball starts in it
+const UNION = { minX: 18, maxX: 282, minZ: 412, maxZ: 538 };
+export const spawn = { x: 228, z: 495, yaw: Math.PI };
 
 // ------------------------------------------------------------------ zoning
 // Height falls off from two cores (midtown, the financial district); avenues and Broadway carry the bigger
@@ -477,7 +479,7 @@ const CORES = [
 ];
 const VILLAGE = { x: 60, z: 620, r: 360 };
 // limits on how often one landmark tower may appear
-const CAP = { skyscraper_twist: 2, skyscraper_spire: 6, skyscraper_deco: 5, midrise_deco: 30, highrise_stone: 30, apartment_tower: 40 };
+const CAP = { skyscraper_twist: 3, skyscraper_spire: 10, skyscraper_deco: 8, midrise_deco: 30, highrise_stone: 30, apartment_tower: 40 };
 // the city's colours: stone, brick, glass; no candy pastels on buildings
 const CITY_OK = new Set(['cobalt', 'teal', 'navy', 'sand', 'cloud', 'sky', 'slate', 'concrete', 'paper', 'brick', 'cocoa', 'caramel', 'butter', 'stone', 'charcoal', 'tomato']);
 
@@ -528,6 +530,7 @@ export function layout(lib, seed = 606) {
   occ.add({ x: 0, z: (BAT_Z + TIP1) / 2, hw: driveX(BAT_Z), hd: (TIP1 - BAT_Z) / 2, yaw: 0 }, 'park');
   occ.add({ x: 1830, z: -600, hw: 170, hd: 150, yaw: 0 }, 'park');
   occ.add({ x: 1800, z: -1500, hw: 160, hd: 190, yaw: 0 }, 'stadium');
+  occ.add({ x: (UNION.minX + UNION.maxX) / 2, z: (UNION.minZ + UNION.maxZ) / 2, hw: (UNION.maxX - UNION.minX) / 2, hd: (UNION.maxZ - UNION.minZ) / 2, yaw: 0 }, 'park');
 
   const used = {};
   const muted = (id) => {
@@ -560,6 +563,7 @@ export function layout(lib, seed = 606) {
     if (Math.abs(ix) > SHORE + 5 && ix < EAST_X0 && ix > WEST_X0) return true; // over water
     if (iz > BAT_Z && Math.abs(ix) < SHORE) return true; // Battery Park
     if (ix < WEST_X0 && (e.name !== 'Shore Road' || iz < -1250 || iz > FREIGHT_Z - 20)) return true; // airport, port, woods
+    if (ix < SHORE_RD_X && iz > -760 && iz < 40) return true; // no towers backing onto the airport apron
     return false;
   };
   for (const f of order) {
@@ -636,6 +640,7 @@ export function layout(lib, seed = 606) {
       }
     }
   }
+  unionSquare(ctx, life);
   plaza(ctx, life);
   centralPark(ctx, life);
   batteryPark(ctx, life);
@@ -708,6 +713,7 @@ function blockYard(ctx, x0, x1, z0, z1, boro = false) {
     cz = (z0 + z1) / 2;
   if (!boro) {
     if (cx > PARK.minX && cx < PARK.maxX && cz > PARK.minZ && cz < PARK.maxZ) return;
+    if (cx > UNION.minX && cx < UNION.maxX && cz > UNION.minZ && cz < UNION.maxZ) return;
     if (Math.abs(cx) > driveX(cz) - 20) return;
   } else if (occ.hits({ x: cx, z: cz, hw: 4, hd: 4, yaw: 0 })) return;
   let core = 0;
@@ -758,6 +764,47 @@ function blockYard(ctx, x0, x1, z0, z1, boro = false) {
     occ.add(r, 'tree');
     L.put(pickId(L, ['street_tree', 'tree_round']), x, z, { scale: L.range(0.9, 1.3), tint: L.pick(['leaf', 'pine', 'lime', 'leaf']) });
   }
+}
+
+function unionSquare(ctx, life) {
+  const { L, occ, paint } = ctx;
+  const U = UNION;
+  const cx = (U.minX + U.maxX) / 2,
+    cz = (U.minZ + U.maxZ) / 2;
+  paint.push((b) => {
+    b.rect(cx, cz, U.maxX - U.minX, U.maxZ - U.minZ, 0, SK.solid, { C: ['leaf'], y: -0.28 });
+    // a paved promenade round the edge and walks across the lawns
+    for (const [x0, z0, x1, z1] of [[U.minX + 3, U.minZ + 3, U.maxX - 3, U.minZ + 3], [U.minX + 3, U.maxZ - 3, U.maxX - 3, U.maxZ - 3], [U.minX + 3, U.minZ + 3, U.minX + 3, U.maxZ - 3], [U.maxX - 3, U.minZ + 3, U.maxX - 3, U.maxZ - 3], [U.minX + 3, U.minZ + 3, U.maxX - 3, U.maxZ - 3], [U.minX + 3, U.maxZ - 3, U.maxX - 3, U.minZ + 3]]) {
+      const len = Math.hypot(x1 - x0, z1 - z0);
+      b.rect((x0 + x1) / 2, (z0 + z1) / 2, 5, len, Math.atan2(x1 - x0, z1 - z0), SK.plaza, { P: [2], C: ['concrete', 'cloud', 'stone'], y: -0.26 });
+    }
+  });
+  const free = (x, z, r = 2) => !occ.hits({ x, z, hw: r, hd: r, yaw: 0 }, new Set(['park', 'spawn']));
+  // shade trees round the edge, a statue and benches, the farmers' market stalls on the north side
+  for (let x = U.minX + 8; x < U.maxX - 4; x += 13)
+    for (const z of [U.minZ + 9, U.maxZ - 9]) if (free(x, z)) L.put('tree_round', x, z, { scale: 1.5, tint: 'leaf' });
+  for (let z = U.minZ + 22; z < U.maxZ - 18; z += 13)
+    for (const x of [U.minX + 9, U.maxX - 9]) if (free(x, z)) L.put('tree_round', x, z, { scale: 1.5, tint: 'leaf' });
+  if (free(70, cz, 4)) L.put('statue', 70, cz, { yaw: Math.PI / 2, tint: 'caramel' });
+  for (let k = 0; k < 8; k++) {
+    const x = U.minX + 30 + k * 26,
+      z = U.minZ + 18;
+    if (free(x, z)) L.put(pickId(L, ['lemonade_stand', 'hot_dog_cart']), x, z, { yaw: 0 });
+  }
+  for (let k = 0; k < 14; k++) {
+    const x = L.range(U.minX + 14, U.maxX - 14),
+      z = L.range(U.minZ + 14, U.maxZ - 14);
+    if (free(x, z)) L.put('park_bench', x, z, { yaw: L.range(0, 6.28) });
+  }
+  const ids = ['person_adult', 'person_adult2', 'person_kid', 'person_teen', 'person_business', 'person_grandpa'].filter((i) => L.lib.byId.has(i));
+  for (let k = 0; k < 45; k++) {
+    const x = L.range(U.minX + 6, U.maxX - 6),
+      z = L.range(U.minZ + 6, U.maxZ - 6);
+    if (!free(x, z, 0.5)) continue;
+    const it = L.put(L.pick(ids), x, z);
+    if (it) life.grazers.push({ it, cx: x, cz: z, yaw: 0, hw: 4, hd: 4, speed: 1, still: 0.5 });
+  }
+  flock(L, life, 90, U.minZ + 40, 10, { r: 5 });
 }
 
 function plaza(ctx, life) {
@@ -1195,7 +1242,7 @@ function streetFurniture(ctx) {
 // review views (tests/city_review.mjs)
 export const review = {
   play: [
-    { name: 'village', x: 170, z: 470, yaw: Math.PI },
+    { name: 'village', x: 228, z: 495, yaw: Math.PI },
     { name: 'avenue', x: 300, z: 300, yaw: Math.PI },
     { name: 'plaza', x: PLAZA_C[0] + Math.sin(BW_PHI) * 40, z: PLAZA_C[1] + Math.cos(BW_PHI) * 40, yaw: BW_PHI + Math.PI, d: 16 },
     { name: 'park', x: -300, z: -560, yaw: Math.PI, d: 80 },
