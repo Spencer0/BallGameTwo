@@ -1007,12 +1007,12 @@ function centralPark(ctx, life) {
     for (const sd of [-1, 1]) L.put('tree_round', mallA[0] + mdx * s - mdz * 8 * sd, mallA[1] + mdz * s + mdx * 8 * sd, { scale: 2.2, tint: 'leaf' });
   for (let s = 12; s < ml - 6; s += 22) for (const sd of [-1, 1]) L.put('park_bench', mallA[0] + mdx * s - mdz * 5 * sd, mallA[1] + mdz * s + mdx * 5 * sd, { yaw: Math.atan2(mdx, mdz) + (sd * Math.PI) / 2 });
   spawnLoopWalkers(L, life, [mallA, mallB, [mallB[0] + 2, mallB[1]], [mallA[0] + 2, mallA[1]]], 26);
-  paint.push((b) => b.rect(mallB[0], mallB[1] + 2, 44, 20, 0, SK.plaza, { P: [1.8], C: ['sand', 'concrete', 'stone'], y: -0.08 }));
-  L.put(pickId(L, ['town_fountain', 'statue']), mallB[0], mallB[1] + 2);
+  paint.push((b) => b.rect(mallB[0], mallB[1] + 7, 44, 20, 0, SK.plaza, { P: [1.8], C: ['sand', 'concrete', 'stone'], y: -0.08 }));
+  L.put(pickId(L, ['town_fountain', 'statue']), mallB[0], mallB[1] + 7);
   // Bethesda Terrace is always busy
   for (let k = 0; k < 30; k++) {
-    const it = L.put(L.pick(['person_adult', 'person_adult2', 'person_kid', 'person_teen', 'person_grandpa'].filter((i) => L.lib.byId.has(i))), mallB[0] + L.range(-20, 20), mallB[1] + 2 + L.range(-8, 8));
-    if (it) life.grazers.push({ it, cx: mallB[0], cz: mallB[1] + 2, yaw: 0, hw: 21, hd: 9, speed: 0.9, still: 0.5 });
+    const it = L.put(L.pick(['person_adult', 'person_adult2', 'person_kid', 'person_teen', 'person_grandpa'].filter((i) => L.lib.byId.has(i))), mallB[0] + L.range(-20, 20), mallB[1] + 7 + L.range(-8, 8));
+    if (it) life.grazers.push({ it, cx: mallB[0], cz: mallB[1] + 7, yaw: 0, hw: 21, hd: 9, speed: 0.9, still: 0.5 });
   }
   L.put(pickId(L, ['bandshell', 'gazebo']), -10, -880, { yaw: -Math.PI / 2 });
   // winding footpaths from the gates on the park's edges to the middle of things
