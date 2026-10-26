@@ -23,12 +23,19 @@ upright. Tap once to start the sound.
 ### Modes
 - **Zen**: no timer. Roll as long as you like and finish from the pause menu. Reaching the goal size
   passes the level.
-- **Timed**: reach the goal size before time runs out (4 to 10 minutes per level, about 45 in all).
+- **Timed**: reach the goal size before time runs out (4 to 8 minutes per level, about 35 in all).
   ★ for the goal; ★★ and ★★★ for going bigger. The tick marks on the size bar show where they are. After
   the goal you can keep rolling or tap **Finish**.
 
 Passing a level in either mode unlocks the next. There are six: Crumb Patrol (breakfast table),
 Bedroom Bedlam, House Party, Cul-de-Sac, Small Town and The Big Tidy (the city).
+
+The three outdoor levels are modelled on real kinds of place and they are alive: a 1990s subdivision
+(Maple Loop: a collector loop, cul-de-sacs, a signalised entrance, a shopping strip), a Midwestern
+river town (Puddleford: courthouse square, Main Street, rail crossing, lake, farms) and Manhattan
+(the grid, Broadway's plazas, Central Park, downtown, a rowhouse borough, Jersey City and the harbour).
+Cars keep to their lanes and stop at lights and for people, pedestrians cross at the zebras, trains,
+ferries, planes and ducks go about their business, and all of it can be rolled up.
 
 ### Extras
 - **Collection**: every kind of thing you have ever rolled up, with a one-line description.
