@@ -386,6 +386,10 @@ const LAKES = [
   { name: 'Prospect Lake', cx: 1830, cz: -560, rx: 90, rz: 55, ph: 1.2 },
 ];
 
+/** the harbour shore beyond the map's east and west edges: straight inside the map, wandering outside */
+const wander = (u) => 150 * Math.sin(u / 520) + 70 * Math.sin(u / 190 + 1.3) - 40 * Math.min(1, u / 400);
+const coastE = (x) => (x < S + 100 ? 1350 : 1350 + wander(x - S - 100));
+const coastW = (x) => (x > -S - 100 ? 1300 : 1300 + wander(-S - 100 - x));
 const hash = (x, z) => {
   const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
   return v - Math.floor(v);
@@ -396,8 +400,10 @@ const hash = (x, z) => {
  * the haze. Two or three buildings per block so the skyline isn't a row of identical slabs.
  */
 function roofs(b, x0, x1, z0, z1, bw, bd, st, pal, y, h0 = 10, h1 = 24, walls = ['stone', 'brick', 'concrete', 'sand'], per = 2) {
+  const coast = (x) => (x > 0 ? coastE(x) : coastW(x)) - 25;
   for (let x = x0; x + bw <= x1 + 0.1; x += bw)
     for (let z = z0; z + bd <= z1 + 0.1; z += bd) {
+      if (z + bd > coast(x) || z + bd > coast(x + bw)) continue; // keep back from the water
       const h = hash(x, z),
         g = hash(z, x);
       const along = bw >= bd;
@@ -426,13 +432,19 @@ function landPolys(b) {
   for (let z = TIP1; z >= TIP0; z -= 15) tip.push([islandHalf(z), z]);
   b.poly(tip, SK.solid, { C: ['stone'], y: -1.2 });
   // the banks
-  b.poly([[-9000, -9000], [WEST_X0, -9000], [WEST_X0, 1300], [-9000, 1300]], SK.solid, { C: ['leaf'], y: -1.2 });
+  // beyond the map the harbour coasts wander (headlands, coves) instead of running ruler-straight
+  const west = [[-9000, -9000], [WEST_X0, -9000], [WEST_X0, 1300]];
+  for (let x = -S - 100; x >= -9000; x -= 100) west.push([x, coastW(x)]);
+  b.poly([[(WEST_X0 - 9000) / 2, 0], ...west, west[0]], SK.solid, { C: ['leaf'], y: -1.2, origin: [0, 0] });
   // the Jersey shore: paved where the towers and the port stand, parkland and woods elsewhere
   b.rect((WEST_X0 + JC2_X - 40) / 2, -245, WEST_X0 - JC2_X + 40, 2010, 0, SK.solid, { C: ['concrete'], y: -1.15 });
   b.rect(-1500, 1040, 500, 520, 0, SK.solid, { C: ['concrete'], y: -1.15 });
   // the borough's waterfront park
   b.rect((EAST_X0 + BORO_AVE[0] - 10) / 2, -470, BORO_AVE[0] - 10 - EAST_X0 - 4, 3440, 0, SK.solid, { C: ['leaf'], y: -1.15 });
-  b.poly([[EAST_X0, -9000], [9000, -9000], [9000, 1350], [EAST_X0, 1350]], SK.solid, { C: ['stone'], y: -1.2 });
+  const east = [[EAST_X0, -9000], [9000, -9000]];
+  for (let x = 9000; x >= S + 100; x -= 100) east.push([x, coastE(x)]);
+  east.push([EAST_X0, 1350]);
+  b.poly([[(EAST_X0 + 9000) / 2, 0], ...east, east[0]], SK.solid, { C: ['stone'], y: -1.2, origin: [0, 0] });
   // beyond the map: Manhattan north of the edge, more borough to the east, Jersey towns and woods to the west
   roofs(b, -SHORE + 60, SHORE - 60, -4500, -S - 100, 150, 75, 16, ['slate', 'concrete', 'stone', 'slate'], -1.0, 18, 70, ['stone', 'sand', 'brick', 'concrete']);
   roofs(b, S + 50, S + 2600, -4500, 1300, 200, 62.5, 12, ['brick', 'cocoa', 'slate'], -1.0, 9, 20, ['brick', 'cocoa', 'caramel', 'sand']);
@@ -550,8 +562,9 @@ function zone(x, z, e) {
     tiers: [
       [SUPER, 0.5 * core * core * a],
       [HIGH, (0.9 * core + 0.08) * a],
-      [MID, 0.55 * (avenue ? 1 : 0.6)],
-      [WALKUP, avenue ? 0.04 : 0.9 * (1 - core)],
+      [MID, (0.55 + 0.6 * core) * (avenue ? 1 : 0.6)],
+      // walk-ups thin out fast towards the cores: midtown's side streets are mid-rise offices and hotels
+      [WALKUP, avenue ? 0.04 : 0.9 * (1 - core) ** 2.5],
       [SHOPS, avenue ? 0 : 0.08],
     ],
     gap: 0,
@@ -647,7 +660,9 @@ export function layout(lib, seed = 606) {
     if (ix < WEST_X0) continue;
     // round the plaza the gaps take modern mid-rises and shopfronts, not four-storey walk-ups
     const nearPlaza = Math.hypot(ix - PLAZA_C[0], iz - PLAZA_C[1]) < 200;
-    const pool = nearPlaza ? plazaFill : e.cls === 'avenue' || e.cls === 'boulevard' ? narrowAve : narrowSide;
+    let core = 0;
+    for (const c of CORES) core = Math.max(core, gauss(ix, iz, c));
+    const pool = nearPlaza || (core > 0.35 && ix < EAST_X0) ? plazaFill : e.cls === 'avenue' || e.cls === 'boulevard' ? narrowAve : narrowSide;
     fillFrontage(L, occ, f, {
       pick: (rem) => {
         const fit = pool.filter((id) => lib.byId.get(id).dims[0] <= rem + 0.3);
