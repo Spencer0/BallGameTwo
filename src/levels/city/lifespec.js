@@ -89,7 +89,7 @@ export function spawnWalkers(L, life, net, count, { ids = ['person_adult', 'pers
 }
 
 /** pedestrians strolling round a closed path (park loops) */
-export function spawnLoopWalkers(L, life, path, count, ids = ['person_adult', 'person_adult2', 'person_kid', 'person_grandpa'], { speed = [0.9, 1.4], dogs = 0.3 } = {}) {
+export function spawnLoopWalkers(L, life, path, count, ids = ['person_adult', 'person_adult2', 'person_kid', 'person_grandpa'], { speed = [0.9, 1.4], dogs = 0.3, spread = 0.8 } = {}) {
   const pool = have(L, ids);
   const P = [...path, path[0]];
   let len = 0;
@@ -99,7 +99,7 @@ export function spawnLoopWalkers(L, life, path, count, ids = ['person_adult', 'p
     // position will be set by the life system on its first update; start near the first point
     const it = L.put(L.pick(pool), P[0][0], P[0][1]);
     if (!it) continue;
-    life.peds.push({ it, path: P, loop: true, s, dir: L.rand() < 0.5 ? 1 : -1, lat: (L.rand() - 0.5) * 0.8, speed: speed[0] + L.rand() * (speed[1] - speed[0]) });
+    life.peds.push({ it, path: P, loop: true, s, dir: L.rand() < 0.5 ? 1 : -1, lat: (L.rand() - 0.5) * spread, speed: speed[0] + L.rand() * (speed[1] - speed[0]) });
     if (L.rand() < dogs && L.lib.byId.has('dog')) {
       const dog = L.put('dog', P[0][0] + 1, P[0][1]);
       if (dog) life.followers.push({ it: dog, owner: it });

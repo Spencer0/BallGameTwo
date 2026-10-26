@@ -514,9 +514,9 @@ function courthouseSquare(ctx, life) {
     const hwz = tt.dims[0] / 2 + 3,
       hwx = tt.dims[2] / 2 + 3;
     const ring = [[hx - hwx, cz - hwz], [hx + hwx, cz - hwz], [hx + hwx, cz + hwz], [hx - hwx, cz + hwz], [hx - hwx, cz - hwz]];
-    spawnLoopWalkers(L, life, ring, 14);
+    spawnLoopWalkers(L, life, ring, 14, undefined, { spread: 2.2 });
     for (const [ax, az, bx2, bz2] of [[x0, z0, hx - hwx, cz - hwz], [x0, z1, hx - hwx, cz + hwz], [front, cz - 8, x1, z0], [front, cz + 8, x1, z1]])
-      spawnLoopWalkers(L, life, [[ax, az], [bx2, bz2], [bx2 + 0.8, bz2], [ax + 0.8, az]], 4);
+      spawnLoopWalkers(L, life, [[ax, az], [bx2, bz2], [bx2 + 0.8, bz2], [ax + 0.8, az]], 4, undefined, { spread: 1.6 });
   }
   flock(L, life, x0 + 26, z0 + 26, 5);
   // people strolling the walks round the courthouse
@@ -584,17 +584,25 @@ function angledParking(ctx) {
     for (const side of [1, -1]) {
       // painted bays repeat every BAY m along the kerb (streets.js); a car sits centred in its bay
       const BAY = 4.2;
+      let prev = null;
       for (let k = Math.ceil(((e.trimA || 0) + 6) / BAY); BAY * (k + 1) - 2.2 < e.len - (e.trimB || 0) - 4; k++) {
-        // one car per bay, a bit under half the bays taken
-        if (L.rand() > 0.45) continue;
+        // one car per bay, a bit under half the bays taken; neighbours are rarer (seen down the street from
+        // the ball, a row of angled cars side by side reads as one pile)
+        if (L.rand() > (prev ? 0.22 : 0.5)) {
+          prev = null;
+          continue;
+        }
         const u = inner + 2.75;
         const vc = BAY * (k + 1) - 2.75 * 0.8;
         const x = e.poly[0][0] + dx * vc - dz * u * side,
           z = e.poly[0][1] + dz * vc + dx * u * side;
         const ax = -dz * side * 1 + dx * -0.8,
           az = dx * side * 1 + dz * -0.8;
-        const id = L.pick(ids);
-        L.put(id, x, z, { yaw: L.along(id, Math.atan2(ax, az)) + (L.rand() < 0.9 ? 0 : Math.PI), tint: L.pick(PARKED_TINTS) });
+        let id = L.pick(ids),
+          tint = L.pick(PARKED_TINTS);
+        if (prev && prev.id === id && prev.tint === tint) tint = PARKED_TINTS[(PARKED_TINTS.indexOf(tint) + 1) % PARKED_TINTS.length];
+        L.put(id, x, z, { yaw: L.along(id, Math.atan2(ax, az)) + (L.rand() < 0.9 ? 0 : Math.PI), tint });
+        prev = { id, tint };
       }
     }
   }
@@ -611,6 +619,16 @@ function mainStreetFurniture(ctx) {
     for (const side of [1, -1]) {
       const at = (s, off) => [e.poly[0][0] + dx * s - dz * off * side, e.poly[0][1] + dz * s + dx * off * side];
       const yaw = Math.atan2(-dz * side, dx * side);
+      // paving runs on past the property line under the shopfronts (their walls stand back of their awnings),
+      // so no lawn shows between a shop and the sidewalk
+      {
+        const p0 = e.w / 2 + e.verge + e.walk - 0.2,
+          p1 = p0 + 4;
+        const t0 = e.trimA || 0,
+          t1 = e.len - (e.trimB || 0);
+        const quad = [at(t0, p0), at(t1, p0), at(t1, p1), at(t0, p1)];
+        L.paint.push((b) => b.poly([at((t0 + t1) / 2, (p0 + p1) / 2), ...quad, quad[0]], SK.solid, { C: ['concrete'], y: -0.05 }));
+      }
       for (let s = s0 + 4; s < s1; s += 22) {
         const [x, z] = at(s, e.w / 2 + 0.6);
         L.put(pickId(L, ['town_lamp', 'street_lamp']), x, z, { yaw });

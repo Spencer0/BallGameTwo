@@ -1273,9 +1273,10 @@ function waterfront(ctx, life) {
     const route = [];
     for (let z = -2350; z <= 1700; z += 200) route.push([x + dir * 40, z]);
     for (let z = 1700; z >= -2350; z -= 200) route.push([x - dir * 40, z]);
-    for (let k = 0; k < 3; k++) {
-      const it = L.put(pickId(L, ['river_barge', 'fishing_boat']), x, 0);
-      if (it) life.movers.push({ its: [it], offs: [0], route, speed: 6, s: k * 2700, kind: 'boat' });
+    // barges and tugs working up and down both rivers, a few hundred metres apart
+    for (let k = 0; k < 7; k++) {
+      const it = L.put(pickId(L, k % 3 === 1 ? ['tugboat', 'fishing_boat'] : ['river_barge', 'tugboat']), x, 0);
+      if (it) life.movers.push({ its: [it], offs: [0], route, speed: 6, s: k * 1160, kind: 'boat' });
     }
   }
   // the bridges themselves
