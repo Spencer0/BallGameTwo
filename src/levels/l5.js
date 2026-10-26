@@ -154,7 +154,7 @@ function buildNet() {
   const mzs = [...MAIN_Z, HWY_Z];
   for (let k = 0; k < mzs.length - 1; k++) {
     const core = mzs[k + 1] <= 220;
-    net.edge(N(MAIN_X, mzs[k], mainNode(mzs[k])), N(MAIN_X, mzs[k + 1], mainNode(mzs[k + 1])), core ? { cls: 'main', name: 'Main Street', tag: 'main', draw: 18 } : { cls: 'street', name: 'Main Street', tag: 'mainS', w: 11 });
+    net.edge(N(MAIN_X, mzs[k], mainNode(mzs[k])), N(MAIN_X, mzs[k + 1], mainNode(mzs[k + 1])), core ? { cls: 'main', name: 'Main Street', tag: 'main', draw: 11 } : { cls: 'street', name: 'Main Street', tag: 'mainS', w: 11 });
   }
   net.edge(N(MAIN_X, -430), N(MAIN_X, MILL_Z), { cls: 'street', name: 'Depot Street', tag: 'depot' });
   // --- the west grid: cross streets from Main to Ash Avenue, avenues from Front Street to Route 9
@@ -222,8 +222,8 @@ export const env = {
   fog: { near: 320, far: 900, k: 75, color: '#FFE0A8' },
   groundY: 0,
   planes: [
-    { x: 0, z: 0, w: 6000, d: 6000, y: -0.5, pattern: 'solid', a: '#8FCF4A' },
-    { x: 0, z: 0, w: 2 * S + 200, d: 2 * S + 200, y: -0.45, pattern: 'solid', a: '#8FCF4A' },
+    { x: 0, z: 0, w: 6000, d: 6000, y: -0.5, pattern: 'solid', a: '#62B851' },
+    { x: 0, z: 0, w: 2 * S + 200, d: 2 * S + 200, y: -0.45, pattern: 'solid', a: '#62B851' }, // leaf-green fields (STYLE.md)
   ],
   streets: (b) => {
     // river: muddy banks under the water ribbon, both following the meander
@@ -263,7 +263,7 @@ export const env = {
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
 export const spawn = { x: MAIN_X - 4, z: 160, yaw: Math.PI };
 
-const STORES = ['storefront_a', 'storefront_b', 'storefront_c', 'storefront_a', 'storefront_b', 'storefront_c', 'storefront_corner', 'shop_a', 'cafe', 'shop_b'];
+const STORES = ['storefront_a', 'storefront_b', 'storefront_c', 'storefront_a', 'storefront_b', 'storefront_c', 'shop_a', 'cafe', 'shop_b'];
 const CIVIC = ['post_office', 'library', 'shop_b', 'cafe', 'shop_a', 'diner'];
 const TOWN_HOUSES = ['house_c', 'house_f', 'house_a', 'house_d', 'house_e', 'house_c', 'house_f', 'house_a'];
 const PARKED = ['car', 'suv', 'pickup_truck', 'hatchback', 'car', 'pickup_truck'];
@@ -352,7 +352,7 @@ export function layout(lib, seed = 505) {
     for (let k = 0; k < n; k++) {
       const s = pad + W * (k + 0.5);
       const fr = frameAt(f, s);
-      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: RES[e.tag], first: k === 0, last: k === n - 1, setback: [4.5, 6.5], pool, fenceP: 0.3, fenceIds: ['picket_fence', 'privacy_fence'], fenceTint: 'paper', fenceMode: 'frontage' }) });
+      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: RES[e.tag], first: k === 0, last: k === n - 1, setback: [4.5, 6.5], pool, fenceP: 0.3, fenceIds: ['picket_fence', 'privacy_fence'], fenceTint: 'paper', fenceMode: 'frontage', yardPaint: false }) });
     }
     // fenced back yards close on the lot lines and return to the house corners
     frontageFences(ctx, f, recs, frameAt);
@@ -404,7 +404,7 @@ export function layout(lib, seed = 505) {
   const laneW = (l) => {
     const e = net.edges[l.e];
     if (bySquare(e)) return 9;
-    return e.cls === 'arterial' ? 2 : e.cls === 'main' ? 11 : e.cls === 'lane' ? 0.35 : e.tag === 'river' || e.tag === 'water' ? 1.4 : 1;
+    return e.cls === 'arterial' ? 2 : e.cls === 'main' ? 6 : e.cls === 'lane' ? 0.35 : e.tag === 'river' || e.tag === 'water' ? 1.4 : 1;
   };
   spawnTraffic(L, life, net, 260, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 6], ['delivery_van', 1.5], ['mail_truck', 0.6], ['tractor', 0.6], ['school_bus', 0.4], ['police_car', 0.3], ['motorcycle', 0.8], ['garbage_truck', 0.3], ['fire_truck', 0.15]], { laneWeight: laneW });
   spawnWalkers(L, life, net, 280, {
@@ -1038,14 +1038,21 @@ function fieldRegion(ctx, life, X0, X1, Z0, Z1) {
   const { L, occ, paint } = ctx;
   const W = X1 - X0,
     D = Z1 - Z0;
-  const nx = Math.max(1, Math.round(W / 105)),
-    nz = Math.max(1, Math.round(D / 115));
-  const cw = W / nx,
-    cd = D / nz;
+  // fields of uneven size (quarter sections split by inheritance and sales), not a checkerboard
+  const edges = (a, b, base) => {
+    const e = [a];
+    while (b - e[e.length - 1] > base * 1.6) e.push(e[e.length - 1] + base * L.range(0.55, 1.45));
+    e.push(b);
+    return e;
+  };
+  const XS = edges(X0, X1, 105),
+    ZS = edges(Z0, Z1, 115);
+  const nx = XS.length - 1,
+    nz = ZS.length - 1;
   // a dirt farm track down a column boundary of the wider regions
   let trackX = null;
   if (nx >= 2) {
-    trackX = X0 + cw * Math.floor(nx / 2);
+    trackX = XS[Math.floor(nx / 2)];
     const runs = [];
     let a = null;
     for (let z = Z0 + 2; z <= Z1 - 2; z += 4) {
@@ -1063,10 +1070,10 @@ function fieldRegion(ctx, life, X0, X1, Z0, Z1) {
   }
   for (let i = 0; i < nx; i++)
     for (let j = 0; j < nz; j++) {
-      let x0 = X0 + i * cw + 0.8,
-        x1 = X0 + (i + 1) * cw - 0.8,
-        z0 = Z0 + j * cd + 0.8,
-        z1 = Z0 + (j + 1) * cd - 0.8;
+      let x0 = XS[i] + 0.8,
+        x1 = XS[i + 1] - 0.8,
+        z0 = ZS[j] + 0.8,
+        z1 = ZS[j + 1] - 0.8;
       if (trackX !== null && Math.abs(x0 - 0.8 - trackX) < 0.1) x0 += 2.2;
       if (trackX !== null && Math.abs(x1 + 0.8 - trackX) < 0.1) x1 -= 2.2;
       // a farmstead in some cells that front a road

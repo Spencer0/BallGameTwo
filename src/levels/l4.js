@@ -438,9 +438,12 @@ function stripMall(ctx) {
   // gas station on the corner by the entrance light, a coffee pad and a second strip — each lot with a curb cut
   const pads = [
     { id: pickId(L, ['supermarket', 'strip_mall']), x: -128, lot: 60, deep: 22 },
+    { id: pickId(L, ['post_office', 'shop_a']), x: -80, lot: 0 },
     { id: pickId(L, ['diner', 'cafe']), x: -45, lot: 26 },
     { id: 'petrol_station', x: 38, lot: 0 },
+    { id: pickId(L, ['bakery', 'shop_b']), x: 70, lot: 0 },
     { id: 'cafe', x: 100, lot: 24 },
+    { id: pickId(L, ['shop_a', 'shop_b']), x: 140, lot: 14 },
     { id: pickId(L, ['strip_mall', 'shop_b']), x: 175, lot: 48 },
   ];
   // the Methodist church on its own lot at the west end of the strip

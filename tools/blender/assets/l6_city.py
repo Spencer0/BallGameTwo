@@ -332,11 +332,10 @@ def office_block():
         box((2.2, 2.2, H + 1.0), at=(x, y, 0), base=True, color="cloud")
     box((w + 1.6, d + 1.6, 1.4), at=(0, 0, H), base=True, color="cloud")
     box((12.0, 9.0, 5.0), at=(-4.0, 2.0, H + 1.4), base=True, color="cloud")
-    cyl(2.6, 4.5, at=(8.0, 4.0, H + 3.0), color="caramel", segs=10)
-    for x in (6.0, 10.0):
-        for y in (1.2, 6.8):
-            cyl(0.18, 3.0, at=(x, y, H + 1.4), color="charcoal", segs=4, lod0=True)
-    cyl(2.7, 0.8, at=(8.0, 4.0, H + 7.5), r2=0.4, color="caramel", segs=10)
+    # cooling towers, not a wooden water tank: that's for prewar walk-ups
+    for y in (2.0, 6.0):
+        box((4.0, 3.4, 2.6), at=(8.0, y, H + 1.4), base=True, color="stone")
+        cyl(1.3, 0.5, at=(8.0, y, H + 4.0), color="charcoal", segs=8, lod0=True)
     box((9.0, 3.0, 0.8), at=(0, -d / 2 - 1.2, 4.6), base=True, color="cloud")
     box((5.0, 0.4, 4.2), at=(0, -d / 2 - 0.2, 0), base=True, color="glass", lod0=True)
     tube([(10.0, -3.0, H + 1.4), (10.0, -3.0, H + 10.0)], 0.25, color="charcoal", segs=4)

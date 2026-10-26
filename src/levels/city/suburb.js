@@ -30,7 +30,7 @@ const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'hous
  * One suburban lot. fr = frame on the property line at the lot's centre (yaw faces the road).
  * e = the street edge (for verge/walk widths). opts: W (frontage), D (depth), first/last (fence ends), pie.
  */
-export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'cocoa', fenceMode = 'lot' } = {}) {
+export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'cocoa', fenceMode = 'lot', yardPaint = true } = {}) {
   const { L, occ, fences, paint } = ctx;
   const pool = (poolIds || HOUSE_POOL).filter((id) => L.lib.byId.has(id));
   if (!pool.length) return false;
@@ -161,7 +161,7 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   occ.add({ ...local2(fr, 0, -setback / 2), hw: W / 2 - 0.5, hd: setback / 2 - 0.3, yaw: fr.yaw }, 'front');
   if (fenced && !pie) {
     const [yx, yz] = local(fr, 0, (backStart - D) / 2);
-    paint.push((b) => b.rect(yx, yz, W - 0.4, D + backStart, fr.yaw, SK.solid, { C: ['lime'], y: -0.06 }));
+    if (yardPaint) paint.push((b) => b.rect(yx, yz, W - 0.4, D + backStart, fr.yaw, SK.solid, { C: ['lime'], y: -0.06 }));
   }
   let rightRun = null;
   const sideDriveGate = (sg) => typeof info.drive !== 'number' && Math.sign(gx) === sg;
@@ -197,13 +197,13 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
     // pie lot: radial side fences along the wedge edges, the rear line across the wide end
     const { cx, cz, a, half, R } = pie;
     const r0 = R - backStart,
-      r1 = R + D;
+      r1 = Math.min(R + D, r0 + 12);
     const P = (ang, r) => [cx + Math.sin(ang) * r, cz + Math.cos(ang) * r];
     if (fenced) {
       // the wedge is an annular sector (concave on the inner arc): paint it as convex quads, since a fan
       // from one corner would sweep thin slivers across the turning circle
       const ang = (k) => a - half + (2 * half * k) / 6;
-      paint.push((b) => {
+      if (yardPaint) paint.push((b) => {
         for (let k = 0; k < 6; k++) b.poly([P(ang(k), r0), P(ang(k + 1), r0), P(ang(k + 1), r1), P(ang(k), r1)], SK.solid, { C: ['lime'], y: -0.06, origin: [cx, cz] });
       });
     }
@@ -461,7 +461,9 @@ export function frontageFences(ctx, f, recs, frameAt) {
   for (const run of runs) {
     const a = run[0],
       z = run[run.length - 1];
-    const D = Math.min(...run.map((r) => r.rec.D));
+    // a fenced back yard runs a dozen metres behind the houses, not out to the far end of a deep lot
+    // (long runs across open lawn read as stray lines from above)
+    const D = Math.min(...run.map((r) => r.rec.D), 12 - Math.min(...run.map((r) => r.rec.backStart)));
     const { fence, fenceTint } = a.rec;
     const at = (s, depth) => local(frameAt(f, s), 0, depth);
     // rear line, panel by panel along the curve
