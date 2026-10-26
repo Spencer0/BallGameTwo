@@ -374,6 +374,7 @@ function greenbelt(ctx) {
   });
   ctx.pondPath = path;
   ctx.pondC = [P.cx - 25, P.cz + 2];
+  L.clear(P.cx + 50, P.cz + 2, 18); // nothing else grows on the playground
   L.put('playground_slide', P.cx + 44, P.cz + 0, { yaw: 0.3 });
   L.put('swing_set', P.cx + 56, P.cz + 6, { yaw: 0 });
   // benches beside the path, not on it (the path rings the pond at 34 x 23)
@@ -382,7 +383,7 @@ function greenbelt(ctx) {
   for (let k = 0; k < 30; k++) {
     const x = P.cx + L.range(-P.rx, P.rx),
       z = P.cz + L.range(-P.rz, P.rz);
-    if (Math.hypot((x - P.cx + 25) / 38, (z - P.cz - 2) / 27) < 1 || (x > P.cx + 34 && x < P.cx + 66 && z > P.cz - 10 && z < P.cz + 14)) continue;
+    if (Math.hypot((x - P.cx + 25) / 38, (z - P.cz - 2) / 27) < 1 || (x > P.cx + 29 && x < P.cx + 71 && z > P.cz - 15 && z < P.cz + 19)) continue; // (crowns clear of the playground)
     L.put(L.rand() < 0.65 ? 'tree_round' : 'pine_tree', x, z, { scale: L.range(0.85, 1.25) });
   }
   ctx.park = { x: P.cx, z: P.cz };

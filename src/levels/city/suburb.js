@@ -169,16 +169,19 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
     // a closed yard right behind the house: out from its back corners, a dozen metres back, across.
     // Never wanders across a curved lot or a pie wedge; on the driveway side it hugs the house and the
     // return leaves a gate gap by the wall
-    const dep = Math.min(13, D + backStart - 1.5);
+    // (it starts at the back wall itself, a hair inside the footprint, so from above no fence stops short
+    // of its house)
+    const zb = -(setback + hd * 2) + 0.3;
+    const dep = Math.min(13, D + zb - 1.5);
     if (dep > 6) {
-      const half = (sg) => (sideDriveGate(sg) ? hw + 0.5 : Math.min(hw + 3.2, (pie ? 99 : W / 2) - 0.6));
+      // on the driveway side the box runs straight back in line with the house's side wall; on the other
+      // side it is wider, and a return comes out of the wall to meet it
+      const half = (sg) => (sideDriveGate(sg) ? hw - 0.2 : Math.min(hw + 3.2, (pie ? 99 : W / 2) - 0.6));
       const P2 = (sg, z) => local(fr, sg * half(sg), z);
-      fenceLine2(L, fence, P2(-1, backStart), P2(-1, backStart - dep), fences, fenceTint, occ);
-      fenceLine2(L, fence, P2(-1, backStart - dep), P2(1, backStart - dep), fences, fenceTint, occ);
-      fenceLine2(L, fence, P2(1, backStart - dep), P2(1, backStart), fences, fenceTint, occ);
-      // returns from the house's back corners out to the box (the driveway side has none: the box hugs the
-      // wall there, and the gap between them is the gate)
-      for (const sg of [-1, 1]) if (!sideDriveGate(sg) && half(sg) - hw > 1.6) fenceLine2(L, fence, local(fr, sg * (hw + 0.5), backStart), P2(sg, backStart), fences, fenceTint, occ);
+      fenceLine2(L, fence, P2(-1, zb), P2(-1, zb - dep), fences, fenceTint, occ);
+      fenceLine2(L, fence, P2(-1, zb - dep), P2(1, zb - dep), fences, fenceTint, occ);
+      fenceLine2(L, fence, P2(1, zb - dep), P2(1, zb), fences, fenceTint, occ);
+      for (const sg of [-1, 1]) if (half(sg) - hw > 0.8) fenceLine2(L, fence, local(fr, sg * (hw - 0.4), zb), P2(sg, zb), fences, fenceTint, occ);
     }
   } else if (fenced && !pie && fenceMode === 'frontage') {
     // the block's fences are drawn once all its lots are down (frontageFences); here just the returns from

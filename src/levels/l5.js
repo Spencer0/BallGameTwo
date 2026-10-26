@@ -761,7 +761,11 @@ function mill(ctx, life) {
   // the weir upstream that feeds it: a line of white water across the river
   const wz = -540;
   const wr = riverAt(wz);
-  paint.push((b) => b.rect(wr.x, wz, wr.hw * 2, 2.4, 0.08, SK.solid, { C: ['cloud'], y: -0.15 }));
+  // (a stone sill bank to bank with broken white water spilling below it, so it reads as a weir, not a stray line)
+  paint.push((b) => {
+    b.rect(wr.x, wz, wr.hw * 2 + 2, 1.6, 0.08, SK.solid, { C: ['stone'], y: -0.12 });
+    b.rect(wr.x - 0.3, wz + 3, wr.hw * 2, 4.4, 0.08, SK.water, { C: ['cloud', 'sky'], y: -0.16 });
+  });
 }
 
 function landmarks(ctx) {
@@ -1138,8 +1142,9 @@ function field(ctx, life, cx, cz, w, d) {
     const n = Math.floor((along ? w : d) / 8);
     for (let k = 0; k < n; k++) {
       const t = (k + 0.5) / n;
-      const x = along ? cx - w / 2 + w * t : cx - w / 2;
-      const z = along ? cz - d / 2 : cz - d / 2 + d * t;
+      // (set in from the field edge: a field can run right up to a road, its hedgerow shouldn't)
+      const x = along ? cx - w / 2 + w * t : cx - w / 2 + 3.5;
+      const z = along ? cz - d / 2 + 3.5 : cz - d / 2 + d * t;
       L.put(L.rand() < 0.65 ? 'tree_round' : 'pine_tree', x + L.range(-0.8, 0.8), z + L.range(-0.8, 0.8), { scale: L.range(0.9, 1.3) });
     }
   }
@@ -1221,8 +1226,13 @@ function farmstead(ctx, life, x0, x1, z0, z1, nr) {
   const pick = L.pick(['pickup_truck', 'pickup_truck', 'suv'].filter((i) => L.lib.byId.has(i)));
   L.put(pick, ...at(half - 10, sb + 5), { yaw: L.along(pick, face), tint: L.pick(PARKED_TINTS) });
   L.put('mailbox', ...at(half - 1, sb + 4), { yaw: face });
-  for (let k = -5; k <= 5; k++) L.put('pine_tree', ...at(half - yd + 3, sb + k * 7 + L.range(-1, 1)), { scale: L.range(1, 1.3) });
-  for (let k = 0; k < 6; k++) L.put('pine_tree', ...at(half - yd + 10 + k * 7, sb - 38), { scale: L.range(1, 1.3) });
+  for (let k = -5; k <= 5; k++) {
+    const b = sb + k * 7 + L.range(-1, 1);
+    if (Math.abs(b) < span - 10) L.put('pine_tree', ...at(half - yd + 3, b), { scale: L.range(1, 1.3) });
+  }
+  // (the side row stays inside the cell, well back from the side road)
+  const sideB = Math.max(sb - 38, -span + 14);
+  for (let k = 0; k < 6; k++) L.put('pine_tree', ...at(half - yd + 10 + k * 7, sideB), { scale: L.range(1, 1.3) });
   L.put('tree_round', ...at(half - 12, sb - 14), { scale: 1.4 });
   L.put('tree_round', ...at(half - 26, sb + 30), { scale: 1.3 });
   // gravel drive to the road
