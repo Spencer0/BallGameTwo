@@ -522,7 +522,8 @@ export class Life {
           const nx = this.laneCars[a.next];
           for (let k = 0; k < nx.length; k++) if (nx[k].s < nx[k].len + 3) hold = true;
         }
-        if (hold) gap = Math.min(gap, toEnd - 0.5);
+        // measured from the nose, so a long truck stops as far behind the line as a hatchback
+        if (hold) gap = Math.min(gap, toEnd - a.len / 2 + 2);
         a.hold = hold;
       } else a.hold = false;
       if (gap < Infinity) target = Math.min(target, Math.max(0, (gap - 2.5) * 1.1));
@@ -574,7 +575,7 @@ export class Life {
     if (!a.conn) {
       if (a.s >= lane.len && a.hold && !net.nodes[lane.to].exit) {
         // told to wait but arrived too fast to stop smoothly: stop at the line rather than barge in
-        a.s = lane.len - 0.05;
+        a.s = Math.max(sPrev, lane.len - a.len / 2);
         a.v = 0;
       }
       if (a.s >= lane.len) {

@@ -230,7 +230,7 @@ export function layout(lib, seed = 404) {
   gaps.sort((a, b) => a - b);
   const wallSegs = [-S, ...gaps.flatMap((x) => [x - 9, x + 9]), S];
   for (let k = 0; k < wallSegs.length; k += 2) {
-    fenceLine(L, pickId(L, ['privacy_fence', 'picket_fence']), wallSegs[k], wallZ, wallSegs[k + 1], wallZ, { dedupe: fences, opts: { tint: 'sand' } });
+    fenceLine(L, pickId(L, ['privacy_fence', 'picket_fence']), wallSegs[k], wallZ, wallSegs[k + 1], wallZ, { dedupe: fences, opts: { tint: 'cocoa' } });
   }
   for (let x = -S + 8; x < S; x += 16) {
     if (gaps.some((g) => Math.abs(x - g) < 14)) continue;
@@ -395,6 +395,8 @@ function school(ctx) {
   ctx.occ.add({ x: bx + 50, z: (ART_Z - 50 + bz - 8) / 2, hw: 14, hd: (ART_Z - 50 - bz + 8) / 2 + 9, yaw: 0 }, 'park');
   L.put(pickId(L, ['flagpole', 'street_lamp']), bx - 10, bz + t.dims[2] / 2 + 4);
   parkingLot(ctx, bx - 52, ART_Z - 50, 22, 36, 0, { fill: 0.6 });
+  // the lot's entrance aisle off School Drive
+  paint.push((b) => b.rect(bx - 24, ART_Z - 40, 34, 6.5, 0, SK.drive, { C: ['charcoal', 'charcoal', 'paper'], y: -0.01 }));
   paint.push((b) => {
     b.rect(bx, bz + t.dims[2] / 2 + 3, 26, 5, 0, SK.plaza, { P: [1.2], C: ['concrete', 'cloud', 'stone'] });
     court(b, SK, bx + 52, ART_Z - 50, 22, 15, 0, 'pine');
@@ -430,8 +432,7 @@ function stripMall(ctx) {
   // along the arterial: a shopping centre (two strip-mall wings behind one shared lot), a diner pad, the
   // gas station on the corner by the entrance light, a coffee pad and a second strip — each lot with a curb cut
   const pads = [
-    { id: pickId(L, ['strip_mall', 'shop_a']), x: -150, lot: 45 },
-    { id: pickId(L, ['strip_mall', 'shop_b']), x: -105, lot: 45 },
+    { id: pickId(L, ['supermarket', 'strip_mall']), x: -128, lot: 60, deep: 22 },
     { id: pickId(L, ['diner', 'cafe']), x: -45, lot: 26 },
     { id: 'petrol_station', x: 38, lot: 0 },
     { id: 'cafe', x: 100, lot: 24 },
@@ -445,9 +446,11 @@ function stripMall(ctx) {
   for (const p of pads) {
     const t = L.lib.byId.get(p.id);
     if (!t) continue;
-    const z = prop + (p.lot ? 14 : 4) + t.dims[2] / 2;
+    const deep = p.deep ?? 13; // the anchor store sits behind a deeper lot
+    const z = prop + (p.lot ? deep + 1 : 4) + t.dims[2] / 2;
     L.put(p.id, p.x, z, { yaw: Math.PI });
-    if (p.lot) parkingLot(ctx, p.x, prop + 6.5, 13, p.lot, Math.PI / 2, { fill: 0.5, tints: ['paper', 'cloud', 'stone', 'slate', 'cocoa', 'tomato', 'sky'] });
+    if (p.deep) paint.push((b) => b.rect(p.x, z, t.dims[0] + 6, t.dims[2] + 6, 0, SK.solid, { C: ['concrete'], y: -0.06 }));
+    if (p.lot) parkingLot(ctx, p.x, prop + 0.5 + deep / 2, deep, p.lot, Math.PI / 2, { fill: 0.5, tints: ['paper', 'cloud', 'stone', 'slate', 'cocoa', 'tomato', 'sky'] });
     // curb cut: a driveway apron across the verge and sidewalk into the lot
     const apron = art.verge + art.walk;
     paint.push((b) => b.rect(p.x + (p.lot ? t.dims[0] / 2 - 2 : 0), prop - apron / 2, 6, apron, 0, SK.drive, { C: ['cloud', 'cloud', 'stone'], y: 0.01 }));

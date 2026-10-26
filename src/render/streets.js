@@ -296,6 +296,27 @@ export class StreetBuilder {
     }
   }
 
+  /** a plain box standing on the ground (backdrop buildings beyond the map): flat top, darker walls */
+  box(cx, cz, w, d, h, { top = 'slate', side = 'stone', y = 0, yaw = 0, face = null } = {}) {
+    const c = Math.cos(yaw),
+      s = Math.sin(yaw);
+    const P = (lx, lz) => [cx + c * lx + s * lz, cz - s * lx + c * lz];
+    const pts = [P(-w / 2, -d / 2), P(w / 2, -d / 2), P(w / 2, d / 2), P(-w / 2, d / 2)];
+    const T = pts.map(([x, z]) => this.vert(x, y + h, z, 0, 0, SK.solid, [], [], [top]));
+    this.index.push(T[0], T[2], T[1], T[0], T[3], T[2]);
+    for (let k = 0; k < 4; k++) {
+      const [x0, z0] = pts[k],
+        [x1, z1] = pts[(k + 1) % 4];
+      // face = [x, z]: only the walls that can be seen from that point (backdrops seen from the map)
+      if (face && ((x1 - x0) * (face[1] - z0) - (z1 - z0) * (face[0] - x0)) * ((x1 - x0) * (cz - z0) - (z1 - z0) * (cx - x0)) > 0) continue;
+      const a = this.vert(x0, y, z0, 0, 0, SK.solid, [], [], [side]),
+        b2 = this.vert(x1, y, z1, 0, 0, SK.solid, [], [], [side]),
+        c2 = this.vert(x1, y + h, z1, 0, 0, SK.solid, [], [], [side]),
+        d2 = this.vert(x0, y + h, z0, 0, 0, SK.solid, [], [], [side]);
+      this.index.push(a, b2, c2, a, c2, d2);
+    }
+  }
+
   /** disc or ring (r0 > 0) */
   disc(cx, cz, r1, kind, { r0 = 0, P = [], Q = [], C = ['charcoal'], y = 0, segs = 40, radialUV = false, a0 = 0, a1 = Math.PI * 2 } = {}) {
     const ring = [];

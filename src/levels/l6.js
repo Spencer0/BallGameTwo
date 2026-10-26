@@ -45,7 +45,8 @@ for (const z of BRIDGES_Z) if (!BORO_Z.includes(z)) BORO_Z.push(z);
 BORO_Z.sort((a, b) => a - b);
 const ELEVATED_X = 1500; // the elevated train runs above this borough avenue
 const SHORE_RD_X = WEST_X0 - 70;
-const JC_X = SHORE_RD_X - 130; // Jersey City: a second avenue behind the waterfront towers
+const JC_X = SHORE_RD_X - 130; // Jersey City: a second avenue behind the waterfront towers...
+const JC2_X = JC_X - 110; // ...and a third, of rowhouses, before the rail yard
 const RWY_X = -2080; // the airport's runway, west of the town, its rail yard and a fence
 const SHORE_RD_Z = [-2300, -2050, WEST_BRIDGE_Z, -1550, -1300, -1050, -800, -550, -300, -50, 200, 450, 760, 1000, 1250];
 const FREIGHT_Z = 760;
@@ -348,13 +349,19 @@ function buildNet() {
   for (let j = 0; j < wNodes.length - 1; j++) net.edge(wNodes[j], wNodes[j + 1], { cls: 'arterial', name: 'Shore Road', walk: 3, verge: 0 });
   // Jersey City behind the towers: Washington Blvd and short cross streets back to Shore Road
   const jz = SHORE_RD_Z.filter((z) => z >= -1300 && z <= FREIGHT_Z);
-  const jNodes = jz.map((z) => N(JC_X, z));
-  for (let j = 0; j < jNodes.length - 1; j++) net.edge(jNodes[j], jNodes[j + 1], { cls: 'street', name: 'Washington Blvd', w: 14, walk: 4, verge: 0 });
-  for (const z of jz) if (z !== -800 && z !== FREIGHT_Z) net.edge(N(SHORE_RD_X, z), N(JC_X, z), { cls: 'street', name: 'Jersey St', w: 12, walk: 3, verge: 0 });
+  for (const [x, name] of [[JC_X, 'Washington Blvd'], [JC2_X, 'Grove St']]) {
+    const jNodes = jz.map((z) => N(x, z));
+    for (let j = 0; j < jNodes.length - 1; j++) net.edge(jNodes[j], jNodes[j + 1], { cls: 'street', name, w: 14, walk: 4, verge: 0 });
+  }
+  for (const z of jz)
+    if (z !== -800 && z !== FREIGHT_Z)
+      for (const [xa, xb] of [[SHORE_RD_X, JC_X], [JC_X, JC2_X]]) net.edge(N(xa, z), N(xb, z), { cls: 'street', name: 'Jersey St', w: 12, walk: 3, verge: 0 });
   net.edge(N(SHORE_RD_X, -800), N(JC_X, -800), { cls: 'arterial', name: 'Airport Road', walk: 3, verge: 0 });
-  net.edge(N(JC_X, -800), N(RWY_X + 390, -800, { bulb: 20 }), { cls: 'arterial', name: 'Airport Road', walk: 0, verge: 0 });
+  net.edge(N(JC_X, -800), N(JC2_X, -800), { cls: 'arterial', name: 'Airport Road', walk: 3, verge: 0 });
+  net.edge(N(JC2_X, -800), N(RWY_X + 390, -800, { bulb: 20 }), { cls: 'arterial', name: 'Airport Road', walk: 0, verge: 0 });
   net.edge(N(SHORE_RD_X, FREIGHT_Z), N(JC_X, FREIGHT_Z), { cls: 'street', name: 'Freight Road', walk: 0, verge: 0 });
-  net.edge(N(JC_X, FREIGHT_Z), N(-2100, FREIGHT_Z), { cls: 'street', name: 'Freight Road', walk: 0, verge: 0 });
+  net.edge(N(JC_X, FREIGHT_Z), N(JC2_X, FREIGHT_Z), { cls: 'street', name: 'Freight Road', walk: 0, verge: 0 });
+  net.edge(N(JC2_X, FREIGHT_Z), N(-2100, FREIGHT_Z), { cls: 'street', name: 'Freight Road', walk: 0, verge: 0 });
   net.edge(N(-2100, FREIGHT_Z), N(-S - 100, FREIGHT_Z, { exit: true }), { cls: 'street', name: 'Freight Road', walk: 0, verge: 0 });
   return net.build();
 }
@@ -383,13 +390,29 @@ const hash = (x, z) => {
   const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
   return v - Math.floor(v);
 };
-/** the city carrying on beyond the map, as blocks of rooftops round yards, fading into the haze */
-function roofs(b, x0, x1, z0, z1, bw, bd, st, pal, y, yard = 0.5) {
+/**
+ * The city carrying on beyond the map: blocks of plain boxes (rooftop colour on top, a darker wall
+ * colour down the sides) with the streets between them, heights varying block to block, fading into
+ * the haze. Two or three buildings per block so the skyline isn't a row of identical slabs.
+ */
+function roofs(b, x0, x1, z0, z1, bw, bd, st, pal, y, h0 = 10, h1 = 24, walls = ['stone', 'brick', 'concrete', 'sand'], per = 2) {
   for (let x = x0; x + bw <= x1 + 0.1; x += bw)
     for (let z = z0; z + bd <= z1 + 0.1; z += bd) {
-      const h = hash(x, z);
-      b.rect(x + bw / 2, z + bd / 2, bw - st, bd - st, 0, SK.solid, { C: [pal[Math.floor(h * pal.length)]], y });
-      if (hash(z, x) < yard) b.rect(x + bw / 2, z + bd / 2, (bw - st) * 0.7, (bd - st) * 0.45, 0, SK.solid, { C: [h < 0.5 ? 'pine' : 'stone'], y: y + 0.02 });
+      const h = hash(x, z),
+        g = hash(z, x);
+      const along = bw >= bd;
+      const len = (along ? bw : bd) - st,
+        dep = (along ? bd : bw) - st;
+      const n = per;
+      for (let k = 0; k < n; k++) {
+        const r = hash(x + k * 17.3, z - k * 9.1);
+        const seg = len / n;
+        const off = -len / 2 + seg * (k + 0.5);
+        const ht = h0 + (h1 - h0) * r * r * (0.6 + 0.8 * g);
+        const cx = x + bw / 2 + (along ? off : 0),
+          cz = z + bd / 2 + (along ? 0 : off);
+        b.box(cx, cz, along ? seg - 2 : dep, along ? dep : seg - 2, ht, { top: pal[Math.floor(((h + r) * 7) % pal.length)], side: walls[Math.floor((g + r) * 11) % walls.length], y, face: [0, 0] });
+      }
     }
 }
 
@@ -405,19 +428,19 @@ function landPolys(b) {
   // the banks
   b.poly([[-9000, -9000], [WEST_X0, -9000], [WEST_X0, 1300], [-9000, 1300]], SK.solid, { C: ['leaf'], y: -1.2 });
   // the Jersey shore: paved where the towers and the port stand, parkland and woods elsewhere
-  b.rect((WEST_X0 + JC_X - 60) / 2, -245, WEST_X0 - JC_X + 60, 2010, 0, SK.solid, { C: ['concrete'], y: -1.15 });
+  b.rect((WEST_X0 + JC2_X - 40) / 2, -245, WEST_X0 - JC2_X + 40, 2010, 0, SK.solid, { C: ['concrete'], y: -1.15 });
   b.rect(-1500, 1040, 500, 520, 0, SK.solid, { C: ['concrete'], y: -1.15 });
   // the borough's waterfront park
   b.rect((EAST_X0 + BORO_AVE[0] - 10) / 2, -470, BORO_AVE[0] - 10 - EAST_X0 - 4, 3440, 0, SK.solid, { C: ['leaf'], y: -1.15 });
   b.poly([[EAST_X0, -9000], [9000, -9000], [9000, 1350], [EAST_X0, 1350]], SK.solid, { C: ['stone'], y: -1.2 });
   // beyond the map: Manhattan north of the edge, more borough to the east, Jersey towns and woods to the west
-  roofs(b, -SHORE + 60, SHORE - 60, -6000, -S - 100, 150, 75, 16, ['slate', 'concrete', 'stone', 'slate'], -1.0, 0.15);
-  roofs(b, S + 50, S + 2600, -6000, 1300, 200, 62.5, 12, ['brick', 'cocoa', 'brick'], -1.0, 0.25);
-  roofs(b, S + 2600, S + 6600, -7000, 1300, 400, 125, 20, ['brick', 'cocoa', 'stone'], -1.0, 0.15);
-  roofs(b, -S - 6600, -S - 2600, -7000, 1250, 400, 125, 20, ['stone', 'concrete', 'sand'], -1.0, 0.15);
-  roofs(b, EAST_X0 + 60, S + 50, -6000, -S - 50, 200, 62.5, 12, ['brick', 'cocoa', 'brick'], -1.0, 0.25);
-  roofs(b, -S - 2600, -S - 150, -6000, 1250, 130, 65, 12, ['stone', 'concrete', 'sand', 'slate'], -1.0, 0.25);
-  roofs(b, WEST_X0 - 900, WEST_X0 - 60, -6000, -S - 150, 130, 65, 12, ['stone', 'concrete', 'sand', 'slate'], -1.0, 0.25);
+  roofs(b, -SHORE + 60, SHORE - 60, -4500, -S - 100, 150, 75, 16, ['slate', 'concrete', 'stone', 'slate'], -1.0, 18, 70, ['stone', 'sand', 'brick', 'concrete']);
+  roofs(b, S + 50, S + 2600, -4500, 1300, 200, 62.5, 12, ['brick', 'cocoa', 'slate'], -1.0, 9, 20, ['brick', 'cocoa', 'caramel', 'sand']);
+  roofs(b, S + 2600, S + 5600, -5000, 1300, 400, 125, 20, ['brick', 'cocoa', 'stone'], -1.0, 8, 30, ['brick', 'cocoa', 'stone'], 1);
+  roofs(b, -S - 5600, -S - 2600, -5000, 1250, 400, 125, 20, ['stone', 'concrete', 'sand'], -1.0, 8, 26, undefined, 1);
+  roofs(b, EAST_X0 + 60, S + 50, -4500, -S - 50, 200, 62.5, 12, ['brick', 'cocoa', 'slate'], -1.0, 9, 20, ['brick', 'cocoa', 'caramel', 'sand']);
+  roofs(b, -S - 2600, -S - 150, -4500, 1250, 130, 65, 12, ['stone', 'concrete', 'sand', 'slate'], -1.0, 9, 30);
+  roofs(b, WEST_X0 - 900, WEST_X0 - 60, -4500, -S - 150, 130, 65, 12, ['stone', 'concrete', 'sand', 'slate'], -1.0, 12, 45);
   // riverside parks between the shore drives and the water (Hudson River Park, the East River esplanade)
   for (const sx of [-1, 1]) b.rect(sx * (SHORE - 21), (-S - 100 + TIP0) / 2, 36, TIP0 + S + 100, 0, SK.solid, { C: ['leaf'], y: -1.1 });
   // the statue's island
@@ -455,7 +478,7 @@ export const env = {
   planes: [
     { x: 0, z: 0, w: 20000, d: 20000, y: -2.5, pattern: 'water', a: 'cobalt', b: 'sky', cell: 30 },
     // airport grass
-    { x: -1970, z: -350, w: 660, d: 2000, y: -0.6, pattern: 'solid', a: '#8FCF4A' },
+    { x: -1970, z: -350, w: 660, d: 2000, y: -0.6, pattern: 'solid', a: '#3DAA5C' },
   ],
   streets: (b) => {
     landPolys(b);
@@ -511,6 +534,7 @@ function zone(x, z, e) {
     return { row: true, tiers: [[['brownstone'], 3], [['tenement'], 1.4]], gap: 0 };
   }
   if (x < WEST_X0 && x > SHORE_RD_X - 30 && e.name === 'Shore Road') return { tiers: [[JERSEY, 1]], gap: 16 };
+  if (x < JC_X - 30) return { row: true, tiers: [[['brownstone'], 2], [['tenement'], 1.4], [['storefront_a', 'storefront_b'], 0.4]], gap: 0 };
   if (x < WEST_X0) return { tiers: [[['midrise_modern', 'midrise_prewar', 'office_block'], 1], [['apartment_tower'], 0.3]], gap: 6 };
   if (cls === 'highway') return { tiers: [[MID, 1], [HIGH, 0.4]], gap: 18 };
   if (Math.hypot(x - PLAZA_C[0], z - PLAZA_C[1]) < 170) return { tiers: [[['screen_building'], 1], [['highrise_glass', 'office_block', 'midrise_modern'], 1.4]], gap: 0 };
@@ -581,8 +605,8 @@ export function layout(lib, seed = 606) {
     if (ix > PARK.minX && ix < PARK.maxX && iz > PARK.minZ && iz < PARK.maxZ) return true;
     if (Math.abs(ix) > SHORE + 5 && ix < EAST_X0 && ix > WEST_X0) return true; // over water
     if (iz > BAT_Z && Math.abs(ix) < SHORE) return true; // Battery Park
-    const jc = e.name === 'Shore Road' || e.name === 'Washington Blvd' || e.name === 'Jersey St';
-    if (ix < WEST_X0 && (!jc || iz < -1300 || iz > FREIGHT_Z - 20 || ix < JC_X - 50)) return true; // airport, port, woods
+    const jc = e.name === 'Shore Road' || e.name === 'Washington Blvd' || e.name === 'Grove St' || e.name === 'Jersey St';
+    if (ix < WEST_X0 && (!jc || iz < -1300 || iz > FREIGHT_Z - 20 || ix < JC2_X - 40)) return true; // airport, port, woods
     return false;
   };
   for (const f of order) {
@@ -614,15 +638,16 @@ export function layout(lib, seed = 606) {
   // second pass: plug the gaps the big buildings left with narrow ones (no one-storey shops on avenues)
   const narrowSide = ['brownstone', 'tenement', 'storefront_a', 'storefront_b'].filter((id) => lib.byId.has(id));
   const narrowAve = ['tenement', 'brownstone'].filter((id) => lib.byId.has(id));
+  const plazaFill = ['midrise_modern', 'office_block', 'storefront_c', 'storefront_a'].filter((id) => lib.byId.has(id));
   for (const f of order) {
     const e = net.edges[f.e];
     if (skip(f, e) || e.cls === 'highway' || e.plaza) continue;
     const mid = frameAt(f, f.L[f.L.length - 1] / 2);
     const [ix, iz] = local(mid, 0, -20);
     if (ix < WEST_X0) continue;
-    // no four-storey walk-ups squeezed in beside the screens round the plaza: those gaps become pocket plazas
-    if (Math.hypot(ix - PLAZA_C[0], iz - PLAZA_C[1]) < 200) continue;
-    const pool = e.cls === 'avenue' || e.cls === 'boulevard' ? narrowAve : narrowSide;
+    // round the plaza the gaps take modern mid-rises and shopfronts, not four-storey walk-ups
+    const nearPlaza = Math.hypot(ix - PLAZA_C[0], iz - PLAZA_C[1]) < 200;
+    const pool = nearPlaza ? plazaFill : e.cls === 'avenue' || e.cls === 'boulevard' ? narrowAve : narrowSide;
     fillFrontage(L, occ, f, {
       pick: (rem) => {
         const fit = pool.filter((id) => lib.byId.get(id).dims[0] <= rem + 0.3);
@@ -675,13 +700,13 @@ export function layout(lib, seed = 606) {
   trafficLights(L, life, net);
   const laneW = (l) => {
     const e = net.edges[l.e];
-    const base = e.cls === 'avenue' || e.cls === 'boulevard' ? 3.2 : e.cls === 'highway' ? 2.2 : e.cls === 'lane' ? 0.5 : e.cls === 'arterial' ? 1.2 : 1;
+    const base = e.cls === 'avenue' || e.cls === 'boulevard' ? 4 : e.cls === 'highway' ? 2.2 : e.cls === 'lane' ? 0.5 : e.cls === 'arterial' ? 1.2 : 1;
     const [x, z] = net.edges[l.e].poly[0];
     let core = 0;
     for (const c of CORES) core = Math.max(core, gauss(x, z, c));
     return base * (x > EAST_X0 ? 1.4 : 0.5 + 5 * core); // thickest in midtown and the financial district; the borough has its own
   };
-  spawnTraffic(L, life, net, 1450, [['taxi', 14], ['car', 4], ['suv', 3], ['hatchback', 2], ['city_bus', 1.4], ['delivery_van', 2.4], ['food_truck', 0.4], ['police_car', 0.7], ['ambulance', 0.3], ['limo', 0.6], ['garbage_truck', 0.4], ['fire_truck', 0.2], ['pickup_truck', 0.8]], { laneWeight: laneW, speed: 1 });
+  spawnTraffic(L, life, net, 1700, [['taxi', 14], ['car', 4], ['suv', 3], ['hatchback', 2], ['city_bus', 1.4], ['delivery_van', 2.4], ['food_truck', 0.4], ['police_car', 0.7], ['ambulance', 0.3], ['limo', 0.6], ['garbage_truck', 0.4], ['fire_truck', 0.2], ['pickup_truck', 0.8]], { laneWeight: laneW, speed: 1 });
   const walkW = (w) => {
     const e = net.edges[w.e];
     const [x, z] = w.pts[0];
@@ -705,6 +730,16 @@ export function layout(lib, seed = 606) {
   const blimp = L.put('blimp', 1800, -1300, { y: 260 });
   if (blimp) life.movers.push({ its: [blimp], offs: [0], route: ring(1800, -1300, 260, 32), speed: 9, y: 260, air: true, kind: 'blimp' });
   for (let k = 0; k < 40; k++) L.put('fluffy_cloud', L.range(-S, S), L.range(-S, S), { y: L.range(520, 860), scale: L.range(0.8, 1.8), yaw: L.range(0, 6.28), tint: L.pick(['snow', 'cloud']) });
+  // a wooden water tank on about a quarter of the walk-up roofs (the tenement model's roof is at 16.6 m)
+  if (L.lib.byId.has('rooftop_water_tank'))
+    for (const it of L.items.slice()) {
+      if (it.id !== 'tenement' || L.rand() > 0.27) continue;
+      const lx = L.rand() < 0.5 ? 3.8 : -2.5,
+        lz = -3.0;
+      const c = Math.cos(it.yaw),
+        s2 = Math.sin(it.yaw);
+      L.put('rooftop_water_tank', it.x + lx * c + lz * s2, it.z - lx * s2 + lz * c, { y: 16.6, on: it, scale: 0.7, yaw: L.range(0, 6.28) });
+    }
   return L;
 }
 
@@ -921,6 +956,17 @@ function plaza(ctx, life) {
       const [x, z] = at(L.range(-hw * 0.7, hw * 0.7), L.range(-hd * 0.9, hd * 0.9));
       L.put('park_bench', x, z, { yaw: yaw + Math.PI / 2 });
     }
+    // planters in two lines down the plaza edges, tables and chairs in clusters between them
+    for (const side of [-1, 1])
+      for (let v = -hd + 4; v < hd - 3; v += 9) L.put(pickId(L, ['planter', 'park_bench']), ...at(side * (hw - 2), v), { yaw: yaw });
+    for (let k = 0; k < Math.max(2, Math.floor(hd / 12)); k++) {
+      const [cx2, cz2] = at(L.range(-hw * 0.5, hw * 0.5), L.range(-hd * 0.8, hd * 0.8));
+      for (let j = 0; j < 4; j++) {
+        const a = (j / 4) * Math.PI * 2 + 0.4;
+        const t = L.put(pickId(L, ['cafe_table', 'picnic_table']), cx2 + Math.sin(a) * 3.2, cz2 + Math.cos(a) * 3.2, { yaw: a, tint: L.pick(['tomato', 'cobalt', 'sun']) });
+        if (t) L.put(L.pick(ids), cx2 + Math.sin(a) * 4.4, cz2 + Math.cos(a) * 4.4, { yaw: a + Math.PI });
+      }
+    }
     // a performer with a ring of spectators
     const [px, pz] = at(0, hd * 0.3);
     L.put(pickId(L, ['person_teen', 'person_adult']), px, pz, { yaw: 0 });
@@ -995,7 +1041,7 @@ function centralPark(ctx, life) {
     wind([60, -1090], [-20, -1200], -20, 3),
     wind([P.maxX - E, -1950], [150, -1930], 20),
   ];
-  for (const w of walks.slice(0, 6)) spawnLoopWalkers(L, life, [...w, ...w.slice().reverse()], 7);
+  for (const w of walks) spawnLoopWalkers(L, life, [...w, ...w.slice().reverse()], 12, ['person_adult', 'person_adult2', 'person_jogger', 'person_kid', 'person_grandpa']);
   // the Great Lawn: open grass with ball fields and people on blankets; Sheep Meadow likewise
   for (const [cx, cz] of [[-60, -1310], [60, -1310]]) paint.push((b) => b.disc(cx, cz + 22, 22, SK.dirt, { C: ['sand', 'caramel'], segs: 4, a0: Math.PI * 0.75, a1: Math.PI * 1.25, y: -0.08 }));
   for (const [cx, cz, hw, hd, n] of [[0, -1310, 110, 32, 30], [-175, -720, 42, 55, 40]]) {
@@ -1258,16 +1304,44 @@ function westBank(ctx, life) {
   L.put(pickId(L, ['airport_terminal', 'parking_garage']), RX + 350, -350, { yaw: -Math.PI / 2 });
   L.put(pickId(L, ['control_tower', 'radio_mast']), RX + 270, -720);
   for (const z of [-1050, -950]) L.put(pickId(L, ['hangar', 'garage']), RX + 230, z, { yaw: -Math.PI / 2 });
-  for (const z of [-560, -440, -320, -200]) L.put('airliner', RX + 230, z, { yaw: L.along('airliner', Math.PI / 2) }); // nose-in at the gates
+  const term = L.lib.byId.get('airport_terminal');
+  const gateX = RX + 350 - (term ? term.dims[2] / 2 : 20) - 26;
+  for (const z of [-560, -440, -320, -200]) L.put('airliner', gateX, z, { yaw: L.along('airliner', Math.PI / 2) }); // nose-in at the gates
+  // one taxiing round the apron edge to the runway hold and back
+  {
+    const route = [[RX + 175, -760], [RX + 120, -700], [RX + 120, 40], [RX + 175, 100], [RX + 175, -760]];
+    const it = L.put('airliner', route[0][0], route[0][1]);
+    if (it) life.movers.push({ its: [it], offs: [0], route, speed: 9, kind: 'plane' });
+  }
   // between the town and the airfield: a freight rail yard with strings of parked wagons, and the airport fence
-  const YX = [JC_X - 70, JC_X - 82, JC_X - 94, JC_X - 106];
+  const YX = [JC2_X - 48, JC2_X - 60, JC2_X - 72];
   paint.push((b) => {
-    b.rect(JC_X - 88, -300, 64, 1900, 0, SK.solid, { C: ['stone'], y: -1.1 });
+    b.rect(JC2_X - 60, -300, 40, 1900, 0, SK.solid, { C: ['stone'], y: -1.1 });
     for (const x of YX) b.rect(x, -300, 3.4, 1880, 0, SK.rail, { C: ['stone', 'cocoa', 'cloud'], y: -1.05 });
     b.rect(RX + 440, -400, 0.5, 1800, 0, SK.solid, { C: ['charcoal'], y: -0.55 });
   });
   const wagons = ['freight_car', 'tank_car', 'hopper_car', 'freight_car'].filter((id) => L.lib.byId.has(id));
-  for (const x of YX) {
+  // a switcher shunting a cut of wagons round the yard: down one track, over a crossover, back up the next
+  {
+    const [xa, xb] = [YX[0], YX[1]];
+    const route = [[xa, -1150], [xa, 450], [(xa + xb) / 2, 500], [xb, 450], [xb, -1150], [(xa + xb) / 2, -1200], [xa, -1150]];
+    const ids = ['locomotive', ...Array.from({ length: 7 }, () => L.pick(wagons))].filter((id) => L.lib.byId.has(id));
+    const its = [],
+      offs = [];
+    let off = 0;
+    for (const id of ids) {
+      const dm = L.lib.byId.get(id).dims;
+      const len = Math.max(dm[0], dm[2]);
+      const it = L.put(id, xa, -1150);
+      if (it) {
+        its.push(it);
+        offs.push(off + len / 2);
+      }
+      off += len + 0.8;
+    }
+    if (its.length) life.movers.push({ its, offs, route, speed: 7, kind: 'train' });
+  }
+  for (const x of YX.slice(1)) {
     for (let z = -1200 + L.range(0, 200); z < 580; ) {
       const n = 4 + Math.floor(L.rand() * 9);
       for (let k = 0; k < n && z < 580; k++) {
@@ -1364,7 +1438,7 @@ export const review = {
     { name: 'downtown', pos: [-700, 430, 2200], look: [100, 0, 1300] },
     { name: 'park', pos: [700, 450, -600], look: [0, 0, -1250] },
     { name: 'borough', pos: [1000, 430, 600], look: [1700, 0, -100] },
-    { name: 'jersey', pos: [-700, 380, 500], look: [-1400, 0, -150] },
+    { name: 'jersey', pos: [-950, 520, 450], look: [-1520, 0, -250] },
   ],
   map: { cx: 0, cz: 0, half: 2250 },
   maps: [
@@ -1376,7 +1450,7 @@ export const review = {
     { name: 'fifth_ave', pos: [60, 90, 300], look: [0, 0, 180] },
     { name: 'plaza', pos: [PLAZA_C[0] + 70, 48, PLAZA_C[1] + 95], look: [PLAZA_C[0], 6, PLAZA_C[1]] },
     { name: 'park', pos: [-40, 120, -900], look: [-40, 0, -1030] },
-    { name: 'airport', pos: [-1380, 170, 0], look: [-1620, 0, -380] },
+    { name: 'airport', pos: [RWY_X + 520, 170, 0], look: [RWY_X + 230, 0, -380] },
     { name: 'harbour', pos: [500, 250, 1700], look: [100, 0, 2000] },
   ],
 };

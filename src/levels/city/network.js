@@ -217,7 +217,8 @@ export class Network {
             if (o === arm) continue;
             const eo = E[o.e];
             const d = Math.abs(Math.sin(o.ang - arm.ang));
-            if (d < 0.25) continue; // straight-through partner
+            // straight-through partner (or nearly: a ring road's two arms leave its junction at ~165°)
+            if (d < 0.25 || Math.cos(o.ang - arm.ang) < -0.85) continue;
             trim = Math.max(trim, eo.w / 2 / d + Math.abs(Math.cos(o.ang - arm.ang)) * (e.w / 2) / d);
           }
         } else if (n.deg === 1 && n.bulb) {

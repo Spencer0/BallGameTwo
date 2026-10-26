@@ -466,6 +466,40 @@ def strip_mall():
         cyl(0.6, 0.08, at=(x + 0.6, y, zt + 1.02), color="ink_soft", segs=10, lod0=True)
 
 
+@asset("supermarket", "Supermarket", "Forty kinds of cereal. One working cart. Good luck.", 4, "stone",
+       "landmark", col="box", fill=0.85)
+def supermarket():
+    # the shopping centre's anchor: one big box, a tall glass entrance with the name band over it,
+    # a covered walk along the front, loading dock at the back
+    L, D, H = 56.0, 36.0, 8.0
+    yf = -D / 2
+    box((L + 0.8, 4.0, 0.15), at=(0, yf - 2.0, 0), base=True, color="concrete")           # front walk
+    box((L, D, H), at=(0, 0, 0.15), base=True, color="sand", tint=True)
+    box((L + 0.1, D + 0.1, 0.12), at=(0, 0, H + 0.15), base=True, color="stone")           # roof membrane
+    # parapet, stepping up over the entrance
+    box((L, 0.5, 1.2), at=(0, yf + 0.25, H + 0.15), base=True, color="sand", tint=True)
+    box((L + 0.3, 0.8, 0.22), at=(0, yf + 0.25, H + 1.35), base=True, color="cloud")
+    box((18.0, 1.2, 4.6), at=(0, yf - 0.2, 0.15), base=True, color="glass")                # entrance glass
+    box((19.0, 1.4, 4.6), at=(0, yf - 0.2, 4.75), base=True, color="sand", tint=True)      # tower over it
+    box((19.6, 1.8, 0.35), at=(0, yf - 0.2, 9.35), base=True, color="cloud")
+    _panel("-y", yf - 0.95, 0, 6.6, 15.0, 2.4, 0.2, "leaf")                                  # name band
+    for k in range(7):
+        box((1.2, 0.12, 1.4), at=(-5.4 + k * 1.8, yf - 1.08, 5.9), base=True, color="snow", lod0=True)
+    # shop windows either side of the entrance, a covered walk on columns
+    for x in (-19.0, 19.0):
+        _panel("-y", yf, x, 1.6, 14.0, 2.6, 0.08, "glass")
+    box((L, 3.4, 0.35), at=(0, yf - 1.7, 3.4), base=True, color="cloud")
+    for x in (-27.0, -18.0, -9.5, 9.5, 18.0, 27.0):
+        box((0.45, 0.45, 3.25), at=(x, yf - 3.1, 0.15), base=True, color="sand", lod0=True)
+    # cart corral by the doors
+    box((3.0, 1.2, 1.0), at=(-12.0, yf - 2.6, 0.15), base=True, color="ink_soft", lod0=True)
+    # back: loading dock doors; roof: units
+    for x in (-18.0, -10.0, -2.0):
+        _panel("+y", D / 2, x, 2.0, 3.4, 3.6, 0.1, "charcoal", lod0=True)
+    for (x, y) in ((-16.0, 4.0), (0.0, 8.0), (14.0, 2.0), (20.0, 10.0)):
+        box((4.0, 3.0, 1.2), at=(x, y, H + 0.27), base=True, color="cloud")
+
+
 # ---------------------------------------------------------------- pedestrians (same peg build as l3 people)
 
 _PED_FLAGS = ["creature", "wander", "flee"]

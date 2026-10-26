@@ -30,7 +30,7 @@ const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'hous
  * One suburban lot. fr = frame on the property line at the lot's centre (yaw faces the road).
  * e = the street edge (for verge/walk widths). opts: W (frontage), D (depth), first/last (fence ends), pie.
  */
-export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'caramel', fenceMode = 'lot' } = {}) {
+export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'cocoa', fenceMode = 'lot' } = {}) {
   const { L, occ, fences, paint } = ctx;
   const pool = (poolIds || HOUSE_POOL).filter((id) => L.lib.byId.has(id));
   if (!pool.length) return false;
@@ -234,7 +234,8 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       if (yd * 2 > depth - 1 || yw * 2 > W - 2) continue;
       // keep play things well off the fence lines
       const rx = L.range(-W / 2 + yw + 1.6, W / 2 - yw - 1.6);
-      const rz = L.range(backStart - yd - 1.2, -D + yd + 1.8);
+      // near the house: on a deep lot the far end is lawn, not a trampoline in the middle of nowhere
+      const rz = L.range(backStart - yd - 1.2, Math.max(-D + yd + 1.8, backStart - 16));
       const [x, z] = local(fr, rx, rz);
       const yaw = fr.yaw + (L.rand() < 0.5 ? 0 : Math.PI / 2);
       const r = { x, z, hw: yw, hd: yd, yaw };

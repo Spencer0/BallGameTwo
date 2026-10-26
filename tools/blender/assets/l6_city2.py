@@ -225,9 +225,8 @@ def tenement():
                 ang = math.degrees(math.atan2(fh, dx))
                 box((math.hypot(dx, fh), 0.55, 0.12), at=(cx, yf - 0.62, z + fh / 2),
                     rot=(0, -sgn * ang, 0), color="ink")
-    # roof: stair bulkhead + water tank
+    # roof: stair bulkhead (the layout sets a rooftop water tank on some of them, not all)
     box((3.0, 3.6, 2.4), at=(-4.5, 4.0, H), base=True, color=F, tint=True)
-    _tank(3.8, 3.0, H, r=1.55, legs=1.6, h=2.4, roof=1.0, steel="ink")
     _rear(7.0, 4.2, 2.0, D, 1.9, F, tint=True)
     _balance(D, color=F, tint=True)
 

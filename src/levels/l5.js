@@ -844,7 +844,8 @@ function lake(ctx, life) {
   const [sx, sz] = lakeAt(shoreA, 0);
   paint.push((b) => {
     b.rect((bulb.x + sx) / 2 + 6, sz, sx - bulb.x - 4, 4, 0, SK.drive, { C: ['caramel', 'caramel', 'cocoa'], y: -0.1 });
-    for (let k = 0; k < 3; k++) b.rect(sx + 18, sz - 24 + k * 22, 40, 3, 0, SK.solid, { C: ['caramel'], y: 0.05 });
+    // docks run from up on the bank out into the water, so none starts afloat where the shore curves away
+    for (let k = 0; k < 3; k++) b.rect(sx + 12, sz - 24 + k * 22, 52, 3, 0, SK.solid, { C: ['caramel'], y: 0.05 });
   });
   for (let k = 0; k < 3; k++)
     for (let j = 0; j < 4; j++) {
@@ -879,12 +880,12 @@ function lake(ctx, life) {
     L.put(L.rand() < 0.7 ? 'picnic_table' : 'bbq_grill', x, z, { yaw: L.range(0, 3) });
   }
   // sailboats tacking about
+  // (concentric loops, so boats on different loops never sail through each other)
   for (let k = 0; k < 7; k++) {
-    const a0 = k * 0.9;
-    const cx = LAKE.x + Math.sin(a0) * 60,
-      cz = LAKE.z + Math.cos(a0) * 45;
+    const cx = LAKE.x + 30,
+      cz = LAKE.z + 10;
     const loop = [];
-    for (let j = 0; j <= 20; j++) loop.push([cx + Math.sin((j / 20) * 6.283) * (34 + k * 5), cz + Math.cos((j / 20) * 6.283) * (22 + k * 3)]);
+    for (let j = 0; j <= 24; j++) loop.push([cx + Math.sin((j / 24) * 6.283) * (34 + k * 13), cz + Math.cos((j / 24) * 6.283) * (24 + k * 10)]);
     const id = L.pick(['sailboat', 'sailboat', 'fishing_boat', pickId(L, ['canoe', 'sailboat'])].filter((i) => L.lib.byId.has(i)));
     const it = L.put(id, loop[0][0], loop[0][1]);
     if (it) life.movers.push({ its: [it], offs: [0], route: loop, speed: 2 + (k % 3), s: k * 20, kind: 'boat' });
@@ -906,9 +907,9 @@ function lake(ctx, life) {
   if (L.lib.byId.has('rail_bridge')) L.put('rail_bridge', riverAt(RAIL_Z).x, RAIL_Z, { yaw: 0, y: -4.05 });
   flock(L, life, bx + 40, bz - 10, 6, { id: pickId(L, ['pigeon']) });
   // ducks off the beach and in the marina's lee
-  ducks(L, life, LAKE.x - 60, LAKE.z - 40, 20, 12, { n: 6, y: -0.2 });
-  ducks(L, life, LAKE.x + 30, LAKE.z - 70, 14, 9, { n: 4, phase: 1.5, y: -0.2 });
-  ducks(L, life, LAKE.x - 20, LAKE.z + 30, 10, 6, { n: 1, speed: 0.3, y: -0.2 });
+  ducks(L, life, LAKE.x - 135, LAKE.z - 10, 12, 8, { n: 6, y: -0.2 });
+  ducks(L, life, LAKE.x - 125, LAKE.z + 40, 9, 6, { n: 4, phase: 1.5, y: -0.2 });
+  ducks(L, life, LAKE.x + 30, LAKE.z + 10, 12, 8, { n: 1, speed: 0.3, y: -0.2 });
 }
 
 function trains(ctx, life) {

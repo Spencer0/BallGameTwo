@@ -19,6 +19,8 @@ export function paintNetwork(b, net, style = {}) {
   for (const e of E) {
     if (!e.paint) continue;
     if (e.cls === 'rail') {
+      // a ballast bed a little wider than the sleepers, so the track never sits straight on the lawn
+      b.strip(e.poly, e.L, -2.8, 2.8, 0, e.len, SK.solid, { C: ['stone'], y: (e.y ?? 0) - 0.03 });
       // leave gaps where roads cross the track (the road surface carries on over it)
       const gaps = railGaps(e, E);
       let s = 0;
@@ -77,7 +79,29 @@ export function paintNetwork(b, net, style = {}) {
     }
   }
   for (const n of N) {
+    // a road that leaves the map carries on to the horizon (rails too) instead of stopping in a field
+    if (n.exit && n.deg === 1) {
+      const e = E[n.arms[0].e];
+      if (e.paint && !e.plaza) {
+        const out = [-Math.sin(n.arms[0].ang), -Math.cos(n.arms[0].ang)];
+        const far = 4000;
+        const pts = [[n.x, n.z], [n.x + out[0] * far, n.z + out[1] * far]];
+        const L = [0, far];
+        if (e.cls === 'rail') b.strip(pts, L, -1.7, 1.7, 0, far, SK.rail, { C: ['stone', 'cocoa', 'cloud'], y: e.y });
+        else {
+          const hw = e.w / 2;
+          const kind = e.cls === 'lane' && e.dirt ? SK.dirt : SK.road;
+          b.strip(pts, L, -hw, hw, 0, far, kind, {
+            P: [hw, e.lanes, e.markings ? (e.oneway ? 3 : e.center) : 0, 0],
+            Q: [0, far, 0, 0],
+            C: kind === SK.dirt ? ['sand', 'caramel'] : [S.asphalt, S.marking, S.yellow],
+            y: e.y,
+          });
+        }
+      }
+    }
     if (n.patch) junction(b, n, E, S);
+    if (n.deg === 2) bend(b, n, E, S);
     if (n.deg === 1 && n.bulb) {
       const e = E[n.arms[0].e];
       const island = n.island ?? n.bulb * 0.32;
@@ -93,6 +117,32 @@ export function paintNetwork(b, net, style = {}) {
       if (e.walk > 0) b.disc(n.x, n.z, r0 + e.walk, SK.walk, { r0, P: [e.walk, e.verge > 0 ? 0 : 1], C: [S.walk, S.curb, S.walkJoint], radialUV: true, segs: 44, a0: mouth + wgap, a1: mouth + Math.PI * 2 - wgap });
       if (e.verge > 0) b.disc(n.x, n.z, n.bulb + 0.3, SK.solid, { r0: n.bulb, C: [S.curb], segs: 44, a0: mouth + gap, a1: mouth + Math.PI * 2 - gap });
     }
+  }
+}
+
+/**
+ * Where two edges meet at an angle (a curve's polyline), each strip ends square to its own last segment,
+ * opening a hairline wedge on the outside of the bend. Lay an oversized patch a hair under the strips
+ * (carriageway and each sidewalk band), so whatever shows through the seam is the same surface.
+ */
+function bend(b, n, E, S) {
+  const [A, B] = n.arms;
+  const ea = E[A.e],
+    eb = E[B.e];
+  if (ea.plaza || eb.plaza || ea.cls === 'rail' || ea.cls === 'path' || eb.cls === 'rail' || eb.cls === 'path') return;
+  if (!ea.paint || !eb.paint || ea.dirt || eb.dirt) return;
+  const y = (n.y ?? ea.y ?? 0) - 0.006;
+  const rot = A.ang;
+  const hw = Math.max(ea.w, eb.w) / 2;
+  const len = 2 + hw * Math.abs(Math.sin(A.ang - B.ang)) * 2;
+  b.rect(n.x, n.z, hw * 2 + 0.2, len, rot, SK.solid, { C: [S.asphalt], y });
+  const inner = hw + Math.min(ea.verge, eb.verge),
+    walk = Math.min(ea.walk, eb.walk);
+  if (walk <= 0) return;
+  const p = [Math.cos(rot), -Math.sin(rot)];
+  for (const sg of [1, -1]) {
+    const u = sg * (inner + walk / 2);
+    b.rect(n.x + p[0] * u, n.z + p[1] * u, walk + 0.1, len, rot, SK.solid, { C: [S.walk], y });
   }
 }
 
