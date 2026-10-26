@@ -76,7 +76,7 @@ export function paintNetwork(b, net, style = {}) {
     }
   }
   for (const n of N) {
-    if (n.patch) b.rect(n.x, n.z, 2 * n.patch.across, 2 * n.patch.along, n.mainAng, SK.asphalt, { C: [S.asphalt], y: n.y ?? 0 });
+    if (n.patch) junction(b, n, E, S);
     if (n.deg === 1 && n.bulb) {
       const e = E[n.arms[0].e];
       const island = n.island ?? n.bulb * 0.32;
@@ -122,4 +122,90 @@ function railGaps(r, E) {
     }
   }
   return gaps.sort((a, b) => a[0] - b[0]);
+}
+
+/** quadratic bezier from a to b with control c (or a straight line when c is null) */
+function curve(a, b, c, n = 6) {
+  const out = [];
+  for (let k = 0; k <= n; k++) {
+    const t = k / n;
+    if (!c) out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+    else {
+      const u = 1 - t;
+      out.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]);
+    }
+  }
+  return out;
+}
+
+/** where line p + s*d meets line q + t*e (null if parallel) */
+function meet(p, d, q, e) {
+  const den = d[0] * e[1] - d[1] * e[0];
+  if (Math.abs(den) < 1e-6) return null;
+  const s = ((q[0] - p[0]) * e[1] - (q[1] - p[1]) * e[0]) / den;
+  return [p[0] + d[0] * s, p[1] + d[1] * s];
+}
+
+/**
+ * A junction's asphalt: each arm's trimmed end, joined to the next arm round the node by a curb return
+ * (a curve whose control point is where the two kerb lines meet), plus the sidewalk wrapping each corner.
+ */
+function junction(b, n, E, S) {
+  // a hair of height per node, so neighbouring junctions that overlap (bow-ties) never z-fight
+  const y = (n.y ?? 0) + (n.id % 4) * 0.004;
+  const arms = n.arms.map((a) => {
+    const e = E[a.e];
+    const d = [Math.sin(a.ang), Math.cos(a.ang)];
+    const p = [d[1], -d[0]]; // towards increasing angle
+    const end = [n.x + d[0] * a.trim, n.z + d[1] * a.trim];
+    return { a, e, d, p, end, hw: e.w / 2 };
+  });
+  const ring = [];
+  const corners = [];
+  for (let k = 0; k < arms.length; k++) {
+    const A = arms[k],
+      B = arms[(k + 1) % arms.length];
+    const cA = [A.end[0] + A.p[0] * A.hw, A.end[1] + A.p[1] * A.hw];
+    const cB = [B.end[0] - B.p[0] * B.hw, B.end[1] - B.p[1] * B.hw];
+    let gap = B.a.ang - A.a.ang;
+    if (gap <= 0) gap += Math.PI * 2;
+    ring.push([A.end[0] - A.p[0] * A.hw, A.end[1] - A.p[1] * A.hw]);
+    const sharp = gap < Math.PI - 0.2;
+    let c = sharp ? meet(cA, A.d, cB, B.d) : null;
+    const reach = Math.max(A.a.trim, B.a.trim) * 2 + 4;
+    if (c && Math.hypot(c[0] - n.x, c[1] - n.z) > reach) c = null;
+    ring.push(...curve(cA, cB, c));
+    // the sidewalk round this corner: between the two arms' walk bands, where both have one
+    if (sharp && A.e.walk > 0 && B.e.walk > 0) {
+      const wA = sideWalk(A, 1),
+        wB = sideWalk(B, -1);
+      if (wA && wB) {
+        const inA = A.hw + A.e.verge,
+          inB = B.hw + B.e.verge;
+        const pt = (X, s, off, sg) => [n.x + X.d[0] * s + sg * X.p[0] * off, n.z + X.d[1] * s + sg * X.p[1] * off];
+        const iA = pt(A, wA, inA, 1),
+          iB = pt(B, wB, inB, -1),
+          oA = pt(A, wA, inA + A.e.walk, 1),
+          oB = pt(B, wB, inB + B.e.walk, -1);
+        const ci = meet(iA, A.d, iB, B.d),
+          co = meet(oA, A.d, oB, B.d);
+        if (ci && co && Math.hypot(co[0] - n.x, co[1] - n.z) < reach + 10) corners.push([curve(iA, iB, ci, 8), curve(oA, oB, co, 8)]);
+      }
+    }
+  }
+  b.poly([[n.x, n.z], ...ring, ring[0]], SK.asphalt, { C: [S.asphalt], y, origin: [0, 0] });
+  for (const [inner, outer] of corners) {
+    for (let k = 0; k < inner.length - 1; k++) b.poly([inner[k], inner[k + 1], outer[k + 1], outer[k]], SK.solid, { C: [S.walk], y });
+  }
+}
+
+/** distance from the node at which an arm's sidewalk on the +p (sg = 1) or -p (sg = -1) side starts */
+function sideWalk(X, sg) {
+  const e = X.e;
+  // edge side +1 is right of a->b travel; for an arm leaving the node (end 0) right of travel is -p
+  const sideP = X.a.end === 0 ? -1 : 1;
+  const side = sideP * sg;
+  const wk = side > 0 ? e.walkR : e.walkL;
+  if (!wk || !wk.has) return null;
+  return X.a.end === 0 ? wk.s0 : e.len - wk.s1;
 }

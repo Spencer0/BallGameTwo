@@ -10,7 +10,7 @@ import { Network } from './city/network.js';
 import { paintNetwork } from './city/surface.js';
 import { Occupancy, occupyNetwork, frameAt, local, fenceLine } from './city/frontage.js';
 import { SK } from '../render/streets.js';
-import { suburbLot, closeFences, pickId, woods, parkingLot, court } from './city/suburb.js';
+import { suburbLot, closeFences, pickId, woods, parkingLot, court, countryside } from './city/suburb.js';
 import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock } from './city/lifespec.js';
 
 const S = 240;
@@ -106,8 +106,8 @@ export const net = buildNet();
 
 function pondShape(cx, cz, rx, rz, seed = 3) {
   const pts = [];
-  for (let k = 0; k < 28; k++) {
-    const a = (k / 28) * Math.PI * 2;
+  for (let k = 0; k < 48; k++) {
+    const a = (k / 48) * Math.PI * 2;
     const w = 1 + 0.12 * Math.sin(a * 3 + seed) + 0.07 * Math.sin(a * 5 + seed * 2);
     pts.push([cx + Math.sin(a) * rx * w, cz + Math.cos(a) * rz * w]);
   }
@@ -134,8 +134,6 @@ export const env = {
   ],
 };
 
-// Madame Prudence keeps an eye on things from far beyond the woods
-env.decor = [{ id: 'char__prudence', x: 40, y: 0, z: -330, yaw: 0.15, scale: 11, size: 30 }];
 
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
 export const spawn = { x: 0, z: 172, yaw: Math.PI };
@@ -233,7 +231,7 @@ export function layout(lib, seed = 404) {
   trafficLights(L, life, net);
   stopSigns(L, net);
   const artW = (l) => (net.edges[l.e].cls === 'arterial' ? 3 : 1);
-  spawnTraffic(L, life, net, 52, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 3], ['delivery_van', 1.5], ['mail_truck', 1], ['motorcycle', 1], ['police_car', 0.4], ['garbage_truck', 0.4], ['ice_cream_van', 0.4], ['school_bus', 0.3]], { laneWeight: artW });
+  spawnTraffic(L, life, net, 96, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 3], ['delivery_van', 1.5], ['mail_truck', 1], ['motorcycle', 1], ['police_car', 0.4], ['garbage_truck', 0.4], ['ice_cream_van', 0.4], ['school_bus', 0.3]], { laneWeight: artW });
   spawnWalkers(L, life, net, 60, { dogs: 0.3, walkWeight: (w) => (net.edges[w.e].cls === 'arterial' ? 0.4 : net.edges[w.e].name.endsWith('Court') ? 2 : 1) });
   if (ctx.pondPath) spawnLoopWalkers(L, life, ctx.pondPath, 10);
   if (ctx.park) {
@@ -262,6 +260,8 @@ export function layout(lib, seed = 404) {
     if (it) life.grazers.push({ it, cx: x, cz: z, yaw: lot.fr.yaw, hw: 4, hd: lot.setback * 0.35, speed: 1.6, still: 0.3 });
   }
 
+  // farmland and woodlots round the subdivision, out to the horizon
+  countryside(ctx, net, { inner: S, outer: S + 780, cell: 120, trees: 0.3 });
   // woods beyond the back fences, to the map edge (and beyond, in the fog)
   woods(ctx, { minX: -S, maxX: S, minZ: -S, maxZ: S }, { count: 900, ids: ['pine_tree', 'tree_round', 'pine_tree', 'bush'], minRoadDist: 46, net });
   return L;
@@ -287,11 +287,15 @@ function greenbelt(ctx) {
     for (let k = 1; k < pl.length; k++) Lp.push(Lp[k - 1] + Math.hypot(pl[k][0] - pl[k - 1][0], pl[k][1] - pl[k - 1][1]));
     b.strip(pl, Lp, -1.3, 1.3, 0, Lp[Lp.length - 1], SK.path, { P: [1.3], C: ['sand', 'caramel'], y: 0 });
     // sandy bank under the water (the water polygon sits on top of it)
-    b.poly(pondShape(P.cx - 25, P.cz + 2, 29, 18.5), SK.solid, { C: ['sand'], y: -0.04, origin: [P.cx - 25, P.cz + 2] });
-    b.poly(pond, SK.water, { C: ['cobalt', 'sky'], y: -0.02, origin: [P.cx - 25, P.cz + 2] });
+    // fan both from the pond's centre (the outline isn't convex)
+    const bank = pondShape(P.cx - 25, P.cz + 2, 29, 18.5);
+    b.poly([[P.cx - 25, P.cz + 2], ...bank, bank[0]], SK.solid, { C: ['sand'], y: -0.04, origin: [P.cx - 25, P.cz + 2] });
+    b.poly([[P.cx - 25, P.cz + 2], ...pond, pond[0]], SK.water, { C: ['teal', 'sky'], y: -0.02, origin: [P.cx - 25, P.cz + 2] });
     // path out to Aspen Way and a playground of mulch
     b.rect(P.cx - 25, P.cz + 34, 2.4, 22, 0, SK.path, { P: [1.2], C: ['sand', 'caramel'] });
-    b.rect(P.cx + 50, P.cz + 2, 26, 18, 0, SK.plaza, { P: [1.0], C: ['caramel', 'sand', 'cocoa'] });
+    // the playground: a timber edging round a bed of bark mulch
+    b.rect(P.cx + 50, P.cz + 2, 26, 18, 0, SK.solid, { C: ['cocoa'], y: -0.01 });
+    b.rect(P.cx + 50, P.cz + 2, 24.6, 16.6, 0, SK.dirt, { C: ['caramel', 'cocoa'], y: 0 });
   });
   ctx.pondPath = path;
   L.put('playground_slide', P.cx + 44, P.cz + 0, { yaw: 0.3 });
@@ -332,20 +336,22 @@ function stripMall(ctx) {
   const { L, paint } = ctx;
   const art = net.edges.find((e) => e.cls === 'arterial');
   const prop = ART_Z + art.w / 2 + art.verge + art.walk; // south property line of Maple Avenue
-  // pad sites along the arterial: strip malls, gas station, cafe, bakery — each with its lot and a curb cut
+  // along the arterial: a shopping centre (two strip-mall wings behind one shared lot), a diner pad, the
+  // gas station on the corner by the entrance light, a coffee pad and a second strip — each lot with a curb cut
   const pads = [
-    { id: pickId(L, ['strip_mall', 'shop_a']), x: -110, lot: 40 },
-    { id: 'petrol_station', x: 100, lot: 0 },
-    { id: 'cafe', x: 30, lot: 16 },
-    { id: 'bakery', x: -40, lot: 14 },
-    { id: pickId(L, ['strip_mall', 'shop_b']), x: 190, lot: 30 },
+    { id: pickId(L, ['strip_mall', 'shop_a']), x: -150, lot: 45 },
+    { id: pickId(L, ['strip_mall', 'shop_b']), x: -105, lot: 45 },
+    { id: pickId(L, ['diner', 'cafe']), x: -45, lot: 26 },
+    { id: 'petrol_station', x: 38, lot: 0 },
+    { id: 'cafe', x: 100, lot: 24 },
+    { id: pickId(L, ['strip_mall', 'shop_b']), x: 175, lot: 48 },
   ];
   for (const p of pads) {
     const t = L.lib.byId.get(p.id);
     if (!t) continue;
     const z = prop + (p.lot ? 14 : 4) + t.dims[2] / 2;
     L.put(p.id, p.x, z, { yaw: Math.PI });
-    if (p.lot) parkingLot(ctx, p.x, prop + 6.5, 13, Math.min(t.dims[0] + 6, p.lot * 2), Math.PI / 2, { fill: 0.55 });
+    if (p.lot) parkingLot(ctx, p.x, prop + 6.5, 13, p.lot, Math.PI / 2, { fill: 0.5, tints: ['paper', 'cloud', 'stone', 'charcoal', 'slate', 'cocoa', 'tomato', 'sky'] });
     // curb cut: a driveway apron across the verge and sidewalk into the lot
     const apron = art.verge + art.walk;
     paint.push((b) => b.rect(p.x + (p.lot ? t.dims[0] / 2 - 2 : 0), prop - apron / 2, 6, apron, 0, SK.drive, { C: ['cloud', 'cloud', 'stone'], y: 0.01 }));

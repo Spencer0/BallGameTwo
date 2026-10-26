@@ -7,6 +7,7 @@ import { serve, launch } from './harness.mjs';
 const levels = (process.argv[2] || '4,5,6').split(',').map(Number);
 const out = process.argv[3] || 'build/review';
 const q = process.argv[4] || 'high';
+const only = process.argv[5] ? new RegExp(process.argv[5]) : null; // render just the views whose names match
 const { srv, url } = await serve();
 
 for (const n of levels) {
@@ -30,13 +31,14 @@ for (const n of levels) {
     shots.push(f);
   };
   // gameplay views: put the ball somewhere at a given size, let the follow camera settle
-  for (const v of review.play || []) {
+  for (const v of (review.play || []).filter((v) => !only || only.test('play_' + v.name))) {
     await page.evaluate((v) => {
       const g = window.__game,
         s = g.session;
       g.debugView = null;
       const r = (v.d ?? s.level.start) / 2;
       s.ball.reset(v.x, s.env.groundAt(v.x, v.z), v.z, r);
+      s.crust.reset(); // don't carry the last view's pickups into this one
       s.rVis = r;
       s.cam.reset(s.ball, v.yaw ?? 0, 0);
     }, v);
@@ -44,7 +46,7 @@ for (const n of levels) {
     await shot(`play_${v.name}`);
   }
   // aerial and map views from fixed cameras
-  for (const v of [...(review.aerial || []), ...(review.map ? [{ name: 'map', ...review.map }] : []), ...(review.maps || []).map((m) => ({ ...m, name: 'map_' + m.name }))]) {
+  for (const v of [...(review.aerial || []).map((a) => ({ ...a, name: 'aerial_' + a.name })), ...(review.map ? [{ name: 'map', ...review.map }] : []), ...(review.maps || []).map((m) => ({ ...m, name: 'map_' + m.name }))].filter((v) => !only || only.test(v.name))) {
     await page.evaluate((v) => {
       const g = window.__game;
       if (v.cx !== undefined) {
@@ -54,10 +56,17 @@ for (const n of levels) {
       } else g.debugView = { pos: v.pos, look: v.look, fov: v.fov ?? 55, near: v.near ?? 2, far: v.far ?? 20000, noFog: v.noFog ?? false };
     }, v);
     await page.waitForTimeout(900);
-    await shot(v.name.startsWith('map') ? v.name : `aerial_${v.name}`);
+    await shot(v.name);
   }
   // motion strips: 4 frames 0.5 s apart from a fixed camera
-  for (const v of review.motion || []) {
+  // park the ball in a far corner so traffic in the motion strips isn't stopping for it
+  await page.evaluate(() => {
+    const s = window.__game.session,
+      b = s.level.mod.bounds;
+    s.ball.reset(b.minX + 3, s.env.groundAt(b.minX + 3, b.minZ + 3), b.minZ + 3, s.level.start / 2);
+    s.crust.reset();
+  });
+  for (const v of (review.motion || []).filter((v) => !only || only.test('motion_' + v.name))) {
     await page.evaluate((v) => {
       window.__game.debugView = { pos: v.pos, look: v.look, fov: v.fov ?? 50, near: 0.5, far: 5000, noFog: false };
     }, v);

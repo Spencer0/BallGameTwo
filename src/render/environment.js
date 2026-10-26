@@ -83,8 +83,9 @@ void main() {
     col = mix(uA, uB, mod(floor(p.x) + floor(p.y), 2.0));
   } else if (uPattern == 8) { // water: small light streaks drifting (same language as the street-mesh water)
     vec2 q = vWorld.xz;
-    float w = sin(q.y * 0.33 + q.x * 0.11 + uTime * 1.1) + sin(q.x * 0.47 - q.y * 0.07 - uTime * 0.8);
-    col = mix(uA, uB, aastep(1.62, w));
+    float w = sin(q.y * 0.21 + q.x * 0.9 + uTime * 0.5) + sin(q.x * 1.3 - q.y * 0.17 - uTime * 0.35);
+    float fade = 1.0 - smoothstep(0.35, 1.2, fwidth(w));
+    col = mix(uA, uB, aastep(1.78, w) * fade);
   }
   col *= uShade;
   float f = smoothstep(uFogNear, uFogFar, vFogDepth);
@@ -361,15 +362,14 @@ export class Environment {
  */
 export function makeSkyDome(stops, horizon) {
   const cols = stops.map(([, c]) => linearRGB(HEX[c] || c));
-  const ts = stops.map(([t]) => Math.min(0.97, t));
-  cols.push(linearRGB(HEX[horizon] || horizon));
-  ts.push(1);
+  const ts = stops.map(([t]) => t);
+  const hor = linearRGB(HEX[horizon] || horizon);
   while (cols.length < 6) {
     cols.push(cols[cols.length - 1].clone());
     ts.push(1.01 + cols.length * 0.01);
   }
   const mat = new THREE.ShaderMaterial({
-    uniforms: { uCol: { value: cols.slice(0, 6) }, uT: { value: ts.slice(0, 6) } },
+    uniforms: { uCol: { value: cols.slice(0, 6) }, uT: { value: ts.slice(0, 6) }, uHor: { value: hor } },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
       void main() {
@@ -380,15 +380,18 @@ export function makeSkyDome(stops, horizon) {
     fragmentShader: /* glsl */ `
       uniform vec3 uCol[6];
       uniform float uT[6];
+      uniform vec3 uHor;
       varying vec3 vDir;
       void main() {
         float e = normalize(vDir).y;
-        float t = 1.0 - clamp(e / 0.55, 0.0, 1.0); // 0 zenith-ish .. 1 horizon and below
+        float t = 1.0 - clamp((e - 0.03) / 0.55, 0.0, 1.0); // 0 zenith-ish .. 1 near the horizon
         vec3 c = uCol[0];
         for (int k = 1; k < 6; k++) {
           float a = clamp((t - uT[k - 1]) / max(1e-4, uT[k] - uT[k - 1]), 0.0, 1.0);
           if (t >= uT[k - 1]) c = mix(uCol[k - 1], uCol[k], a);
         }
+        // a soft band into the fog colour, so fogged ground and sky meet without a seam
+        c = mix(c, uHor, 1.0 - smoothstep(0.0, 0.16, e));
         gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`,

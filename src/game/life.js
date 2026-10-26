@@ -124,7 +124,15 @@ export class Life {
       if (lights.length) this.signals.push({ node: sg.node, lights });
     }
     // rail crossings: lights flash and cars wait while a train is near
-    this.crossings = (spec.crossings || []).map((c) => ({ x: c.x, z: c.z, r: c.r ?? 120, lights: (c.lights || []).map(inst).filter(reg), active: false }));
+    this.crossings = (spec.crossings || []).map((c) => ({
+      x: c.x,
+      z: c.z,
+      r: c.r ?? 120,
+      lights: (c.lights || []).map(inst).filter(reg),
+      // gate arms swing about their hinge end: hinge (hx,hy,hz), pointing along yaw when lowered
+      gates: (c.gates || []).map((g) => ({ ...g, i: inst(g.it), a: 1.45 })).filter((g) => g.i >= 0),
+      active: false,
+    }));
     this.trains = this.movers.filter((m) => m.kind === 'train');
     this.honks = 0;
   }
@@ -139,6 +147,7 @@ export class Life {
   }
 
   update(dt) {
+    this.dtLast = dt;
     this.frame++;
     const f = this.frame;
     const ball = this.s.ball;
@@ -257,6 +266,26 @@ export class Life {
         if (near) break;
       }
       c.active = near;
+      for (const g of c.gates) {
+        if (!this.alive(g.i)) continue;
+        const goal = near ? 0 : 1.45;
+        const da = goal - g.a;
+        if (Math.abs(da) < 1e-3 && g.set) continue;
+        g.a += Math.sign(da) * Math.min(Math.abs(da), 0.9 * this.dtLast);
+        g.set = true;
+        const t = w.types[w.type[g.i]],
+          s = w.scale[g.i];
+        const half = (t.dims[0] * s) / 2,
+          cy = (t.dims[1] * s) / 2;
+        const ca = Math.cos(g.a);
+        w.x[g.i] = g.hx + Math.cos(g.yaw) * ca * half;
+        w.z[g.i] = g.hz - Math.sin(g.yaw) * ca * half;
+        w.y[g.i] = g.hy + Math.sin(g.a) * half - cy;
+        w.yaw[g.i] = g.yaw;
+        w.tilt[g.i * 2 + 1] = g.a;
+        w.updateMatrix(g.i);
+        w.moved(g.i);
+      }
       for (let k = 0; k < c.lights.length; k++) {
         const i = c.lights[k];
         if (!this.alive(i)) continue;
@@ -272,7 +301,7 @@ export class Life {
       const dx = c.x - x,
         dz = c.z - z;
       const along = dx * hx + dz * hz;
-      if (along > 4 && along < 26 && Math.abs(dx * hz - dz * hx) < 9) return along;
+      if (along > 4 && along < 34 && Math.abs(dx * hz - dz * hx) < 9) return along;
     }
     return 0;
   }
@@ -477,7 +506,8 @@ export class Life {
     // a train coming through the level crossing ahead
     if (this.crossings.length) {
       const ca = this.crossingAhead(w.x[a.i], w.z[a.i], a.hx ?? 0, a.hz ?? 1);
-      if (ca) target = Math.min(target, Math.max(0, (ca - 7) * 0.8));
+      // stop well back from the gate; a car already within a few metres of the tracks clears them
+      if (ca > 11) target = Math.min(target, Math.max(0, (ca - 13) * 0.8));
     }
     // the ball in the way
     const bx = ball.pos.x - w.x[a.i],

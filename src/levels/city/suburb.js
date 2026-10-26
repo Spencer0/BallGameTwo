@@ -18,13 +18,14 @@ const HOUSES = {
   house_e: { drive: -4.8 },
   house_f: { drive: 'side' },
 };
+const SIDING = new Set(['paper', 'sand', 'cloud', 'concrete', 'stone', 'butter', 'mint', 'brick', 'snow', 'caramel']);
 const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'house_d', 'house_e', 'house_f'];
 
 /**
  * One suburban lot. fr = frame on the property line at the lot's centre (yaw faces the road).
  * e = the street edge (for verge/walk widths). opts: W (frontage), D (depth), first/last (fence ends), pie.
  */
-export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'caramel' } = {}) {
+export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'cocoa' } = {}) {
   const { L, occ, fences, paint } = ctx;
   const pool = (poolIds || HOUSE_POOL).filter((id) => L.lib.byId.has(id));
   if (!pool.length) return false;
@@ -61,7 +62,11 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   occ.add(rect, 'bld');
   // garage-door houses can't be mirrored without moving the door: keep their native side
   const flip = typeof info.drive === 'number' ? 1 : mirror;
-  L.put(house, hx, hz, { yaw: fr.yaw });
+  // siding in the narrow range real streets have (white, cream, beige, grey, a little sage); colour goes on
+  // the doors, cars and toys
+  const t0 = L.lib.byId.get(house);
+  const siding = (t0.variants || []).filter((c) => SIDING.has(c));
+  L.put(house, hx, hz, { yaw: fr.yaw, tint: siding.length ? L.pick(siding) : L.pick(['paper', 'sand', 'cloud']) });
   // driveway: from the property line to the garage door (or alongside the house)
   const gx = typeof info.drive === 'number' ? info.drive : flip * (hw + 2.2);
   const driveLen = typeof info.drive === 'number' ? setback : setback + hd * 1.3;
@@ -197,12 +202,12 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
     }
   }
   // the family dog lives in the back yard
-  if (L.rand() < 0.45) {
+  if (L.rand() < 0.3) {
     const [x, z] = local(fr, L.range(-W / 3, W / 3), (backStart - D) / 2);
     const dog = L.put('dog', x, z);
     if (dog) (ctx.yardDogs || (ctx.yardDogs = [])).push({ it: dog, fr, W, z0: backStart, z1: -D });
   }
-  (ctx.lots || (ctx.lots = [])).push({ fr, W, D, setback, gx, driveLen, house, fence, fenceTint, leftAt: fenced && !pie ? local(fr, -W / 2, backStart) : null, rightRun });
+  (ctx.lots || (ctx.lots = [])).push({ fr, W, D, setback, gx, driveLen, house, fence, fenceTint, leftAt: fenced && !pie ? local(fr, -W / 2, backStart) : null, rightRun, rearL: local(fr, -W / 2, -D), rearR: local(fr, W / 2, -D), fenced: fenced && !pie });
   return true;
 }
 
@@ -212,8 +217,10 @@ export function closeFences(ctx) {
   for (const a of lots) {
     if (!a.rightRun) continue;
     const [r0, r1] = a.rightRun;
-    const shared = lots.some((b) => b !== a && b.leftAt && Math.hypot(b.leftAt[0] - r0[0], b.leftAt[1] - r0[1]) < 3);
-    if (!shared) fenceLine2(ctx.L, a.fence, r0, r1, ctx.fences, a.fenceTint);
+    const nb = lots.find((b) => b !== a && b.leftAt && Math.hypot(b.leftAt[0] - r0[0], b.leftAt[1] - r0[1]) < 3);
+    if (!nb) fenceLine2(ctx.L, a.fence, r0, r1, ctx.fences, a.fenceTint);
+    // neighbours of different depth: carry the shared side fence on to the deeper rear corner
+    else if (Math.abs(nb.D - a.D) > 0.5 && Math.hypot(nb.rearL[0] - a.rearR[0], nb.rearL[1] - a.rearR[1]) < 12) fenceLine2(ctx.L, a.fence, a.rearR, nb.rearL, ctx.fences, a.fenceTint);
     a.rightRun = null;
   }
 }
@@ -322,4 +329,37 @@ export function court(b, SKk, x, z, w, d, yaw, col, line = 'paper') {
     const [px, pz] = at(lx, lz);
     b.rect(px, pz, rw, rd, yaw, SKk.solid, { C: [line] });
   }
+}
+
+const FARM_CROPS = [['sun', 'butter'], ['leaf', 'lime'], ['caramel', 'sand'], ['pine', 'leaf'], ['lime', 'butter'], ['leaf', 'pine'], ['butter', 'sand']];
+
+/**
+ * Farmland beyond the play area, out to the horizon: a grid of fields (painted), hedgerows and woodlots,
+ * clear of the roads that leave the map. avoid(x, z, half) -> true skips a cell (rivers, lakes).
+ */
+export function countryside(ctx, net, { inner, outer, cell = 130, trees = 0.18, avoid = null } = {}) {
+  const { L, paint } = ctx;
+  for (let x = -outer; x < outer; x += cell)
+    for (let z = -outer; z < outer; z += cell) {
+      if (!(x + cell <= -inner || x >= inner || z + cell <= -inner || z >= inner)) continue;
+      const cx = x + cell / 2,
+        cz = z + cell / 2;
+      if (roadDistance(net, cx, cz) < cell * 0.72) continue;
+      if (avoid && avoid(cx, cz, cell / 2)) continue;
+      const r = L.rand();
+      const w = cell - 3;
+      if (r < 0.1) {
+        // a woodlot
+        for (let k = 0; k < 14; k++) L.put(L.pick(['pine_tree', 'tree_round', 'pine_tree']), cx + L.range(-w / 2.5, w / 2.5), cz + L.range(-w / 2.5, w / 2.5), { scale: L.range(1.1, 1.6), tint: L.pick(['leaf', 'pine']) });
+        continue;
+      }
+      if (r > 0.2) {
+        const [a, b] = L.pick(FARM_CROPS);
+        paint.push((bb) => bb.rect(cx, cz, w, w, L.rand() < 0.5 ? 0 : Math.PI / 2, SK.field, { P: [2.4], C: [a, b], y: -0.15 }));
+      }
+      if (L.rand() < trees) {
+        const along = L.rand() < 0.5;
+        for (let t = -w / 2 + 5; t < w / 2 - 4; t += 13) L.put(L.rand() < 0.7 ? 'tree_round' : 'pine_tree', cx + (along ? t : -w / 2), cz + (along ? -w / 2 : t), { scale: L.range(1, 1.4), tint: L.pick(['leaf', 'pine', 'lime']) });
+      }
+    }
 }

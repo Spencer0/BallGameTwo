@@ -35,7 +35,9 @@ varying vec4 vQ;
 varying vec3 vCol;
 varying float vKind;
 varying float vFogDepth;
+varying vec2 vW;
 void main() {
+  vW = position.xz; // the mesh is built in world space
   vUV = aUV; vP = aP; vQ = aQ; vCol = aCol; vKind = aKind;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   vFogDepth = -mv.z;
@@ -49,6 +51,7 @@ uniform vec3 uFogColor;
 uniform float uFogNear;
 uniform float uFogFar;
 uniform float uTime;
+varying vec2 vW;
 varying vec2 vUV;
 varying vec4 vP;
 varying vec4 vQ;
@@ -146,8 +149,10 @@ void main() {
   } else if (k == 11) { // dirt road: two worn tracks
     col = mix(A, B, max(band(u - 0.9, 0.35), band(u + 0.9, 0.35)) * 0.8);
   } else if (k == 13) { // water: small light streaks drifting with the current
-    float w = sin(v * 0.33 + u * 0.11 + uTime * 1.1) + sin(u * 0.47 - v * 0.07 - uTime * 0.8);
-    col = mix(A, B, aa(1.62, w));
+    // world-space, same as the ground-plane water: fine sparse dashes, faded where they would alias
+    float w = sin(vW.y * 0.21 + vW.x * 0.9 + uTime * 0.5) + sin(vW.x * 1.3 - vW.y * 0.17 - uTime * 0.35);
+    float fade = 1.0 - smoothstep(0.35, 1.2, fwidth(w));
+    col = mix(A, B, aa(1.78, w) * fade);
   }
   float f = smoothstep(uFogNear, uFogFar, vFogDepth);
   gl_FragColor = vec4(mix(col, uFogColor, f), 1.0);

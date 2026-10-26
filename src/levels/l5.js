@@ -16,7 +16,7 @@ import { Network } from './city/network.js';
 import { paintNetwork } from './city/surface.js';
 import { Occupancy, occupyNetwork, frameAt, local, fillFrontage, fenceLine } from './city/frontage.js';
 import { SK } from '../render/streets.js';
-import { suburbLot, closeFences, pickId, woods, parkingLot } from './city/suburb.js';
+import { suburbLot, closeFences, pickId, woods, parkingLot, countryside } from './city/suburb.js';
 import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock } from './city/lifespec.js';
 
 const S = 750;
@@ -28,7 +28,7 @@ const WEST_X = [-280, -400, -520];
 const WEST_NAMES = ['Elm Avenue', 'Oak Avenue', 'Ash Avenue'];
 const SQUARE = { minX: -280, maxX: MAIN_X, minZ: -40, maxZ: 90 };
 const RAIL_Z = -470;
-const TRACK = 2.5; // double track: eastbound on +z, westbound on -z
+const TRACK = 3.2; // double track: eastbound on +z, westbound on -z
 const MILL_Z = -560;
 const EAST_X = [300, 410, 520];
 const EAST_NAMES = ['Pine Street', 'Cedar Street', 'Birch Street'];
@@ -41,6 +41,7 @@ const PARK_W = 30; // riverfront park between the bank and the riverside street'
 // the river: control points [x, z, width], north (beyond the map, in the woods) -> the lake.
 // It narrows and runs nearly north-south where the three bridges cross it.
 const RIVER_CTRL = [
+  [-240, -1900, 70],
   [-175, -1150, 70],
   [-150, -860, 72],
   [-118, -700, 76],
@@ -137,7 +138,7 @@ function buildNet() {
   // --- Route 9: west edge -> town -> river bridge -> east edge
   const hb = riverAt(HWY_Z);
   const bW = hb.x - hb.hw - 14;
-  const hx = [-S - 80, -640, ...WEST_X, MAIN_X, LAKE_RD_X, bW, hb.x + hb.hw + 14, riverRoadX(HWY_Z), ...EAST_X, S + 80].sort((a, b) => a - b);
+  const hx = [-S - 450, -640, ...WEST_X, MAIN_X, LAKE_RD_X, bW, hb.x + hb.hw + 14, riverRoadX(HWY_Z), ...EAST_X, S + 450].sort((a, b) => a - b);
   for (let k = 0; k < hx.length - 1; k++) {
     const bridge = Math.abs(hx[k] - bW) < 0.01;
     net.edge(N(hx[k], HWY_Z, k === 0 ? { exit: true } : {}), N(hx[k + 1], HWY_Z, k + 1 === hx.length - 1 ? { exit: true } : {}), bridge ? { cls: 'arterial', name: 'Route 9 Bridge', tag: 'hwy', walk: 0, verge: 0, y: 0.5, paint: false } : { cls: 'arterial', name: 'Route 9', tag: 'hwy', draw: 2 });
@@ -170,7 +171,7 @@ function buildNet() {
   // --- Mill Road: the county road north of town, over the Mill Road bridge, past the fairground
   const mb = riverAt(MILL_Z);
   const mW = mb.x - mb.hw - 14;
-  const mx = [-S - 80, -640, -520, MAIN_X, mW, mb.x + mb.hw + 14, riverRoadX(MILL_Z), ...EAST_X, S + 80].sort((a, b) => a - b);
+  const mx = [-S - 450, -640, -520, MAIN_X, mW, mb.x + mb.hw + 14, riverRoadX(MILL_Z), ...EAST_X, S + 450].sort((a, b) => a - b);
   for (let k = 0; k < mx.length - 1; k++) {
     const bridge = Math.abs(mx[k] - mW) < 0.01;
     net.edge(N(mx[k], MILL_Z, k === 0 ? { exit: true } : {}), N(mx[k + 1], MILL_Z, k + 1 === mx.length - 1 ? { exit: true } : {}), bridge ? { cls: 'street', name: 'Mill Road Bridge', tag: 'mill', walk: 0, verge: 0, y: 0.5, paint: false } : { cls: 'street', name: 'Mill Road', tag: 'mill', verge: 0, walk: 2, draw: 0.6 });
@@ -187,10 +188,10 @@ function buildNet() {
   });
   // --- county roads through the farms (narrow, no sidewalks)
   const lane = { cls: 'lane', name: 'County Road 12', tag: 'county', w: 7, draw: 0.4 };
-  net.edge(N(-640, -S - 80, { exit: true }), N(-640, MILL_Z), lane);
+  net.edge(N(-640, -S - 450, { exit: true }), N(-640, MILL_Z), lane);
   net.edge(N(-640, MILL_Z), N(-640, HWY_Z), lane);
   net.edge(N(-640, HWY_Z), N(-640, 560), lane);
-  net.edge(N(-640, 560), N(-640, S + 80, { exit: true }), lane);
+  net.edge(N(-640, 560), N(-640, S + 450, { exit: true }), lane);
   net.edge(N(-640, 560), N(LAKE_RD_X, 560), { ...lane, name: 'Lake Road' });
   net.edge(N(LAKE_RD_X, 560), N(LAKE_RD_X, HWY_Z), { ...lane, name: 'Lake Road' });
   net.edge(N(LAKE_RD_X, 560), N(232, 560, { bulb: 14 }), { ...lane, name: 'Lake Road', w: 8 });
@@ -223,12 +224,12 @@ export const env = {
     // river: muddy banks under the water ribbon, both following the meander
     const pts = RIVER.map((p) => [p[0], p[1]]);
     b.ribbon(pts, RIVER.map((p) => p[2] / 2 + BANK), SK.solid, { C: ['sand'], y: -0.33 });
-    b.ribbon(pts, RIVER.map((p) => p[2] / 2), SK.water, { C: ['cobalt', 'sky'], y: -0.2 });
+    b.ribbon(pts, RIVER.map((p) => p[2] / 2), SK.water, { C: ['teal', 'sky'], y: -0.2 });
     // the lake: a beach all round, then the water (fans from the centre: the shape is star-shaped)
     const beach = lakePts(14);
     b.poly([[LAKE.x, LAKE.z], ...beach, beach[0]], SK.solid, { C: ['sand'], y: -0.33 });
     const lake = lakePts(0);
-    b.poly([[LAKE.x, LAKE.z], ...lake, lake[0]], SK.water, { C: ['cobalt', 'sky'], y: -0.2, origin: [0, 0] });
+    b.poly([[LAKE.x, LAKE.z], ...lake, lake[0]], SK.water, { C: ['teal', 'sky'], y: -0.2, origin: [0, 0] });
     paintNetwork(b, net);
   },
   blocks: [
@@ -239,14 +240,12 @@ export const env = {
   ],
 };
 
-// Madame Prudence, town-sized, on the horizon
-env.decor = [{ id: 'char__prudence', x: -920, y: 0, z: -520, yaw: 1.05, scale: 80, size: 220 }];
 
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
 export const spawn = { x: MAIN_X - 4, z: 160, yaw: Math.PI };
 
-const STORES = ['storefront_a', 'storefront_b', 'storefront_c', 'storefront_a', 'storefront_b', 'storefront_c', 'storefront_corner', 'shop_a', 'cafe', 'bakery', 'shop_b'];
-const CIVIC = ['post_office', 'library', 'shop_b', 'bakery', 'cafe', 'shop_a', 'diner'];
+const STORES = ['storefront_a', 'storefront_b', 'storefront_c', 'storefront_a', 'storefront_b', 'storefront_c', 'storefront_corner', 'shop_a', 'cafe', 'shop_b'];
+const CIVIC = ['post_office', 'library', 'shop_b', 'cafe', 'shop_a', 'diner'];
 const TOWN_HOUSES = ['house_c', 'house_f', 'house_a', 'house_d', 'house_e', 'house_c', 'house_f', 'house_a'];
 const PARKED = ['car', 'suv', 'pickup_truck', 'hatchback', 'car', 'pickup_truck'];
 const PARKED_TINTS = ['paper', 'cloud', 'stone', 'charcoal', 'slate', 'concrete', 'cocoa', 'tomato', 'sky', 'pine', 'paper', 'stone'];
@@ -506,19 +505,25 @@ function depot(ctx, life) {
       if ((az - RAIL_Z) * (bz - RAIL_Z) >= 0) continue;
       const x = ax + ((RAIL_Z - az) / (bz - az)) * (bx - ax);
       const off = e.w / 2 + 1.4;
-      const lights = [];
+      const lights = [],
+        gates = [];
       for (const side of [-1, 1]) {
-        const it = L.put(pickId(L, ['crossing_signal', 'stop_sign']), x + side * off, RAIL_Z + side * (TRACK + 6), { yaw: side > 0 ? 0 : Math.PI });
+        // flashers on the right of each approach, the gate arm reaching across that approach's lane
+        const px = x + side * off,
+          pz = RAIL_Z + side * (TRACK + 6);
+        const it = L.put(pickId(L, ['crossing_signal', 'stop_sign']), px, pz, { yaw: side > 0 ? 0 : Math.PI });
         if (it) lights.push(it);
+        const g = L.lib.byId.has('crossing_gate') ? L.put('crossing_gate', px, pz, { yaw: 0 }) : null;
+        if (g) gates.push({ it: g, hx: px - side * 0.4, hy: 1.1, hz: pz, yaw: side > 0 ? Math.PI : 0 });
       }
-      crossings.push({ x, z: RAIL_Z, lights });
+      crossings.push({ x, z: RAIL_Z, lights, gates });
     }
   }
 }
 
 function angledParking(ctx) {
   const { L } = ctx;
-  const ids = PARKED.filter((i) => L.lib.byId.has(i));
+  const ids = ['car', 'suv', 'hatchback', 'car'].filter((i) => L.lib.byId.has(i));
   for (const e of net.edges) {
     if (e.parking !== 'angled') continue;
     const inner = e.w / 2 - 5.5;
@@ -527,7 +532,7 @@ function angledParking(ctx) {
     for (const side of [1, -1]) {
       for (let v = (e.trimA || 0) + 6; v < e.len - (e.trimB || 0) - 6; v += 3.0) {
         // one car per painted bay, about three bays in five taken
-        if (L.rand() > 0.6) continue;
+        if (L.rand() > 0.5) continue;
         const u = inner + 2.75;
         const vc = v + 1.5 - 2.75 * 0.8;
         const x = e.poly[0][0] + dx * vc - dz * u * side,
@@ -818,8 +823,6 @@ function lake(ctx, life) {
   L.put(bh, bulb.x + 4, bulb.z - 34, { yaw: Math.PI / 2 });
   occ.add({ x: bulb.x + 4, z: bulb.z - 34, hw: 8, hd: 8, yaw: 0 }, 'bld');
   parkingLot(ctx, bulb.x - 30, bulb.z - 34, 30, 22, 0, { fill: 0.5, tints: PARKED_TINTS });
-  const [lx, lz] = lakeAt(Math.PI * 0.08, 6);
-  L.put('lighthouse', lx, lz);
   // beachgoers on the north shore
   const [bx, bz] = lakeAt(Math.PI * 0.9, 7);
   for (let k = 0; k < 10; k++) {
@@ -880,8 +883,8 @@ function trains(ctx, life) {
   let len = 0;
   for (let k = 1; k < route.length; k++) len += Math.hypot(route[k][0] - route[k - 1][0], route[k][1] - route[k - 1][1]);
   const consists = [
-    { cars: ['locomotive', 'locomotive', 'hopper_car', 'hopper_car', 'freight_car', 'tank_car', 'hopper_car', 'freight_car', 'tank_car', 'caboose'], s: 0, speed: 14 },
-    { cars: ['locomotive', 'train_carriage', 'train_carriage', 'train_carriage'], s: len / 2, speed: 14 },
+    { cars: ['locomotive', 'hopper_car', 'hopper_car', 'hopper_car', 'freight_car', 'tank_car', 'tank_car', 'hopper_car', 'freight_car', 'freight_car', 'caboose'], s: 0, speed: 14 },
+    { cars: ['locomotive', 'train_carriage', 'train_carriage', 'train_carriage', 'train_carriage'], s: len / 2, speed: 14 },
   ];
   for (const c of consists) {
     const its = [],
@@ -958,6 +961,8 @@ function farms(ctx, life) {
   ];
   ctx.farmsteads = 0;
   for (const [x0, x1, z0, z1] of regions) fieldRegion(ctx, life, x0, x1, z0, z1);
+  // and beyond the map, the same countryside to the horizon (clear of the river)
+  countryside(ctx, net, { inner: S, outer: S + 900, avoid: (x, z, h) => z < -S && Math.abs(x - riverAt(z).x) < riverAt(z).hw + h + 20 });
   // woods in the leftovers, away from the roads
   woods(ctx, { minX: -S, maxX: S, minZ: -S, maxZ: S }, { count: 260, ids: ['pine_tree', 'tree_round', 'pine_tree'], scale: [1, 1.5], minRoadDist: 40, net });
 }
@@ -1165,7 +1170,7 @@ const WINDMILL_AXLE = 14.4, // tower axle height (asset report)
 export const review = {
   play: [
     { name: 'main_street', x: MAIN_X - 4, z: 160, yaw: Math.PI },
-    { name: 'square', x: -150, z: 25, yaw: -Math.PI / 2, d: 16 },
+    { name: 'square', x: -200, z: 70, yaw: Math.PI, d: 10 },
     { name: 'residential', x: -400, z: 20, yaw: Math.PI, d: 14 },
     { name: 'depot', x: MAIN_X, z: -400, yaw: Math.PI, d: 30 },
     { name: 'riverfront', x: waterX(-60) + 4, z: 10, yaw: Math.PI, d: 20 },
@@ -1181,9 +1186,9 @@ export const review = {
   map: { cx: 0, cz: 0, half: 760 },
   maps: [{ name: 'downtown', cx: -150, cz: -100, half: 260 }],
   motion: [
-    { name: 'main_st', pos: [-120, 45, 60], look: [-150, 0, -10] },
+    { name: 'main_st', pos: [-150, 40, 75], look: [-150, 0, -20] },
     { name: 'rail_crossing', pos: [-100, 60, -400], look: [-150, 0, -470], waitTrain: [-150, RAIL_Z] },
     { name: 'lake', pos: [330, 90, 380], look: [470, 0, 560] },
-    { name: 'square', pos: [-120, 50, 120], look: [-215, 0, 25] },
+    { name: 'square', pos: [-215, 60, 135], look: [-215, 0, 20] },
   ],
 };

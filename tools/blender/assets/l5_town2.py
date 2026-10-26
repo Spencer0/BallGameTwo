@@ -839,6 +839,20 @@ def crossing_signal():
     cyl(0.17, 0.12, at=(0, 0, 4.06), r2=0.12, color="ink_soft", segs=8)
 
 
+@asset("crossing_gate", "Crossing Gate", "Comes down for every train. Goes up for nobody else.", L, "wood",
+       "small", col="box", fill=0.6)
+def crossing_gate():
+    # just the arm: the game swings it about its hinge end (-x) between raised and lowered
+    n = 9
+    ln = 6.4
+    seg_ = ln / n
+    for k in range(n):
+        box((seg_, 0.14, 0.14), at=(-ln / 2 + seg_ * (k + 0.5), 0, 0), base=True, color="tomato" if k % 2 == 0 else "snow")
+    box((0.5, 0.3, 0.3), at=(-ln / 2 + 0.25, 0, -0.08), base=True, color="charcoal")
+    for x in (-0.6, 1.4, 3.0):
+        box((0.12, 0.1, 0.1), at=(x, 0, 0.14), base=True, color="tomato", lod0=True)
+
+
 # ---------------------------------------------------------------- rolling stock
 # Matches train_carriage: trucks (2.8 x 2.2 x 0.5 frame at z 0.45, r 0.45 wheels at y +-1.15),
 # floor at z ~1.25, roof ~4.2-4.3, couplers centred at z ~1.15 reaching the ends of the stated length.
