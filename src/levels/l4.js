@@ -26,12 +26,13 @@ const loopOut = (t) => {
 };
 // loop junctions (parameter t, 0 = south, increasing towards the east)
 const T = { entrance: 0, birch: 0.27 * Math.PI, oak: 0.5 * Math.PI, aspenE: 0.63 * Math.PI, spruce: 0.79 * Math.PI, pine: Math.PI, hazel: 1.21 * Math.PI, aspenW: 1.37 * Math.PI, willow: 1.5 * Math.PI, cedar: 1.7 * Math.PI, willowRd: 1.86 * Math.PI };
+// each court its own length and a bend, so they don't stick out like the hours on a clock
 const COURTS = [
-  { name: 'Oak Court', t: T.oak, stub: 42 },
-  { name: 'Spruce Court', t: T.spruce, stub: 52 },
-  { name: 'Pine Court', t: T.pine, stub: 42 },
-  { name: 'Hazel Court', t: T.hazel, stub: 52 },
-  { name: 'Willow Court', t: T.willow, stub: 42 },
+  { name: 'Oak Court', t: T.oak, stub: 34, bend: 0.35 },
+  { name: 'Spruce Court', t: T.spruce, stub: 60, bend: -0.25 },
+  { name: 'Pine Court', t: T.pine, stub: 40, bend: 0.5 },
+  { name: 'Hazel Court', t: T.hazel, stub: 64, bend: 0.3 },
+  { name: 'Willow Court', t: T.willow, stub: 46, bend: -0.45 },
 ];
 const BIRCH = { cx: 52, cz: 28, r: 30 };
 const CEDAR = { x: -62, z: 36 };
@@ -52,7 +53,7 @@ function buildNet() {
   const net = new Network({ crosswalks: 'signals' });
   const N = (x, z, o) => net.at(x, z, 0.5, o);
   // Maple Avenue: through traffic in and out of the fog
-  const artNodes = [[-S - 700, { exit: true }], [loopPt(T.willowRd)[0], {}], [0, { signal: true }], [SCHOOL.x, {}], [S + 700, { exit: true }]];
+  const artNodes = [[-S - 700, { exit: true }], [0, { signal: true }], [SCHOOL.x, {}], [S + 700, { exit: true }]];
   for (let k = 0; k < artNodes.length - 1; k++) net.edge(N(artNodes[k][0], ART_Z, artNodes[k][1]), N(artNodes[k + 1][0], ART_Z, artNodes[k + 1][1]), { cls: 'arterial', name: 'Maple Avenue' });
   // the collector loop through all its junctions
   const stops = Object.values(T).sort((a, b) => a - b);
@@ -62,11 +63,11 @@ function buildNet() {
     const pts = [];
     const n = Math.max(2, Math.ceil(((t1 - t0) * 150) / 8));
     for (let j = 1; j < n; j++) pts.push(loopPt(t0 + ((t1 - t0) * j) / n));
-    net.edge(N(...loopPt(t0)), N(...loopPt(t1 % (Math.PI * 2))), { cls: 'street', name: 'Maple Loop', w: 10, pts });
+    net.edge(N(...loopPt(t0)), N(...loopPt(t1 % (Math.PI * 2))), { cls: 'street', name: 'Maple Loop', w: 10, pts, draw: 2 });
   }
   // entrances
-  net.edge(N(0, ART_Z), N(...loopPt(T.entrance)), { cls: 'street', name: 'Maple Loop Entrance', w: 12 });
-  net.edge(N(loopPt(T.willowRd)[0], ART_Z), N(...loopPt(T.willowRd)), { cls: 'street', name: 'Willow Road' });
+  // the one way in (Willow Road is only a footpath out to the avenue)
+  net.edge(N(0, ART_Z), N(...loopPt(T.entrance)), { cls: 'street', name: 'Maple Loop Entrance', w: 12, draw: 3 });
   // Aspen Way: a crescent across the inside of the loop
   const aE = loopPt(T.aspenE),
     aW = loopPt(T.aspenW);
@@ -95,7 +96,11 @@ function buildNet() {
   for (const c of COURTS) {
     const p = loopPt(c.t),
       n = loopOut(c.t);
-    net.edge(N(...p), N(p[0] + n[0] * c.stub, p[1] + n[1] * c.stub, { bulb: BULB }), { cls: 'street', name: c.name });
+    const tx = -n[1],
+      tz = n[0]; // along the loop
+    const end = [p[0] + n[0] * c.stub + tx * c.stub * c.bend, p[1] + n[1] * c.stub + tz * c.stub * c.bend];
+    const mid = [p[0] + n[0] * c.stub * 0.55, p[1] + n[1] * c.stub * 0.55];
+    net.edge(N(...p), N(...end, { bulb: BULB }), { cls: 'street', name: c.name, pts: curve(p, mid, end, 8) });
   }
   // School Drive: off Maple Avenue to the bus loop in front of the school
   net.edge(N(SCHOOL.x, ART_Z), N(SCHOOL.x, ART_Z - 48, { bulb: SCHOOL.bulb }), { cls: 'street', name: 'School Drive', w: 10 });
@@ -152,6 +157,16 @@ export function layout(lib, seed = 404) {
   occ.add({ x: SCHOOL.x, z: ART_Z - 45, hw: 75, hd: 34, yaw: 0 }, 'school');
   occ.add({ x: 0, z: ART_Z + 26, hw: S, hd: 26, yaw: 0 }, 'mall');
   occ.add({ x: BIRCH.cx, z: BIRCH.cz, hw: BIRCH.r - 9, hd: BIRCH.r - 9, yaw: 0 }, 'green');
+  // Willow Walk: a footpath from the loop out to the avenue's sidewalk (kept clear of lots)
+  const willow = (() => {
+    const [wx, wz] = loopPt(T.willowRd);
+    const art = net.edges.find((e) => e.cls === 'arterial');
+    const z1 = ART_Z - art.w / 2 - art.verge - art.walk;
+    const z0 = wz + loopOut(T.willowRd)[1] * 9;
+    occ.add({ x: wx, z: (z0 + z1) / 2, hw: 3, hd: (z1 - z0) / 2, yaw: 0 }, 'path');
+    ctx.paint.push((b) => b.rect(wx, (z0 + z1) / 2, 2.4, z1 - z0, 0, SK.path, { P: [1.2], C: ['sand', 'caramel'] }));
+    return [[wx, z0], [wx, z1], [wx + 0.8, z1], [wx + 0.8, z0]];
+  })();
 
   // pie lots all the way round each turning circle, houses and driveways facing the bulb
   for (const n of net.nodes) {
@@ -219,6 +234,19 @@ export function layout(lib, seed = 404) {
     occ.add(r, 'tree');
     L.put(pickId(L, ['street_tree', 'tree_round']), x + L.range(-2, 2), wallZ - 3.5, { scale: L.range(0.9, 1.1) });
   }
+  // the entrance drive: a double row of street trees and a lamp-lit sidewalk up to the loop
+  {
+    const z0 = loopPt(T.entrance)[1] + 22,
+      z1 = ART_Z - 24;
+    for (let z = z0; z < z1; z += 11)
+      for (const sx of [-1, 1]) {
+        const x = sx * 14.5;
+        const r = { x, z, hw: 1.6, hd: 1.6, yaw: 0 };
+        if (occ.hits(r, new Set(['lot']))) continue;
+        occ.add(r, 'tree');
+        L.put(pickId(L, ['street_tree', 'tree_round']), x, z, { scale: 1.05, tint: 'leaf' });
+      }
+  }
   // entrance: hedges and flags either side of the Maple Loop entrance
   for (const sx of [-1, 1]) {
     L.put('hedge', sx * 12, ART_Z - 15, { yaw: 0 });
@@ -230,10 +258,11 @@ export function layout(lib, seed = 404) {
   const life = (L.life = lifeSpec(net));
   trafficLights(L, life, net);
   stopSigns(L, net);
-  const artW = (l) => (net.edges[l.e].cls === 'arterial' ? 3 : 1);
-  spawnTraffic(L, life, net, 96, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 3], ['delivery_van', 1.5], ['mail_truck', 1], ['motorcycle', 1], ['police_car', 0.4], ['garbage_truck', 0.4], ['ice_cream_van', 0.4], ['school_bus', 0.3]], { laneWeight: artW });
-  spawnWalkers(L, life, net, 60, { dogs: 0.3, walkWeight: (w) => (net.edges[w.e].cls === 'arterial' ? 0.4 : net.edges[w.e].name.endsWith('Court') ? 2 : 1) });
+  const artW = (l) => (net.edges[l.e].cls === 'arterial' ? 1.2 : net.edges[l.e].name === 'Maple Loop' ? 3 : 1.4);
+  spawnTraffic(L, life, net, 120, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 3], ['delivery_van', 1.5], ['mail_truck', 1], ['motorcycle', 1], ['police_car', 0.4], ['garbage_truck', 0.4], ['ice_cream_van', 0.4], ['school_bus', 0.3]], { laneWeight: artW });
+  spawnWalkers(L, life, net, 110, { dogs: 0.3, walkWeight: (w) => (net.edges[w.e].cls === 'arterial' ? 0.4 : net.edges[w.e].name.endsWith('Court') ? 2 : 1) });
   if (ctx.pondPath) spawnLoopWalkers(L, life, ctx.pondPath, 10);
+  spawnLoopWalkers(L, life, willow, 3);
   if (ctx.park) {
     flock(L, life, ctx.park.x + 30, ctx.park.z - 6, 7);
     flock(L, life, ctx.park.x - 40, ctx.park.z + 10, 5);

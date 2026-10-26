@@ -4,6 +4,11 @@ import { SK } from '../../render/streets.js';
 import { local } from './frontage.js';
 
 /** first id in the list that exists in the asset library */
+const local2 = (fr, r, f) => {
+  const [x, z] = local(fr, r, f);
+  return { x, z };
+};
+
 export function pickId(L, ids) {
   for (const id of ids) if (L.lib.byId.has(id)) return id;
   return ids[ids.length - 1];
@@ -96,6 +101,14 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       if (!occ.hits(gr, IN_LOT) && setback + hd * 2 + gt.dims[2] + 2 < D) {
         occ.add(gr, 'bld');
         L.put('garage', gx2, gz2, { yaw: fr.yaw });
+        // the driveway runs on past the house to the garage door
+        const d0 = driveLen,
+          d1 = setback + hd * 2 + 1;
+        if (d1 > d0 + 0.5) {
+          const [ex, ez] = local(fr, gx, -(d0 + d1) / 2);
+          paint.push((b) => b.rect(ex, ez, 3.4, d1 - d0, fr.yaw, SK.drive, { C: ['cloud', 'cloud', 'stone'] }));
+          occ.add({ x: ex, z: ez, hw: 1.9, hd: (d1 - d0) / 2, yaw: fr.yaw }, 'drive');
+        }
       }
     }
   }
@@ -132,6 +145,11 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   const backStart = -(setback + hd * 2 + 0.8);
   const fenceTint = ft;
   const fenced = L.rand() < fenceP;
+  occ.add({ ...local2(fr, 0, -setback / 2), hw: W / 2 - 0.5, hd: setback / 2 - 0.3, yaw: fr.yaw }, 'front');
+  if (fenced && !pie) {
+    const [yx, yz] = local(fr, 0, (backStart - D) / 2);
+    paint.push((b) => b.rect(yx, yz, W - 0.4, D + backStart, fr.yaw, SK.solid, { C: ['leaf'], y: -0.06 }));
+  }
   let rightRun = null;
   if (!fenced) {
     // an open back yard
@@ -141,21 +159,27 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       leftEnd = local(fr, -W / 2, -D),
       right = local(fr, W / 2, backStart),
       rightEnd = local(fr, W / 2, -D);
-    fenceLine2(L, fence, left, leftEnd, fences, fenceTint);
+    fenceLine2(L, fence, left, leftEnd, fences, fenceTint, occ);
     if (last) {
-      fenceLine2(L, fence, right, rightEnd, fences, fenceTint);
+      fenceLine2(L, fence, right, rightEnd, fences, fenceTint, occ);
       rightRun = null;
     }
-    fenceLine2(L, fence, leftEnd, rightEnd, fences, fenceTint);
+    fenceLine2(L, fence, leftEnd, rightEnd, fences, fenceTint, occ);
   } else {
     // pie lot: radial side fences along the wedge edges, the rear line across the wide end
     const { cx, cz, a, half, R } = pie;
     const r0 = R - backStart,
       r1 = R + D;
     const P = (ang, r) => [cx + Math.sin(ang) * r, cz + Math.cos(ang) * r];
-    fenceLine2(L, fence, P(a - half, r0), P(a - half, r1), fences, fenceTint);
-    fenceLine2(L, fence, P(a + half, r0), P(a + half, r1), fences, fenceTint);
-    fenceLine2(L, fence, P(a - half, r1), P(a + half, r1), fences, fenceTint);
+    if (fenced) {
+      const wedge = [];
+      for (let k = 0; k <= 6; k++) wedge.push(P(a - half + (2 * half * k) / 6, r0));
+      for (let k = 6; k >= 0; k--) wedge.push(P(a - half + (2 * half * k) / 6, r1));
+      paint.push((b) => b.poly(wedge, SK.solid, { C: ['leaf'], y: -0.06, origin: [cx, cz] }));
+    }
+    fenceLine2(L, fence, P(a - half, r0), P(a - half, r1), fences, fenceTint, occ);
+    fenceLine2(L, fence, P(a + half, r0), P(a + half, r1), fences, fenceTint, occ);
+    fenceLine2(L, fence, P(a - half, r1), P(a + half, r1), fences, fenceTint, occ);
   }
   // each family's yard has a character, not the same kit everywhere
   const THEMES = [
@@ -218,14 +242,15 @@ export function closeFences(ctx) {
     if (!a.rightRun) continue;
     const [r0, r1] = a.rightRun;
     const nb = lots.find((b) => b !== a && b.leftAt && Math.hypot(b.leftAt[0] - r0[0], b.leftAt[1] - r0[1]) < 3);
-    if (!nb) fenceLine2(ctx.L, a.fence, r0, r1, ctx.fences, a.fenceTint);
+    if (!nb) fenceLine2(ctx.L, a.fence, r0, r1, ctx.fences, a.fenceTint, ctx.occ);
     // neighbours of different depth: carry the shared side fence on to the deeper rear corner
-    else if (Math.abs(nb.D - a.D) > 0.5 && Math.hypot(nb.rearL[0] - a.rearR[0], nb.rearL[1] - a.rearR[1]) < 12) fenceLine2(ctx.L, a.fence, a.rearR, nb.rearL, ctx.fences, a.fenceTint);
+    else if (Math.abs(nb.D - a.D) > 0.5 && Math.hypot(nb.rearL[0] - a.rearR[0], nb.rearL[1] - a.rearR[1]) < 12) fenceLine2(ctx.L, a.fence, a.rearR, nb.rearL, ctx.fences, a.fenceTint, ctx.occ);
     a.rightRun = null;
   }
 }
 
-function fenceLine2(L, id, [x0, z0], [x1, z1], dedupe, tint) {
+const FENCE_PASS = new Set(['lot', 'yard', 'tree', 'green', 'park', 'path']);
+function fenceLine2(L, id, [x0, z0], [x1, z1], dedupe, tint, occ = null) {
   const t = L.lib.byId.get(id);
   if (!t) return;
   const panel = Math.max(t.dims[0], t.dims[2]);
@@ -242,6 +267,8 @@ function fenceLine2(L, id, [x0, z0], [x1, z1], dedupe, tint) {
       z = z0 + uz * c;
     const key = Math.round(x) + ',' + Math.round(z);
     if (dedupe.has(key)) continue;
+    // never through a house, garage, driveway, road or somebody's front garden
+    if (occ && occ.hits({ x, z, hw: 0.5, hd: 0.5, yaw: 0 }, FENCE_PASS)) continue;
     dedupe.add(key);
     L.put(id, x, z, { yaw, scale: s, tint });
   }
