@@ -468,10 +468,10 @@ function landPolys(b) {
 
 export const env = {
   sky: [
-    [0, 'grape'],
-    [0.42, 'flamingo'],
-    [0.75, 'tangerine'],
-    [1, 'butter'],
+    [0, 'tangerine'],
+    [0.3, 'flamingo'],
+    [0.8, 'grape'],
+    [1, 'grape'],
   ],
   fog: { near: 600, far: 1700, k: 70, color: '#FF9E7A' },
   groundY: 0,
@@ -717,7 +717,7 @@ export function layout(lib, seed = 606) {
     return (e.cls === 'avenue' || e.cls === 'boulevard' ? 1.6 : 1) * (0.5 + 4 * core + 1.5 * gauss(x, z, VILLAGE));
   };
   spawnWalkers(L, life, net, 1250, { dogs: 0.07, joggers: 0.05, walkWeight: walkW });
-  // the sky: helicopters circling, a blimp over the stadium, clouds well above the towers
+  // the sky: helicopters circling, a blimp over the stadium
   const ring = (cx, cz, r, n = 24) => {
     const p = [];
     for (let k = 0; k <= n; k++) p.push([cx + Math.sin((k / n) * Math.PI * 2) * r, cz + Math.cos((k / n) * Math.PI * 2) * r]);
@@ -729,7 +729,17 @@ export function layout(lib, seed = 606) {
   }
   const blimp = L.put('blimp', 1800, -1300, { y: 260 });
   if (blimp) life.movers.push({ its: [blimp], offs: [0], route: ring(1800, -1300, 260, 32), speed: 9, y: 260, air: true, kind: 'blimp' });
-  for (let k = 0; k < 40; k++) L.put('fluffy_cloud', L.range(-S, S), L.range(-S, S), { y: L.range(520, 860), scale: L.range(0.8, 1.8), yaw: L.range(0, 6.28), tint: L.pick(['snow', 'cloud']) });
+  // (no low clouds over the city: seen from below and far off they read as dark slivers or floating rocks)
+  // downtown's hero tower: the glass tower nearest the heart of the financial district becomes the spire
+  {
+    const fd = CORES[1];
+    let best = null;
+    for (const it of L.items) if (it.id === 'highrise_glass' && (!best || Math.hypot(it.x - fd.x, it.z - fd.z) < Math.hypot(best.x - fd.x, best.z - fd.z))) best = it;
+    if (best && L.lib.byId.has('skyscraper_spire')) {
+      best.id = 'skyscraper_spire';
+      best.tint = 'navy';
+    }
+  }
   // a wooden water tank on about a quarter of the walk-up roofs (the tenement model's roof is at 16.6 m)
   if (L.lib.byId.has('rooftop_water_tank'))
     for (const it of L.items.slice()) {
@@ -785,26 +795,29 @@ function blockYard(ctx, x0, x1, z0, z1, boro = false) {
       dep = along ? z1 - z0 : x1 - x0;
     const YW = 7;
     const yards = [];
+    // (all one lawn, so from above the block doesn't read as strips of crops: the variety is a paved patio
+    // at the house end of each yard, the odd fully paved yard, and trees)
     for (let t = -len / 2; t + YW <= len / 2 + 0.01; t += YW)
-      for (const side of [-1, 1]) yards.push({ t: t + YW / 2, side, g: L.pick(['pine', 'pine', 'leaf', 'pine', 'concrete', 'stone', 'sand', 'leaf']) });
+      for (const side of [-1, 1]) yards.push({ t: t + YW / 2, side, paved: L.rand() < 0.15, patio: L.range(3, 7), pc: L.pick(['concrete', 'stone']) });
     const at = (t, u) => (along ? [cx + t, cz + u] : [cx + u, cz + t]);
     L.paint.push((b) => {
       for (const y of yards) {
-        const [px, pz] = at(y.t, (y.side * dep) / 4);
-        b.rect(px, pz, along ? YW : dep / 2, along ? dep / 2 : YW, 0, SK.solid, { C: [y.g], y: -0.29 });
+        const d = y.paved ? dep / 2 : y.patio;
+        const [px, pz] = at(y.t, y.side * (dep / 2 - d / 2));
+        b.rect(px, pz, along ? YW - 0.4 : d, along ? d : YW - 0.4, 0, SK.solid, { C: [y.pc], y: -0.29 });
       }
-      if (along) b.rect(cx, cz, len, 0.45, 0, SK.solid, { C: ['caramel'], y: -0.27 });
-      else b.rect(cx, cz, 0.45, len, 0, SK.solid, { C: ['caramel'], y: -0.27 });
+      if (along) b.rect(cx, cz, len, 0.4, 0, SK.solid, { C: ['cocoa'], y: -0.27 });
+      else b.rect(cx, cz, 0.4, len, 0, SK.solid, { C: ['cocoa'], y: -0.27 });
       for (let t = -len / 2 + YW; t < len / 2; t += YW) {
         const [px, pz] = at(t, 0);
-        b.rect(px, pz, along ? 0.4 : dep, along ? dep : 0.4, 0, SK.solid, { C: ['caramel'], y: -0.27 });
+        b.rect(px, pz, along ? 0.3 : dep, along ? dep : 0.3, 0, SK.solid, { C: ['cocoa'], y: -0.27 });
       }
     });
     for (const y of yards) {
       const r = L.rand();
       const u = (y.side * dep) / 4 + L.range(-dep / 10, dep / 10);
       const [px, pz] = at(y.t + L.range(-1, 1), u);
-      const id = r < 0.16 ? pickId(L, ['street_tree', 'tree_round']) : r < 0.24 ? pickId(L, ['garden_shed', 'picnic_table']) : r < 0.29 ? pickId(L, ['picnic_table', 'bbq_grill']) : null;
+      const id = r < 0.3 ? pickId(L, ['street_tree', 'tree_round']) : r < 0.36 ? pickId(L, ['garden_shed', 'picnic_table']) : r < 0.4 ? pickId(L, ['picnic_table', 'bbq_grill']) : null;
       if (!id) continue;
       const rr = { x: px, z: pz, hw: 1.6, hd: 1.6, yaw: 0 };
       if (occ.hits(rr)) continue;
@@ -1206,12 +1219,13 @@ function waterfront(ctx, life) {
   }
   // the bridges themselves
   const bridge = pickId(L, ['suspension_bridge', 'bridge_tower']);
-  const place = (x, z) => {
-    if (bridge === 'suspension_bridge') L.put(bridge, x, z, { y: -5.4, yaw: 0 });
+  // New York's bridges are stone and grey-blue steel, not Golden Gate red
+  const place = (x, z, tint) => {
+    if (bridge === 'suspension_bridge') L.put(bridge, x, z, { y: -5.4, yaw: 0, tint });
     else for (const dx of [-120, 120]) L.put(bridge, x + dx, z, { tint: 'sky' });
   };
-  BRIDGES_Z.forEach((z) => place((SHORE + EAST_X0) / 2, z));
-  place((-SHORE + WEST_X0) / 2, WEST_BRIDGE_Z);
+  BRIDGES_Z.forEach((z, k) => place((SHORE + EAST_X0) / 2, z, ['stone', 'sky', 'slate'][k]));
+  place((-SHORE + WEST_X0) / 2, WEST_BRIDGE_Z, 'slate');
   // the ferris wheel on the borough's waterfront
   if (L.lib.byId.get('ferris_wheel_frame')) {
     L.put('ferris_wheel_frame', EAST_X0 + 80, 1250, { yaw: Math.PI / 2 });
@@ -1309,7 +1323,8 @@ function westBank(ctx, life) {
   for (const z of [-560, -440, -320, -200]) L.put('airliner', gateX, z, { yaw: L.along('airliner', Math.PI / 2) }); // nose-in at the gates
   // one taxiing round the apron edge to the runway hold and back
   {
-    const route = [[RX + 175, -760], [RX + 120, -700], [RX + 120, 40], [RX + 175, 100], [RX + 175, -760]];
+    // (on the apron's outer lane, clear of the taxiway the departing jets use)
+    const route = [[RX + 215, -640], [RX + 175, -600], [RX + 175, -60], [RX + 215, -20], [RX + 215, -640]];
     const it = L.put('airliner', route[0][0], route[0][1]);
     if (it) life.movers.push({ its: [it], offs: [0], route, speed: 9, kind: 'plane' });
   }
