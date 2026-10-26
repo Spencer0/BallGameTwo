@@ -344,7 +344,10 @@ export class Network {
         if (s1 - s0 > 1) {
           if (has) {
             const mid = curb + e.verge + e.walk / 2;
-            const pts = offsetPoly(e.poly, e.L, side * mid, s0, s1, 6).map(([x, z]) => [x, z]);
+            // walkers' paths end on the middle of the zebra, so crossings run along the stripes
+            const w0 = s0 + (e.crossA === 2 ? 1.6 : 0),
+              w1 = s1 - (e.crossB === 2 ? 1.6 : 0);
+            const pts = offsetPoly(e.poly, e.L, side * mid, w1 - w0 > 2 ? w0 : s0, w1 - w0 > 2 ? w1 : s1, 6).map(([x, z]) => [x, z]);
             this.walks.push({ id: this.walks.length, e: e.id, side, pts, L: polyLen(pts), w: e.walk });
           }
           const fs0 = s0 + (A.deg >= 3 ? prop - curb : 0),
