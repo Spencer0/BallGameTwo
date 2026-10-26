@@ -1,7 +1,7 @@
 // DOM UI: screens, HUD, overlays. Styled by style.css following STYLE.md (sticker panels,
 // Shrikhand display + Baloo 2 UI). Talks to the app through a small action interface.
 import { ICON } from './icons.js';
-import { LEVELS } from '../levels/index.js';
+import { LEVELS, starRatios } from '../levels/index.js';
 import { formatSize, formatTime, STAR_RATIOS } from '../game/rules.js';
 import { SKINS, isUnlocked } from '../game/skins.js';
 import { INTRO, BEFORE, ENDING, verdictFor, moodFor } from '../game/story.js';
@@ -192,7 +192,7 @@ export class UI {
           </button>
           <button class="mode-btn" data-act="start" data-i="${i}" data-mode="timed">
             <span class="mode-ico">${ICON.timer}</span>
-            <span><b>Timed</b><em>Reach ${formatSize(L.target)} in ${formatTime(L.time)}. Stars at ${STAR_RATIOS.map((r) => formatSize(L.target * r)).join(' · ')}.</em></span>
+            <span><b>Timed</b><em>Reach ${formatSize(L.target)} in ${formatTime(L.time)}. Stars at ${starRatios(L).map((r) => formatSize(L.target * r)).join(' · ')}.</em></span>
           </button>
           <button class="btn btn-ghost" data-act="story" data-i="${i}">Replay the memo</button>
         </div>
@@ -355,11 +355,12 @@ export class UI {
     this.h.goal.textContent = `Goal ${formatSize(L.target)}`;
     // bar spans start..3-star size (log scale)
     this.barMin = Math.log(L.start);
-    this.barMax = Math.log(L.target * STAR_RATIOS[2] * 1.05);
+    const sr = starRatios(L);
+    this.barMax = Math.log(L.target * sr[2] * 1.05);
     const pos = (d) => ((Math.log(d) - this.barMin) / (this.barMax - this.barMin)) * 100;
     $('.m1', this.h.barWrap).style.left = pos(L.target) + '%';
-    $('.m2', this.h.barWrap).style.left = pos(L.target * STAR_RATIOS[1]) + '%';
-    $('.m3', this.h.barWrap).style.left = pos(L.target * STAR_RATIOS[2]) + '%';
+    $('.m2', this.h.barWrap).style.left = pos(L.target * sr[1]) + '%';
+    $('.m3', this.h.barWrap).style.left = pos(L.target * sr[2]) + '%';
     this.h.barWrap.classList.toggle('stars', timed);
     this.hudState = { size: '', time: '', bar: -1, urgent: false, warned60: L.time <= 60, warned30: false };
     $('.t1', this.h.title).textContent = L.name;

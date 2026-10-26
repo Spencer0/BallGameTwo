@@ -3,7 +3,7 @@
 // For each level reports: objects, start-collectible count, the max size reachable by collecting
 // everything reachable in size order, and the size reached at partial efficiency (a "typical player").
 import fs from 'node:fs';
-import { LEVELS } from '../src/levels/index.js';
+import { LEVELS, starRatios } from '../src/levels/index.js';
 import * as R from '../src/game/rules.js';
 
 const catalog = JSON.parse(fs.readFileSync(new URL('../assets/catalog.json', import.meta.url)));
@@ -37,7 +37,7 @@ for (const level of LEVELS) {
   if (!level.mod || (only && !only.includes(level.n))) continue;
   const full = simulate(level, 1);
   const typical = simulate(level, 0.55, 7);
-  const three = level.target * R.STAR_RATIOS[2];
+  const three = level.target * starRatios(level)[2];
   const ok = full.d >= three * 1.3 && typical.d >= level.target && full.startCollectible >= 40;
   if (!ok) fail++;
   console.log(

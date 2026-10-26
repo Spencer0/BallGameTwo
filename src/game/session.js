@@ -606,6 +606,13 @@ export class Session {
   }
 
   render(renderer) {
+    const b = this.ball;
+    this.focus = this.focus || { x: 0, y: 0, z: 0, r: 0 };
+    this.focus.x = b.pos.x;
+    this.focus.y = b.pos.y;
+    this.focus.z = b.pos.z;
+    this.focus.r = b.r;
+    this.world.focus = this.over ? null : this.focus;
     this.world.updateRender(this.camera, this.game.focalPx);
     renderer.render(this.scene, this.camera);
   }
@@ -622,7 +629,7 @@ export class Session {
       diameter: d,
       target: this.level.target,
       completed: rules.isCompleted(d, this.level.target),
-      stars: this.mode === 'timed' ? rules.starsFor(d, this.level.target) : 0,
+      stars: this.mode === 'timed' ? rules.starsFor(d, this.level.target, this.level.stars) : 0,
       collected: this.collected,
       order: this.collectOrder,
       pickups: this.pickups,

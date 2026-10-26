@@ -55,9 +55,9 @@ export function shrink(radius, gained, minR) {
   return Math.max(minR, v > 0 ? radiusFromVolume(v) : minR);
 }
 
-export function starsFor(diameter, target) {
+export function starsFor(diameter, target, ratios = STAR_RATIOS) {
   let s = 0;
-  for (const r of STAR_RATIOS) if (diameter >= target * r - 1e-9) s++;
+  for (const r of ratios) if (diameter >= target * r - 1e-9) s++;
   return s;
 }
 

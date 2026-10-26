@@ -3,7 +3,7 @@
 import { Layout } from './layout.js';
 
 const W = 34,
-  D = 26;
+  D = 38; // garden to z=±13, plus a street out front (z 13..19)
 const WALL_H = 1.1;
 const T = 0.24; // wall thickness
 
@@ -50,11 +50,10 @@ const blocks = [
   { min: [-W / 2 - 2, -1, D / 2], max: [W / 2 + 2, 30, D / 2 + 2], visible: false },
   { min: [-W / 2 - 2, -1, -D / 2], max: [-W / 2, 30, D / 2], visible: false },
   { min: [W / 2, -1, -D / 2], max: [W / 2 + 2, 30, D / 2], visible: false },
-  // garden fence (visual)
-  { min: [-W / 2, 0, -D / 2 - 0.15], max: [W / 2, 1.8, -D / 2], color: 'caramel', collide: false },
-  { min: [-W / 2, 0, D / 2], max: [W / 2, 1.8, D / 2 + 0.15], color: 'caramel', collide: false },
-  { min: [-W / 2 - 0.15, 0, -D / 2], max: [-W / 2, 1.8, D / 2], color: 'caramel', collide: false },
-  { min: [W / 2, 0, -D / 2], max: [W / 2 + 0.15, 1.8, D / 2], color: 'caramel', collide: false },
+  // garden fence (visual) around the garden; the street side is open
+  { min: [-W / 2, 0, -13.15], max: [W / 2, 1.8, -13], color: 'caramel', collide: false },
+  { min: [-W / 2 - 0.15, 0, -13], max: [-W / 2, 1.8, 13], color: 'caramel', collide: false },
+  { min: [W / 2, 0, -13], max: [W / 2 + 0.15, 1.8, 13], color: 'caramel', collide: false },
 ];
 
 export const env = {
@@ -67,7 +66,9 @@ export const env = {
   groundY: 0,
   planes: [
     { x: 0, z: 0, w: 140, d: 120, y: -0.02, pattern: 'lawn', a: 'leaf', b: '#4DB86A', cell: 3 },
-    { x: 0, z: 0, w: W, d: D, y: -0.01, pattern: 'lawn', a: 'lime', b: '#8BCB45', cell: 1.6 },
+    { x: 0, z: -3, w: W, d: 32, y: -0.01, pattern: 'lawn', a: 'lime', b: '#8BCB45', cell: 1.6 },
+    { x: 0, z: 14.2, w: 140, d: 2.4, y: -0.008, pattern: 'tiles', a: 'cloud', b: '#E6E9F1', c: 'stone', cell: 1.2 },
+    { x: 0, z: 17.6, w: 140, d: 4.6, y: -0.006, pattern: 'roadx', a: 'charcoal', b: 'paper', cell: 4.6, offset: [0, -17.6] },
     // patio
     { x: 0, z: -9.5, w: 10, d: 5, y: -0.005, pattern: 'tiles', a: 'cloud', b: 'stone', c: '#C3C8D6', cell: 1 },
     { x: -4.5, z: 3.5, w: 9, d: 7, y: 0.002, pattern: 'boards', a: 'caramel', b: 'sand', c: 'cocoa', cell: 0.5 },
@@ -243,16 +244,32 @@ export function layout(lib, seed = 303) {
 
   // ---- garden (everything outside the house)
   const yard = [
-    { minX: -W / 2 + 0.8, maxX: W / 2 - 0.8, minZ: 7.8, maxZ: D / 2 - 0.8 },
-    { minX: -W / 2 + 0.8, maxX: W / 2 - 0.8, minZ: -D / 2 + 0.8, maxZ: -7.8 },
+    { minX: -W / 2 + 0.8, maxX: W / 2 - 0.8, minZ: 7.8, maxZ: 12.2 },
+    { minX: -W / 2 + 0.8, maxX: W / 2 - 0.8, minZ: -12.2, maxZ: -7.8 },
     { minX: -W / 2 + 0.8, maxX: -9.8, minZ: -7.8, maxZ: 7.8 },
     { minX: 9.8, maxX: W / 2 - 0.8, minZ: -7.8, maxZ: 7.8 },
   ];
   // hedges along the fence
   for (let x = -W / 2 + 2; x < W / 2 - 1; x += 3.2) {
-    L.put('hedge', x, D / 2 - 0.9, { yaw: 0 });
-    L.put('hedge', x + 1, -D / 2 + 0.9, { yaw: 0 });
+    if (Math.abs(x + 4.5) > 3) L.put('hedge', x, 12.2, { yaw: 0 });
+    L.put('hedge', x + 1, -12.1, { yaw: 0 });
   }
+  // the street out front: parked cars and street stuff for when the ball is big
+  for (const [x, id, tint] of [[-14, 'car', 'tomato'], [-8.5, 'pickup_truck', null], [-2, 'car', 'sun'], [6, 'delivery_van', null], [12.5, 'car', 'leaf']])
+    L.put(id, x, 16.3, { yaw: L.along(id, Math.PI / 2), tint: tint || undefined });
+  L.put('car', 3, 18.8, { yaw: L.along('car', -Math.PI / 2), tint: 'cobalt' });
+  L.put('motorcycle', -11, 18.7, { yaw: L.along('motorcycle', -Math.PI / 2) });
+  for (const x of [-15, -5, 5, 15]) L.put('street_lamp', x, 14.3, { yaw: Math.PI });
+  L.put('mailbox', -3, 13.6, { yaw: Math.PI });
+  L.put('wheelie_bin', 1, 13.8);
+  L.put('wheelie_bin', 2, 13.8, { tint: 'cobalt' });
+  L.put('fire_hydrant', 9, 13.7);
+  L.put('bus_stop', -15.5, 13.9, { yaw: Math.PI });
+  L.put('dumpster', 15.5, 13.9, { yaw: Math.PI / 2 });
+  L.put('garden_shed', 14.3, 10.5, { yaw: -Math.PI / 2 });
+  L.put('above_ground_pool', -12.4, 9.4);
+  L.put('playground_slide', 11.5, -5.5, { yaw: 1.2 });
+  L.put('lemonade_stand', 6.5, 13.6, { yaw: Math.PI });
   L.put('car', 13.2, -9.6, { yaw: Math.PI / 2, tint: 'sky' });
   L.put('garden_shed', -14.5, -10.3, { yaw: Math.PI / 2 });
   L.put('trampoline', 13.5, 0.6);

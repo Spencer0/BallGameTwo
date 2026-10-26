@@ -127,6 +127,7 @@ export class World {
     this.cullPx = 1.6; // below this an object isn't drawn
     this.viewDist = 1e9;
     this.visibleCount = 0;
+    this.focus = null; // {x,y,z,r}: the ball; objects occluding the camera's view of it are hidden
   }
 
   add(typeIdx, x, y, z, yaw = 0, scale = 1, tint = 0) {
@@ -319,6 +320,18 @@ export class World {
     const stamp = ++this.stampId;
     const lodPx = this.lodPx,
       cullPx = this.cullPx;
+    // camera -> focus segment for occluder hiding
+    const F = this.focus;
+    let sx = 0,
+      sy = 0,
+      sz = 0,
+      sl2 = 0;
+    if (F) {
+      sx = F.x - camX;
+      sy = F.y - camY;
+      sz = F.z - camZ;
+      sl2 = sx * sx + sy * sy + sz * sz;
+    }
     const pad = this.maxBound;
     let visible = 0;
     let ns = 0;
@@ -344,6 +357,23 @@ export class World {
           const d = Math.sqrt(dx * dx + dy * dy + dz * dz) + 1e-6;
           // camera inside (or nearly inside) this object: hide it so we see through it
           if (d < this.bound[i] * 0.85) continue;
+          // object between the camera and the ball (or Lint at its base): hide it (Katamari-style see-through)
+          if (F && d * d < sl2 && this.bound[i] > F.r * 0.25) {
+            const oy = this.y[i] + this.bound[i] * 0.6 - camY;
+            const rr = this.bound[i] * 0.8 + F.r * 0.35;
+            let hidden = false;
+            for (let pass = 0; pass < 2 && !hidden; pass++) {
+              const ty = pass === 0 ? sy : sy - F.r * 1.1; // ball centre, then ball base
+              const l2 = sx * sx + ty * ty + sz * sz;
+              const t = (dx * sx + oy * ty + dz * sz) / l2;
+              if (t <= 0 || t >= 1) continue;
+              const ex = dx - sx * t,
+                ey = oy - ty * t,
+                ez = dz - sz * t;
+              if (ex * ex + ey * ey + ez * ez < rr * rr) hidden = true;
+            }
+            if (hidden) continue;
+          }
           const px = (this.bound[i] * 2 * focalPx) / d;
           if (px < cullPx) continue;
           const b = this.batchOf[this.type[i]];
