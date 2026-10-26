@@ -81,6 +81,9 @@ export const env = {
   blocks,
 };
 
+// Madame Prudence inspects the garden (life-size, 1.5 m)
+env.decor = [{ id: 'char__prudence', x: -9.5, y: 0, z: -11.2, yaw: 0.3, scale: 0.5, size: 1.5, collide: true }];
+
 export const bounds = { minX: -W / 2, maxX: W / 2, minZ: -D / 2, maxZ: D / 2 };
 export const spawn = { x: -5.2, z: 4.6, yaw: Math.PI * 0.85 };
 

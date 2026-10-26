@@ -48,6 +48,9 @@ export const env = {
   ],
 };
 
+// Madame Prudence, city-sized, supervising from beyond the stadium
+env.decor = [{ id: 'char__prudence', x: 250, y: 0, z: -1650, yaw: -0.2, scale: 300, size: 800 }];
+
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
 export const spawn = { x: 300, z: 520, yaw: Math.PI };
 

@@ -21,6 +21,24 @@ _Last updated: during the main build session._
 - **Tests**: unit (23), audio render check, balance tool, screen tour (3 viewports), playthrough bot,
   persistence across reload, long-session profiler.
 
+## Polish pass 1 (wow / jank review)
+Wow:
+- Attract-mode menus: the title and level select float over a live demo of Lint rolling up the table.
+- Level-intro camera swoop from high above while the title card plays.
+- Madame Prudence cameos in every level, scaled absurdly to match (life-size in the garden, a 65 m giant at the
+  end of the street, a 240 m colossus on the town horizon, a 900 m inspector beyond the city).
+- Lumpy rolling (big stuck things lift the ball as they pass under it), dust trail at speed, "Time's up!" stamp.
+- Prudence babbles her results verdict; Lint squeaks on milestones.
+Jank fixed:
+- Ball jittering on low edges (diagonal contacts) → low obstacles are steps, climbable from any angle.
+- Ball wandering on furniture tops (climb limit 2.3 r → 1.6 r).
+- Camera trapped behind dollhouse walls → low walls don't block the camera; room walls are see-through planes.
+- Buildings between camera and ball / Lint → hidden (two sight lines).
+- Camera inside an object → its outline hull flooded the screen with ink → instances containing the camera are culled.
+- Inward-facing faces from some helpers → normals recalculated in the asset pipeline.
+- Release single-page build was corrupted by `$'` sequences in the minified JS → function replacements.
+- Pickup-card strobing during tiny-item bursts → rate-limited, NEW/big pickups always shown.
+
 ## Next
 - Integrate L4–L6 packs, balance, playthrough all levels both modes.
 - Regenerate icon atlas + ASSETS.md with all assets.

@@ -107,6 +107,14 @@ export class Session {
         this.scene.add(m);
       }
       this.decor.push(mat, omat);
+      if (d.collide) {
+        // a simple box around the decor's footprint (scaled bounding box)
+        geo.computeBoundingBox();
+        const bb = geo.boundingBox;
+        const sc = d.scale ?? 1;
+        const hw = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * 0.3 * sc;
+        this.env.boxes.push({ minX: d.x - hw, maxX: d.x + hw, minZ: d.z - hw, maxZ: d.z + hw, minY: d.y ?? 0, maxY: (d.y ?? 0) + (bb.max.y - bb.min.y) * sc, climb: false, cam: false });
+      }
     }
     // world
     const layout = mod.layout(lib);

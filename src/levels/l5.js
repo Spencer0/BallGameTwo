@@ -47,6 +47,9 @@ export const env = {
   ],
 };
 
+// Madame Prudence, town-sized, on the horizon
+env.decor = [{ id: 'char__prudence', x: -560, y: 0, z: -320, yaw: 0.9, scale: 80, size: 220 }];
+
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
 export const spawn = { x: 37.5, z: 60, yaw: Math.PI };
 

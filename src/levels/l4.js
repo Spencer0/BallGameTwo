@@ -37,6 +37,9 @@ export const env = {
   ],
 };
 
+// a giant Madame Prudence peers over the end of the street
+env.decor = [{ id: 'char__prudence', x: 10, y: 0, z: -150, yaw: -0.15, scale: 22, size: 60 }];
+
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
 export const spawn = { x: 0, z: 38, yaw: Math.PI };
 

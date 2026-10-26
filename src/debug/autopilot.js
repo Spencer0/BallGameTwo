@@ -86,7 +86,7 @@ export class Autopilot {
     const b = s.ball,
       w = s.world;
     const D = b.diameter;
-    const radius = b.r * 30;
+    const radius = b.r * 60;
     const n = w.query(b.pos.x, b.pos.z, radius, BUF);
     let best = -1,
       bestScore = 0;
