@@ -73,7 +73,8 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   const siding = (t0.variants || []).filter((c) => SIDING.has(c));
   L.put(house, hx, hz, { yaw: fr.yaw, tint: siding.length ? L.pick(siding) : L.pick(['paper', 'sand', 'cloud']) });
   // driveway: from the property line to the garage door (or alongside the house)
-  const gx = typeof info.drive === 'number' ? info.drive : flip * (hw + 2.2);
+  // local() measures r to the right of the facing direction, which is the model's -x: negate the door offset
+  const gx = typeof info.drive === 'number' ? -info.drive : flip * (hw + 2.2);
   const driveLen = typeof info.drive === 'number' ? setback : setback + hd * 1.3;
   const [dx, dz] = local(fr, gx, -driveLen / 2);
   const apronLen = Math.max(0, e.verge - 0.3);
@@ -148,7 +149,7 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   occ.add({ ...local2(fr, 0, -setback / 2), hw: W / 2 - 0.5, hd: setback / 2 - 0.3, yaw: fr.yaw }, 'front');
   if (fenced && !pie) {
     const [yx, yz] = local(fr, 0, (backStart - D) / 2);
-    paint.push((b) => b.rect(yx, yz, W - 0.4, D + backStart, fr.yaw, SK.solid, { C: ['leaf'], y: -0.06 }));
+    paint.push((b) => b.rect(yx, yz, W - 0.4, D + backStart, fr.yaw, SK.solid, { C: ['lime'], y: -0.06 }));
   }
   let rightRun = null;
   if (!fenced) {
@@ -175,7 +176,7 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       const wedge = [];
       for (let k = 0; k <= 6; k++) wedge.push(P(a - half + (2 * half * k) / 6, r0));
       for (let k = 6; k >= 0; k--) wedge.push(P(a - half + (2 * half * k) / 6, r1));
-      paint.push((b) => b.poly(wedge, SK.solid, { C: ['leaf'], y: -0.06, origin: [cx, cz] }));
+      paint.push((b) => b.poly(wedge, SK.solid, { C: ['lime'], y: -0.06, origin: [cx, cz] }));
     }
     fenceLine2(L, fence, P(a - half, r0), P(a - half, r1), fences, fenceTint, occ);
     fenceLine2(L, fence, P(a + half, r0), P(a + half, r1), fences, fenceTint, occ);
@@ -244,7 +245,8 @@ export function closeFences(ctx) {
     const nb = lots.find((b) => b !== a && b.leftAt && Math.hypot(b.leftAt[0] - r0[0], b.leftAt[1] - r0[1]) < 3);
     if (!nb) fenceLine2(ctx.L, a.fence, r0, r1, ctx.fences, a.fenceTint, ctx.occ);
     // neighbours of different depth: carry the shared side fence on to the deeper rear corner
-    else if (Math.abs(nb.D - a.D) > 0.5 && Math.hypot(nb.rearL[0] - a.rearR[0], nb.rearL[1] - a.rearR[1]) < 12) fenceLine2(ctx.L, a.fence, a.rearR, nb.rearL, ctx.fences, a.fenceTint, ctx.occ);
+    // neighbours of different depth, or fanning apart round a curve: close the gap between rear corners
+    else if (Math.hypot(nb.rearL[0] - a.rearR[0], nb.rearL[1] - a.rearR[1]) > 0.8 && Math.hypot(nb.rearL[0] - a.rearR[0], nb.rearL[1] - a.rearR[1]) < 16) fenceLine2(ctx.L, a.fence, a.rearR, nb.rearL, ctx.fences, a.fenceTint, ctx.occ);
     a.rightRun = null;
   }
 }
@@ -358,7 +360,7 @@ export function court(b, SKk, x, z, w, d, yaw, col, line = 'paper') {
   }
 }
 
-const FARM_CROPS = [['sun', 'butter'], ['leaf', 'lime'], ['caramel', 'sand'], ['pine', 'leaf'], ['lime', 'butter'], ['leaf', 'pine'], ['butter', 'sand']];
+const FARM_CROPS = [['leaf', 'lime'], ['sand', 'butter'], ['pine', 'leaf'], ['lime', 'leaf'], ['caramel', 'sand'], ['butter', 'sand']];
 
 /**
  * Farmland beyond the play area, out to the horizon: a grid of fields (painted), hedgerows and woodlots,

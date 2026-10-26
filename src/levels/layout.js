@@ -12,6 +12,8 @@ export function mulberry32(seed) {
   };
 }
 
+const GREENS = new Set(['leaf', 'lime', 'pine', 'mint', 'teal']);
+
 export class Layout {
   constructor(lib, seed, bounds) {
     this.lib = lib;
@@ -128,6 +130,11 @@ export class Layout {
 
   variant(t) {
     if (!t.variants || !t.variants.length) return null;
+    // trees keep to one season: summer greens (no blossom pinks or autumn oranges mixed in)
+    if (/tree/.test(t.id)) {
+      const g = t.variants.filter((c) => GREENS.has(c));
+      return this.rand() < 0.4 || !g.length ? null : g[Math.floor(this.rand() * g.length)];
+    }
     const r = this.rand();
     return r < 0.35 ? null : t.variants[Math.floor(this.rand() * t.variants.length)];
   }

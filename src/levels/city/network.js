@@ -16,7 +16,7 @@ export const CLASSES = {
   crosstown: { w: 14, lanes: 2, oneway: true, walk: 5, verge: 0, center: 0, speed: 11 },
   boulevard: { w: 22, lanes: 2, walk: 5, verge: 0, center: 2, speed: 13 },
   highway: { w: 22, lanes: 2, walk: 0, verge: 0, center: 2, speed: 24 },
-  main: { w: 20, lanes: 1, walk: 4, verge: 0, center: 1, speed: 8, parking: 'angled' },
+  main: { w: 17, lanes: 1, walk: 4, verge: 0, center: 1, speed: 8, parking: 'angled' },
   rail: { w: 4, lanes: 0, walk: 0, verge: 0, center: 0, speed: 0 },
   path: { w: 3, lanes: 0, walk: 0, verge: 0, center: 0, speed: 0 },
 };

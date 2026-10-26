@@ -42,20 +42,22 @@ const PARK_W = 30; // riverfront park between the bank and the riverside street'
 // It narrows and runs nearly north-south where the three bridges cross it.
 const RIVER_CTRL = [
   [-240, -1900, 70],
-  [-175, -1150, 70],
-  [-150, -860, 72],
-  [-118, -700, 76],
+  [-110, -1520, 95],
+  [-240, -1180, 80],
+  [-110, -880, 110],
+  [-165, -720, 85],
   [-98, -615, 56],
   [-95, -560, 44], // Mill Road bridge
   [-90, -515, 50],
   [-73, -490, 48],
   [-69, -470, 44], // rail bridge
-  [-60, -430, 56],
-  [-5, -345, 80],
-  [65, -225, 88],
-  [108, -95, 76],
-  [138, 35, 72],
-  [168, 170, 64],
+  [-55, -425, 60],
+  [10, -360, 100],
+  [45, -265, 125],
+  [15, -170, 85],
+  [70, -70, 75],
+  [160, 10, 115],
+  [150, 130, 80],
   [192, 272, 50],
   [199, 330, 44], // Route 9 bridge
   [212, 385, 54],
@@ -222,12 +224,26 @@ export const env = {
   ],
   streets: (b) => {
     // river: muddy banks under the water ribbon, both following the meander
+    // river: grassy, wooded banks (dark), gravel bars on the inside of the bends, then the water
     const pts = RIVER.map((p) => [p[0], p[1]]);
-    b.ribbon(pts, RIVER.map((p) => p[2] / 2 + BANK), SK.solid, { C: ['sand'], y: -0.33 });
+    b.ribbon(pts, RIVER.map((p) => p[2] / 2 + BANK), SK.solid, { C: ['pine'], y: -0.33 });
     b.ribbon(pts, RIVER.map((p) => p[2] / 2), SK.water, { C: ['teal', 'sky'], y: -0.2 });
-    // the lake: a beach all round, then the water (fans from the centre: the shape is star-shaped)
-    const beach = lakePts(14);
-    b.poly([[LAKE.x, LAKE.z], ...beach, beach[0]], SK.solid, { C: ['sand'], y: -0.33 });
+    for (const [z, side] of [[-265, -1], [10, -1], [-880, 1], [-1180, -1], [130, 1]]) {
+      const r = riverAt(z);
+      const bar = [];
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        bar.push([r.x + side * r.hw * 0.62 + Math.sin(a) * r.hw * 0.28, z + Math.cos(a) * 30]);
+      }
+      b.poly([[r.x + side * r.hw * 0.62, z], ...bar, bar[0]], SK.solid, { C: ['sand'], y: -0.17 });
+    }
+    // the lake: grassy shore all round, a sand beach on the north side, then the water
+    const shore = lakePts(14);
+    b.poly([[LAKE.x, LAKE.z], ...shore, shore[0]], SK.solid, { C: ['pine'], y: -0.34 });
+    const beachArc = [];
+    for (let k = 0; k <= 16; k++) beachArc.push(lakeAt(Math.PI * (0.72 + (0.36 * k) / 16), 22));
+    for (let k = 16; k >= 0; k--) beachArc.push(lakeAt(Math.PI * (0.72 + (0.36 * k) / 16), -6));
+    b.poly([[LAKE.x, LAKE.z], ...beachArc], SK.solid, { C: ['sand'], y: -0.33 });
     const lake = lakePts(0);
     b.poly([[LAKE.x, LAKE.z], ...lake, lake[0]], SK.water, { C: ['teal', 'sky'], y: -0.2, origin: [0, 0] });
     paintNetwork(b, net);
@@ -248,7 +264,7 @@ const STORES = ['storefront_a', 'storefront_b', 'storefront_c', 'storefront_a', 
 const CIVIC = ['post_office', 'library', 'shop_b', 'cafe', 'shop_a', 'diner'];
 const TOWN_HOUSES = ['house_c', 'house_f', 'house_a', 'house_d', 'house_e', 'house_c', 'house_f', 'house_a'];
 const PARKED = ['car', 'suv', 'pickup_truck', 'hatchback', 'car', 'pickup_truck'];
-const PARKED_TINTS = ['paper', 'cloud', 'stone', 'charcoal', 'slate', 'concrete', 'cocoa', 'tomato', 'sky', 'pine', 'paper', 'stone'];
+const PARKED_TINTS = ['paper', 'cloud', 'stone', 'slate', 'concrete', 'cocoa', 'tomato', 'sky', 'pine', 'paper', 'stone'];
 
 export function layout(lib, seed = 505) {
   const L = new Layout(lib, seed, { minX: -S + 2, maxX: S - 2, minZ: -S + 2, maxZ: S - 2 });
@@ -440,9 +456,7 @@ function courthouseSquare(ctx, life) {
     b.rect(hx - hwx, cz, 3, hwz * 2 - 3, 0, SK.drive, { C: ['concrete', 'concrete', 'stone'] });
   });
   // the veterans' memorial and the flag in the front plaza, a fountain; the bandstand on the lawn
-  L.put('statue', front + 14, cz, { yaw: Math.PI / 2 });
-  L.put(pickId(L, ['flagpole', 'town_lamp']), front + 6, cz - 6);
-  L.put(pickId(L, ['flagpole', 'town_lamp']), front + 6, cz + 6);
+  L.put('statue', front + 14, cz, { yaw: Math.PI / 2, tint: 'caramel' }); // a bronze soldier
   L.put('gazebo', x0 + 20, z1 - 20, { yaw: 0.6 });
   L.put('town_fountain', x0 + 18, z0 + 18);
   // canopy trees round the lawn, clear of the walks
@@ -464,7 +478,11 @@ function courthouseSquare(ctx, life) {
     if (k % 3 === 1) continue;
     L.put('tree_round', x, z, { scale: L.range(1.35, 1.7) });
   }
-  for (const [dx, dz, a] of [[10, -10, 0], [10, 10, Math.PI], [-24, -12, 0.4], [-24, 12, 2.7], [22, -18, 0], [22, 18, Math.PI]]) L.put('park_bench', hx + dx, cz + dz, { yaw: a });
+  for (const [dx, dz, a] of [[10, -10, 0], [10, 10, Math.PI], [-24, -12, 0.4], [-24, 12, 2.7], [22, -18, 0], [22, 18, Math.PI]]) {
+    L.put('park_bench', hx + dx, cz + dz, { yaw: a });
+    // someone sitting on most of them
+    if (L.rand() < 0.75) L.put(L.pick(['person_grandpa', 'person_adult', 'person_adult2']), hx + dx + Math.sin(a) * 0.4, cz + dz + Math.cos(a) * 0.4, { yaw: a });
+  }
   flock(L, life, front + 10, cz + 4, 9);
   flock(L, life, x0 + 26, z0 + 26, 5);
   // people strolling the walks round the courthouse
@@ -530,11 +548,11 @@ function angledParking(ctx) {
     const dx = (e.poly[1][0] - e.poly[0][0]) / e.len,
       dz = (e.poly[1][1] - e.poly[0][1]) / e.len;
     for (const side of [1, -1]) {
-      for (let v = (e.trimA || 0) + 6; v < e.len - (e.trimB || 0) - 6; v += 3.0) {
+      for (let v = (e.trimA || 0) + 6; v < e.len - (e.trimB || 0) - 6; v += 3.4) {
         // one car per painted bay, about three bays in five taken
         if (L.rand() > 0.5) continue;
         const u = inner + 2.75;
-        const vc = v + 1.5 - 2.75 * 0.8;
+        const vc = v + 1.7 - 2.75 * 0.8;
         const x = e.poly[0][0] + dx * vc - dz * u * side,
           z = e.poly[0][1] + dz * vc + dx * u * side;
         const ax = -dz * side * 1 + dx * -0.8,
@@ -659,6 +677,14 @@ function riverfront(ctx, life) {
   L.put(pickId(L, ['canoe', 'rowboat']), dx0 + 16, lz + 10, { yaw: 0 });
   L.put(pickId(L, ['rowboat', 'canoe']), dx0 + 8, lz - 3.2, { yaw: Math.PI / 2 });
   spawnLoopWalkers(L, life, [...path, ...path.slice().reverse().map(([x, z]) => [x - 0.8, z])], 12);
+  // canoes and a rowboat out on the town reach
+  for (const [z, k] of [[-200, 0], [-20, 1], [150, 2]]) {
+    const r = riverAt(z);
+    const loop = [];
+    for (let j = 0; j <= 16; j++) loop.push([r.x + Math.sin((j / 16) * Math.PI * 2) * r.hw * 0.45, z + Math.cos((j / 16) * Math.PI * 2) * 45]);
+    const it = L.put(pickId(L, [k === 1 ? 'rowboat' : 'canoe', 'rowboat']), loop[0][0], loop[0][1]);
+    if (it) life.movers.push({ its: [it], offs: [0], route: loop, speed: 1.4, s: k * 30, kind: 'boat' });
+  }
   flock(L, life, dx0 - 10, 120, 6);
 }
 
@@ -926,7 +952,8 @@ function nearestRoad(x, z) {
   return best;
 }
 
-const CROPS = [['sun', 'butter'], ['leaf', 'lime'], ['caramel', 'sand'], ['pine', 'leaf'], ['lime', 'butter'], ['leaf', 'pine'], ['butter', 'sand']];
+// low-contrast crops: corn, beans, wheat stubble, hay (no candy stripes)
+const CROPS = [['leaf', 'lime'], ['sand', 'butter'], ['pine', 'leaf'], ['lime', 'leaf'], ['caramel', 'sand'], ['butter', 'sand']];
 
 function farms(ctx, life) {
   const { L, occ } = ctx;
@@ -1069,7 +1096,7 @@ function field(ctx, life, cx, cz, w, d) {
       route.push(...route.slice().reverse());
       const it = L.put('combine_harvester', route[0][0], route[0][1]);
       if (it) life.movers.push({ its: [it], offs: [0], route, speed: 2.2, kind: 'combine' });
-    } else if (L.rand() < 0.12) L.put('tractor', cx + L.range(-w / 3, w / 3), cz + L.range(-d / 3, d / 3), { yaw: L.rand() < 0.5 ? 0 : Math.PI / 2 });
+    }
   } else if (kind < 0.84) {
     // pasture: ranch fence all round with a gate, stock grazing
     const f = pickId(L, ['ranch_fence', 'picket_fence']);

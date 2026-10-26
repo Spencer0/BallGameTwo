@@ -91,7 +91,7 @@ void main() {
       }
       // angled parking bays along the curbs
       if (park > 0.5 && abs(u) > inner) {
-        float d = fract((v + (abs(u) - inner) * 0.8) / 3.0);
+        float d = fract((v + (abs(u) - inner) * 0.8) / 3.4);
         m = max(m, band(d - 0.5, 0.025) * 0.9);
       }
     }

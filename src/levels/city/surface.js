@@ -162,6 +162,7 @@ function junction(b, n, E, S) {
   });
   const ring = [];
   const corners = [];
+  const islands = [];
   for (let k = 0; k < arms.length; k++) {
     const A = arms[k],
       B = arms[(k + 1) % arms.length];
@@ -175,6 +176,12 @@ function junction(b, n, E, S) {
     const reach = Math.max(A.a.trim, B.a.trim) * 2 + 4;
     if (c && Math.hypot(c[0] - n.x, c[1] - n.z) > reach) c = null;
     ring.push(...curve(cA, cB, c));
+    // an acute wedge between two roads (Broadway's bow-ties): pave it as a pedestrian island, so the
+    // junction doesn't read as one shapeless sheet of asphalt
+    if (c && gap < 0.85) {
+      const Lw = Math.min(28, Math.max(A.a.trim, B.a.trim) * 1.4);
+      islands.push([c, [c[0] + A.d[0] * Lw, c[1] + A.d[1] * Lw], [c[0] + B.d[0] * Lw, c[1] + B.d[1] * Lw]]);
+    }
     // the sidewalk round this corner: between the two arms' walk bands, where both have one
     if (sharp && A.e.walk > 0 && B.e.walk > 0) {
       const wA = sideWalk(A, 1),
@@ -194,6 +201,7 @@ function junction(b, n, E, S) {
     }
   }
   b.poly([[n.x, n.z], ...ring, ring[0]], SK.asphalt, { C: [S.asphalt], y, origin: [0, 0] });
+  for (const tri of islands) b.poly(tri, SK.plaza, { P: [3], C: [S.walk, S.walkJoint, 'ink_soft'], y: y + 0.015, origin: tri[0] });
   for (const [inner, outer] of corners) {
     for (let k = 0; k < inner.length - 1; k++) b.poly([inner[k], inner[k + 1], outer[k + 1], outer[k]], SK.solid, { C: [S.walk], y });
   }

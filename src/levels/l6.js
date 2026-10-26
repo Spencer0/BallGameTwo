@@ -401,6 +401,8 @@ function landPolys(b) {
   // beyond the map: Manhattan north of the edge, more borough to the east, Jersey towns and woods to the west
   roofs(b, -SHORE + 60, SHORE - 60, -6000, -S - 100, 150, 75, 16, ['brick', 'slate', 'concrete', 'cocoa', 'stone', 'sand'], -1.0, 0.4);
   roofs(b, S + 50, S + 2600, -6000, 1300, 200, 62.5, 12, ['brick', 'cocoa', 'caramel', 'sand', 'brick', 'slate'], -1.0, 0.8);
+  roofs(b, S + 2600, S + 6600, -7000, 1300, 400, 125, 20, ['brick', 'cocoa', 'sand', 'slate'], -1.0, 0.6);
+  roofs(b, -S - 6600, -S - 2600, -7000, 1250, 400, 125, 20, ['paper', 'sand', 'brick', 'slate'], -1.0, 0.8);
   roofs(b, EAST_X0 + 60, S + 50, -6000, -S - 50, 200, 62.5, 12, ['brick', 'cocoa', 'caramel', 'sand', 'brick', 'slate'], -1.0, 0.8);
   roofs(b, -S - 2600, -S - 150, -6000, 1250, 130, 65, 12, ['paper', 'sand', 'brick', 'slate', 'cloud'], -1.0, 0.9);
   roofs(b, WEST_X0 - 900, WEST_X0 - 60, -6000, -S - 150, 130, 65, 12, ['paper', 'sand', 'brick', 'slate', 'cloud'], -1.0, 0.9);
@@ -445,7 +447,7 @@ export const env = {
   ],
   streets: (b) => {
     landPolys(b);
-    paintNetwork(b, net, { plazaA: 'concrete', plazaB: 'stone' });
+    paintNetwork(b, net, { plazaA: 'concrete', plazaB: 'cloud' });
   },
   blocks: [
     { min: [-S - 50, -10, -S - 50], max: [S + 50, 10000, -S], visible: false },
@@ -650,13 +652,13 @@ export function layout(lib, seed = 606) {
     const [x, z] = net.edges[l.e].poly[0];
     let core = 0;
     for (const c of CORES) core = Math.max(core, gauss(x, z, c));
-    return base * (0.5 + 5 * core); // thickest in midtown and the financial district
+    return base * (x > EAST_X0 ? 1.4 : 0.5 + 5 * core); // thickest in midtown and the financial district; the borough has its own
   };
-  spawnTraffic(L, life, net, 1300, [['taxi', 14], ['car', 4], ['suv', 3], ['hatchback', 2], ['city_bus', 1.4], ['delivery_van', 2.4], ['food_truck', 0.4], ['police_car', 0.7], ['ambulance', 0.3], ['limo', 0.6], ['garbage_truck', 0.4], ['fire_truck', 0.2], ['pickup_truck', 0.8]], { laneWeight: laneW, speed: 1 });
+  spawnTraffic(L, life, net, 1450, [['taxi', 14], ['car', 4], ['suv', 3], ['hatchback', 2], ['city_bus', 1.4], ['delivery_van', 2.4], ['food_truck', 0.4], ['police_car', 0.7], ['ambulance', 0.3], ['limo', 0.6], ['garbage_truck', 0.4], ['fire_truck', 0.2], ['pickup_truck', 0.8]], { laneWeight: laneW, speed: 1 });
   const walkW = (w) => {
     const e = net.edges[w.e];
     const [x, z] = w.pts[0];
-    if (x > EAST_X0) return 0.35;
+    if (x > EAST_X0) return 1.0;
     if (x < WEST_X0) return 0.15;
     let core = 0;
     for (const c of CORES) core = Math.max(core, gauss(x, z, c));
@@ -712,6 +714,28 @@ function blockYard(ctx, x0, x1, z0, z1, boro = false) {
   for (const c of CORES) core = Math.max(core, gauss(cx, cz, c));
   const green = boro || gauss(cx, cz, VILLAGE) > 0.35 || core < 0.12; // rear yards; paved courts under the towers
   L.paint.push((b) => b.rect(cx, cz, x1 - x0, z1 - z0, 0, SK.solid, { C: [green ? 'pine' : 'concrete'], y: -0.3 }));
+  if (!green) {
+    // the middle of a midtown block isn't a car park: mid-block buildings fill what the street walls left
+    const ids = ['midrise_modern', 'office_block', 'midrise_prewar', 'parking_garage'].filter((id) => L.lib.byId.has(id));
+    const along = x1 - x0 > z1 - z0;
+    const len = along ? x1 - x0 : z1 - z0;
+    for (let s = -len / 2 + 4; s < len / 2 - 4; ) {
+      const id = L.pick(ids);
+      const t = L.lib.byId.get(id);
+      const w = t.dims[0],
+        d = t.dims[2];
+      const x = along ? cx + s + w / 2 : cx,
+        z = along ? cz : cz + s + w / 2;
+      const yaw = along ? 0 : Math.PI / 2;
+      const r = { x, z, hw: w / 2, hd: d / 2, yaw };
+      if (s + w < len / 2 - 2 && !occ.hits(r)) {
+        occ.add(r, 'bld');
+        const v = (t.variants || []).filter((c) => CITY_OK.has(c));
+        L.put(id, x, z, { yaw, tint: v.length ? L.pick(v) : undefined });
+        s += w + 1;
+      } else s += 6;
+    }
+  }
   for (let k = 0; k < (green ? 12 : 4); k++) {
     const x = L.range(x0 + 4, x1 - 4),
       z = L.range(z0 + 4, z1 - 4);
@@ -951,9 +975,9 @@ function waterfront(ctx, life) {
     return pts;
   };
   const routes = [
-    { pts: shuttle(40, TIP1 + 50, 300, 1985, 40), speed: 9 },
-    { pts: shuttle(-SHORE - 40, 400, WEST_X0 + 40, 400, 45), speed: 10 },
-    { pts: shuttle(SHORE + 40, 900, EAST_X0 - 40, 900, 45), speed: 10 },
+    { pts: shuttle(40, TIP1 + 50, 300, 1985, 90), speed: 8 },
+    { pts: shuttle(-SHORE - 40, 400, WEST_X0 + 40, 400, 110), speed: 9 },
+    { pts: shuttle(SHORE + 40, 900, EAST_X0 - 40, 900, 110), speed: 9 },
   ];
   for (const r of routes) {
     const it = L.put(ferry, r.pts[0][0], r.pts[0][1]);

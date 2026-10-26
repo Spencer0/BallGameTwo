@@ -342,8 +342,9 @@ export class World {
       // box-like enough to draw as a plain box when tiny on screen: tall buildings, anything that fills
       // most of its box (vehicles, sheds, bins), and fence panels (a thin box reads as a fence far off)
       const fill = ty.vol / Math.max(1e-9, ty.dims[0] * ty.dims[1] * ty.dims[2]);
-      const treeish = ty.collider && ty.collider.kind === 'cyl' && /tree|bush|hedge/.test(ty.id); // a blob of leaves far off
-      ty.boxable = !!(this.batchOf[t] && ty.collider && !ty.isCreature && !ty.floats && (treeish || (ty.collider.kind === 'box' && (ty.dims[1] >= 6 || fill >= 0.55 || /fence/.test(ty.id)))));
+      const treeish = ty.collider && ty.collider.kind === 'cyl' && /tree/.test(ty.id); // a blob of leaves, only when tiny
+      ty.treeish = treeish;
+      ty.boxable = !!(this.batchOf[t] && ty.collider && !ty.isCreature && !ty.floats && !/airliner|helicopter|blimp|cloud|balloon/.test(ty.id) && (treeish || (ty.collider.kind === 'box' && (ty.dims[1] >= 6 || fill >= 0.55 || /fence/.test(ty.id)))));
       if (ty.boxable) {
         ty.domPal = dominantPal(ty.geo[1] || ty.geo[0]);
         nb += this.countByType[t];
@@ -522,7 +523,7 @@ export class World {
           const b = this.batchOf[this.type[i]];
           if (!b) continue;
           visible++;
-          if (px < farPx && b.type.boxable && BB) {
+          if (px < farPx && b.type.boxable && BB && (!b.type.treeish || px < farPx * 0.45)) {
             // far away: a plain box in the building's main colour
             const t = b.type,
               s = this.scale[i];

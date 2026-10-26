@@ -122,6 +122,7 @@ export function trafficLights(L, life, net, { id = 'traffic_light' } = {}) {
     for (const arm of n.arms) {
       const e = net.edges[arm.e];
       if (e.oneway && arm.end === 0) continue; // one-way arm leaving the node: nobody approaches on it
+      if (e.plaza || e.traffic === false) continue; // pedestrian plaza: no signal standing in it
       const dx = Math.sin(arm.ang),
         dz = Math.cos(arm.ang); // from the node out along the arm
       // traffic approaching travels -d; its right-hand curb is on the (dz, -dx) side

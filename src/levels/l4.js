@@ -247,6 +247,19 @@ export function layout(lib, seed = 404) {
         L.put(pickId(L, ['street_tree', 'tree_round']), x, z, { scale: 1.05, tint: 'leaf' });
       }
   }
+  // street trees along Maple Avenue's verges, both sides
+  {
+    const art = net.edges.find((e) => e.cls === 'arterial');
+    for (const side of [-1, 1]) {
+      const z = ART_Z + side * (art.w / 2 + art.verge / 2 + 0.2);
+      for (let x = -S + 6; x < S - 6; x += 16) {
+        const r = { x, z, hw: 1, hd: 1, yaw: 0 };
+        if (occ.hits(r, new Set(['road']))) continue;
+        if (net.nodes.some((n) => n.deg >= 3 && Math.abs(n.x - x) < 22 && Math.abs(n.z - ART_Z) < 2)) continue;
+        L.put('street_tree', x, z, { scale: 0.95, tint: 'leaf' });
+      }
+    }
+  }
   // entrance: hedges and flags either side of the Maple Loop entrance
   for (const sx of [-1, 1]) {
     L.put('hedge', sx * 12, ART_Z - 15, { yaw: 0 });
@@ -299,10 +312,18 @@ export function layout(lib, seed = 404) {
 // ------------------------------------------------------------------ special places
 function birchGreen(ctx) {
   const { L } = ctx;
-  // the little green inside Birch Circle: lawn, an oak, a bench, a swing
-  L.put('tree_round', BIRCH.cx, BIRCH.cz, { scale: 1.6 });
-  L.put('park_bench', BIRCH.cx + 8, BIRCH.cz + 4, { yaw: -2 });
-  L.put('swing_set', BIRCH.cx - 9, BIRCH.cz - 3, { yaw: 0.6 });
+  // the neighbourhood green inside Birch Circle: a ring of shade trees, a path, a play area and benches
+  L.put('tree_round', BIRCH.cx, BIRCH.cz, { scale: 1.7, tint: 'leaf' });
+  for (let k = 0; k < 7; k++) {
+    const a = (k / 7) * Math.PI * 2 + 0.3;
+    L.put(k % 3 ? 'tree_round' : 'pine_tree', BIRCH.cx + Math.sin(a) * 15, BIRCH.cz + Math.cos(a) * 15, { scale: 1.1, tint: 'leaf' });
+  }
+  ctx.paint.push((b) => {
+    b.disc(BIRCH.cx, BIRCH.cz, 9.5, SK.path, { r0: 7.5, P: [1], C: ['sand', 'caramel'], segs: 36, y: -0.04 });
+    b.rect(BIRCH.cx - 3, BIRCH.cz + 4, 7, 5, 0.6, SK.dirt, { C: ['caramel', 'cocoa'], y: -0.03 });
+  });
+  L.put('swing_set', BIRCH.cx - 3, BIRCH.cz + 4, { yaw: 0.6 });
+  for (const a of [0.8, 2.6, 4.4]) L.put('park_bench', BIRCH.cx + Math.sin(a) * 11, BIRCH.cz + Math.cos(a) * 11, { yaw: a + Math.PI });
 }
 
 function greenbelt(ctx) {
@@ -329,7 +350,8 @@ function greenbelt(ctx) {
   ctx.pondPath = path;
   L.put('playground_slide', P.cx + 44, P.cz + 0, { yaw: 0.3 });
   L.put('swing_set', P.cx + 56, P.cz + 6, { yaw: 0 });
-  for (const [dx, dz, yaw] of [[-25, 25, Math.PI], [5, 14, -2.4], [-55, -10, 1.4], [-25, -24, 0]]) L.put('park_bench', P.cx + dx, P.cz + dz, { yaw });
+  // benches beside the path, not on it (the path rings the pond at 34 x 23)
+  for (const a of [0.3, 1.9, 3.4, 5.0]) L.put('park_bench', P.cx - 25 + Math.sin(a) * 39, P.cz + 2 + Math.cos(a) * 27.5, { yaw: a + Math.PI });
   for (const [dx, dz] of [[60, -22], [72, -16]]) L.put('picnic_table', P.cx + dx, P.cz + dz, { yaw: 0.1 });
   for (let k = 0; k < 30; k++) {
     const x = P.cx + L.range(-P.rx, P.rx),
@@ -380,7 +402,7 @@ function stripMall(ctx) {
     if (!t) continue;
     const z = prop + (p.lot ? 14 : 4) + t.dims[2] / 2;
     L.put(p.id, p.x, z, { yaw: Math.PI });
-    if (p.lot) parkingLot(ctx, p.x, prop + 6.5, 13, p.lot, Math.PI / 2, { fill: 0.5, tints: ['paper', 'cloud', 'stone', 'charcoal', 'slate', 'cocoa', 'tomato', 'sky'] });
+    if (p.lot) parkingLot(ctx, p.x, prop + 6.5, 13, p.lot, Math.PI / 2, { fill: 0.5, tints: ['paper', 'cloud', 'stone', 'slate', 'cocoa', 'tomato', 'sky'] });
     // curb cut: a driveway apron across the verge and sidewalk into the lot
     const apron = art.verge + art.walk;
     paint.push((b) => b.rect(p.x + (p.lot ? t.dims[0] / 2 - 2 : 0), prop - apron / 2, 6, apron, 0, SK.drive, { C: ['cloud', 'cloud', 'stone'], y: 0.01 }));
