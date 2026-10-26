@@ -303,5 +303,9 @@ export const review = {
     { name: 'court', pos: [-150, 60, 120], look: [-185, 0, 55] },
   ],
   map: { cx: 0, cz: 0, half: 250 },
-  motion: [{ name: 'elm_birch', pos: [30, 40, 20], look: [0, 0, -20] }],
+  motion: [
+    { name: 'elm_birch', pos: [30, 40, 20], look: [0, 0, -20] },
+    { name: 'entrance_signal', pos: [45, 32, 232], look: [0, 0, 196] },
+    { name: 'park', pos: [-60, 45, -90], look: [-100, 0, -128] },
+  ],
 };

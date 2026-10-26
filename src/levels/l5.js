@@ -568,5 +568,10 @@ export const review = {
     { name: 'farms', pos: [-300, 260, 700], look: [-560, 0, 300] },
   ],
   map: { cx: 0, cz: 0, half: 760 },
-  motion: [{ name: 'main_st', pos: [-120, 45, 60], look: [-150, 0, -10] }],
+  motion: [
+    { name: 'main_st', pos: [-120, 45, 60], look: [-150, 0, -10] },
+    { name: 'rail_crossing', pos: [-100, 60, -400], look: [-150, 0, -470] },
+    { name: 'lake', pos: [330, 90, 330], look: [470, 0, 520] },
+    { name: 'square', pos: [-170, 50, 120], look: [-215, 0, 25] },
+  ],
 };

@@ -635,5 +635,10 @@ export const review = {
     { name: 'park', pos: [900, 900, -300], look: [0, 0, -1100] },
   ],
   map: { cx: 0, cz: 0, half: 2250 },
-  motion: [{ name: 'fifth_ave', pos: [60, 90, 300], look: [0, 0, 180] }],
+  motion: [
+    { name: 'fifth_ave', pos: [60, 90, 300], look: [0, 0, 180] },
+    { name: 'plaza', pos: [70, 80, 150], look: [0, 0, 66] },
+    { name: 'airport', pos: [-1500, 260, 500], look: [-1830, 0, -300] },
+    { name: 'harbour', pos: [500, 250, 1700], look: [100, 0, 2000] },
+  ],
 };
