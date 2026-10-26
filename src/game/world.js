@@ -385,6 +385,12 @@ export class World {
 
   /** Fill instance buffers from cells visible to the camera. */
   /** Does segment a->b pass through instance i's yawed box (inflated by m)? Slab test in object space. */
+  /** does object i block the camera's view of the ball (centre or base)? */
+  occludes(i, camX, camY, camZ, F) {
+    const m = F.r * 0.15;
+    return this.segmentHitsBox(i, camX, camY, camZ, F.x, F.y, F.z, m) || this.segmentHitsBox(i, camX, camY, camZ, F.x, F.y - F.r * 0.7, F.z, m);
+  }
+
   segmentHitsBox(i, ax, ay, az, bx, by, bz, m) {
     const t = this.types[this.type[i]];
     const s = this.scale[i];
@@ -514,9 +520,14 @@ export class World {
           // object between the camera and the ball (or Lint at its base): hide it (Katamari-style see-through).
           // Exact sight-segment vs yawed-box test: a sphere test hid flat props (knives, books) lying in the
           // foreground, especially toward the bottom corners of the view, though they couldn't block the ball.
-          if (F && d * d < sl2 && this.bound[i] > F.r * 0.25) {
-            const m = F.r * 0.15;
-            if (this.segmentHitsBox(i, camX, camY, camZ, F.x, F.y, F.z, m) || this.segmentHitsBox(i, camX, camY, camZ, F.x, F.y - F.r * 0.7, F.z, m)) continue;
+          if (F && d * d < sl2 && this.bound[i] > F.r * 0.25 && this.occludes(i, camX, camY, camZ, F)) continue;
+          // and whatever sits on a hidden occluder (a water tank on a roof) goes with it
+          const host = this.restOn[i];
+          if (F && host >= 0) {
+            const hx = this.x[host] - camX,
+              hy = this.y[host] - camY,
+              hz = this.z[host] - camZ;
+            if (hx * hx + hy * hy + hz * hz < sl2 && this.bound[host] > F.r * 0.25 && this.occludes(host, camX, camY, camZ, F)) continue;
           }
           const px = (this.bound[i] * 2 * focalPx) / d;
           if (px < cullPx) continue;

@@ -427,9 +427,11 @@ function landPolys(b) {
     const z1 = Math.min(TIP0, z + 400);
     b.poly([[-SHORE, z], [SHORE, z], [SHORE, z1], [-SHORE, z1]], SK.solid, { C: ['stone'], y: -1.2 });
   }
-  const tip = [[0, TIP0]];
-  for (let z = TIP0; z <= TIP1; z += 15) tip.push([-islandHalf(z), z]);
-  for (let z = TIP1; z >= TIP0; z -= 15) tip.push([islandHalf(z), z]);
+  // (the tip starts 30 m back under the last strip: a shared edge left a crack the harbour showed through)
+  const T0 = TIP0 - 30;
+  const tip = [[0, T0]];
+  for (let z = T0; z <= TIP1; z += 15) tip.push([-islandHalf(z), z]);
+  for (let z = TIP1; z >= T0; z -= 15) tip.push([islandHalf(z), z]);
   b.poly(tip, SK.solid, { C: ['stone'], y: -1.2 });
   // the banks
   // beyond the map the harbour coasts wander (headlands, coves) instead of running ruler-straight
@@ -803,7 +805,11 @@ function blockYard(ctx, x0, x1, z0, z1, boro = false) {
   } else if (occ.hits({ x: cx, z: cz, hw: 4, hd: 4, yaw: 0 })) return;
   let core = 0;
   for (const c of CORES) core = Math.max(core, gauss(cx, cz, c));
-  const green = boro || gauss(cx, cz, VILLAGE) > 0.35 || core < 0.12; // rear yards; paved courts under the towers
+  // (a block Broadway cuts through has no proper back: its wedges are paved, or lawn shows between the sidewalks)
+  const xa = bwX(z0),
+    xb = bwX(z1);
+  const cut = !boro && Math.max(xa, xb) > x0 - 20 && Math.min(xa, xb) < x1 + 20 && cz > -500 && cz < DT_Z;
+  const green = !cut && (boro || gauss(cx, cz, VILLAGE) > 0.35 || core < 0.12); // rear yards; paved courts under the towers
   L.paint.push((b) => b.rect(cx, cz, x1 - x0, z1 - z0, 0, SK.solid, { C: [green ? 'pine' : 'concrete'], y: -0.3 }));
   if (green) {
     // the rear yards are lots, each its own: lawn, a paved patio or gravel, wooden fences between them and
