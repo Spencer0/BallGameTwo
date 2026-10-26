@@ -59,6 +59,13 @@ export class Layout {
     return true;
   }
 
+  /** Yaw that lines an object's longest horizontal axis up with direction `dir` (radians, like yaw). */
+  along(id, dir) {
+    const t = this.lib.byId.get(id);
+    if (!t) return dir;
+    return t.dims[0] > t.dims[2] ? dir - Math.PI / 2 : dir;
+  }
+
   /** Place one object exactly. Returns its placement or null when the type isn't built. */
   put(id, x, z, opts = {}) {
     if (!this.has(id)) {

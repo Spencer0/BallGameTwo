@@ -106,8 +106,8 @@ export function layout(lib, seed = 606) {
   L.put('water_tower', 950, -50);
   L.put('grain_silo', 880, 520);
   L.put('lighthouse', -1200, 860, { scale: 1.5 });
-  L.put('bridge_tower', -350, 960);
-  L.put('bridge_tower', -350, 1160);
+  L.put('bridge_tower', -350, 960, { tint: 'sky' });
+  L.put('bridge_tower', -350, 1160, { tint: 'sky' });
   // ---- central park
   L.scatterTable(
     [
@@ -127,9 +127,9 @@ export function layout(lib, seed = 606) {
     { pad: 0.5 },
   );
   // ---- port
-  L.put('cruise_ship', -200, 900, { yaw: Math.PI / 2 });
-  L.put('cargo_ship', 250, 880, { yaw: -Math.PI / 2 });
-  L.put('cargo_ship', 700, 1000, { yaw: Math.PI / 2 + 0.2 });
+  L.put('cruise_ship', -200, 900, { yaw: L.along('cruise_ship', Math.PI / 2) });
+  L.put('cargo_ship', 250, 880, { yaw: L.along('cargo_ship', -Math.PI / 2) });
+  L.put('cargo_ship', 700, 1000, { yaw: L.along('cargo_ship', Math.PI / 2) + 0.2 });
   for (const x of [-60, 60, 380, 480]) L.put('harbour_crane', x, 830, { yaw: 0 });
   L.scatterTable(
     [

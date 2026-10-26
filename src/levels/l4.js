@@ -56,7 +56,8 @@ function lot(L, cx, cz, yaw, rand) {
   // driveway + car + garage
   const side = rand() < 0.5 ? -1 : 1;
   if (rand() < 0.5) p('garage', -1, side * 9.5);
-  p(L.pick(['car', 'car', 'pickup_truck', 'car']), 9, side * 8.5, { turn: Math.PI * (rand() < 0.5 ? 0 : 1) });
+  const carId = L.pick(['car', 'car', 'pickup_truck', 'car']);
+  p(carId, 9, side * 8.5, { turn: L.along(carId, 0) + Math.PI * (rand() < 0.5 ? 0 : 1) });
   p('mailbox', 15.5, -side * 6);
   p('wheelie_bin', 15.2, side * 6.2);
   // front garden
@@ -113,15 +114,21 @@ export function layout(lib, seed = 404) {
   L.put('stop_sign', -6.3, -65.5, { yaw: 0 });
   L.put('bus_stop', 30, -53.5, { yaw: Math.PI });
   L.put('phone_booth', 37, -53.6, { yaw: Math.PI });
-  L.put('school_bus', 40, -62, { yaw: Math.PI / 2 });
-  L.put('garbage_truck', 2.2, -20, { yaw: Math.PI });
-  L.put('ice_cream_van', -55, -66, { yaw: -Math.PI / 2 });
-  L.put('delivery_van', -2.2, 10, { yaw: 0 });
+  L.put('school_bus', 40, -62, { yaw: L.along('school_bus', Math.PI / 2) });
+  L.put('garbage_truck', 2.2, -20, { yaw: L.along('garbage_truck', Math.PI) });
+  L.put('ice_cream_van', -55, -66, { yaw: L.along('ice_cream_van', -Math.PI / 2) });
+  L.put('delivery_van', -2.2, 10, { yaw: L.along('delivery_van', 0) });
   L.line('traffic_cone', 1.5, -30, 1.5, -40, 5);
   L.put('dumpster', -14, -40, { yaw: Math.PI / 2 });
   // cars parked along the street
-  for (let k = 0; k < 10; k++) L.put(L.pick(['car', 'car', 'pickup_truck', 'motorcycle']), (k % 2 ? 3.2 : -3.2), -100 + k * 13 + L.range(-2, 2), { yaw: k % 2 ? 0 : Math.PI });
-  for (let k = 0; k < 8; k++) L.put(L.pick(['car', 'delivery_van', 'car', 'motorcycle']), -100 + k * 26, -60 + (k % 2 ? 2.4 : -2.4), { yaw: k % 2 ? Math.PI / 2 : -Math.PI / 2 });
+  for (let k = 0; k < 10; k++) {
+    const id = L.pick(['car', 'car', 'pickup_truck', 'motorcycle']);
+    L.put(id, k % 2 ? 3.2 : -3.2, -100 + k * 13 + L.range(-2, 2), { yaw: L.along(id, k % 2 ? 0 : Math.PI) });
+  }
+  for (let k = 0; k < 8; k++) {
+    const id = L.pick(['car', 'delivery_van', 'car', 'motorcycle']);
+    L.put(id, -100 + k * 26, -60 + (k % 2 ? 2.4 : -2.4), { yaw: L.along(id, k % 2 ? Math.PI / 2 : -Math.PI / 2) });
+  }
   // people on sidewalks, dogs, bikes
   L.scatterTable(
     [

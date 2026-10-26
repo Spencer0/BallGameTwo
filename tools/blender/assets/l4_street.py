@@ -162,7 +162,7 @@ def wheelie_bin():
         cyl(0.11, 0.07, at=(k * 0.3, 0.3, 0.11), rot=(0, 90, 0), base=False, color="ink_soft", segs=12)
         cyl(0.05, 0.08, at=(k * 0.3, 0.3, 0.11), rot=(0, 90, 0), base=False, color="cloud", segs=6, lod0=True)
     cyl(0.025, 0.66, at=(0, 0.3, 0.11), rot=(0, 90, 0), base=False, color="stone", segs=6)
-    _panel("-y", -0.36, 0, 0.62, 0.22, 0.22, 0.02, "snow", lod0=True)
+    _panel("-y", -0.355, 0, 0.66, 0.2, 0.12, 0.02, "cloud", lod0=True)
     # the lid doesn't quite close: something banana-shaped escapes
     tube([(0.12, -0.36, 1.0), (0.18, -0.44, 0.96), (0.2, -0.47, 0.88)], 0.03, r_end=0.018, color="sun", segs=6,
          smooth_path=1)
@@ -922,36 +922,36 @@ def garage():
        variants=["sand", "sky", "tomato", "mint"], col="cyl", fill=0.4)
 def treehouse():
     lathe([(0, 0), (0.75, 0), (0.55, 0.35), (0.48, 1.2), (0.42, 5.0), (0, 5.0)], color="cocoa", segs=10)
-    for (x, y, z, r) in ((0.0, 0.6, 5.2, 2.3), (-1.8, 0.3, 4.4, 1.5), (1.9, 0.4, 4.6, 1.5), (0.4, -0.3, 6.3, 1.4),
-                         (-1.0, -0.7, 5.9, 1.2)):
+    for (x, y, z, r) in ((0.0, 0.7, 5.4, 2.3), (-1.9, 0.4, 4.7, 1.45), (2.0, 0.5, 4.9, 1.45), (0.4, -0.2, 6.5, 1.3),
+                         (-1.1, -0.5, 6.1, 1.1)):
         sphere(r, at=(x, y, z), color="leaf", segs=12, rings=7)
     # platform + hut
     zp = 2.7
-    box((2.9, 2.6, 0.2), at=(0, -0.6, zp), base=True, color="caramel")
+    box((3.2, 2.8, 0.2), at=(0, -0.7, zp), base=True, color="caramel")
     for k in (-1, 1):
         tube([(k * 0.4, 0.0, zp - 1.3), (k * 1.3, -0.6, zp)], 0.1, color="cocoa", segs=5)
-    box((2.1, 1.8, 1.55), at=(0, -0.6, zp + 0.2), base=True, color="sand", tint=True)
-    _gable_x(2.1, 1.8, zp + 1.75, 0.8, "sand", "tomato", over=0.2, t=0.14, c=(0, -0.6))
-    f = -0.6 - 0.9
+    box((2.4, 2.0, 1.7), at=(0, -0.7, zp + 0.2), base=True, color="sand", tint=True)
+    _gable_x(2.4, 2.0, zp + 1.9, 0.9, "sand", "tomato", over=0.22, t=0.15, c=(0, -0.7))
+    f = -0.7 - 1.0
     arch = [(-0.32, 0), (0.32, 0)] + [(0.32 * math.cos(math.radians(a)), 0.75 + 0.32 * math.sin(math.radians(a)))
                                       for a in range(0, 181, 45)]
     extrude(arch, 0.05, at=(-0.4, f - 0.02, zp + 0.2), rot=(90, 0, 0), color="ink_soft")
     _window("-y", f, 0.55, zp + 1.0, 0.5, 0.5, sill=False)
-    _window("+x", 1.05, -0.6, zp + 1.0, 0.5, 0.5, sill=False)
-    _panel("-y", f, 0.0, zp + 1.98, 0.9, 0.24, 0.04, "paper", lod0=True)
+    _window("+x", 1.2, -0.7, zp + 1.05, 0.55, 0.55, sill=False)
+    _panel("-y", f, 0.0, zp + 2.12, 0.9, 0.24, 0.04, "paper", lod0=True)
     # railing on the front ledge
-    box((2.9, 0.08, 0.08), at=(0, -1.88, zp + 0.75), color="caramel")
-    for x in (-1.4, -0.95, -0.45, 0.45, 0.95, 1.4):
-        box((0.07, 0.07, 0.55), at=(x, -1.88, zp + 0.2), base=True, color="caramel", lod0=True)
+    box((3.2, 0.08, 0.08), at=(0, -2.06, zp + 0.75), color="caramel")
+    for x in (-1.55, -1.05, -0.55, 0.55, 1.05, 1.55):
+        box((0.07, 0.07, 0.55), at=(x, -2.06, zp + 0.2), base=True, color="caramel", lod0=True)
     # rope ladder
     for x in (0.2, 0.6):
-        tube([(x, -1.9, zp + 0.1), (x + 0.05, -2.05, 0.0)], 0.03, color="sand", segs=4)
+        tube([(x, -2.08, zp + 0.1), (x + 0.05, -2.23, 0.0)], 0.03, color="sand", segs=4)
     for i in range(6):
         z = 0.3 + i * 0.42
-        box((0.5, 0.06, 0.05), at=(0.42, -1.92 - 0.15 * (1 - z / zp), z), color="caramel")
+        box((0.5, 0.06, 0.05), at=(0.42, -2.1 - 0.15 * (1 - z / zp), z), color="caramel")
     # pennant flag
-    tube([(0.9, -0.6, zp + 2.5), (0.9, -0.6, zp + 3.4)], 0.03, color="cocoa", segs=4)
-    extrude([(0, 0), (0.6, 0.15), (0, 0.3)], 0.03, at=(0.9, -0.6, zp + 3.05), rot=(90, 0, 0), color="flamingo")
+    tube([(0.95, -0.7, zp + 2.6), (0.95, -0.7, zp + 3.5)], 0.03, color="cocoa", segs=4)
+    extrude([(0, 0), (0.6, 0.15), (0, 0.3)], 0.03, at=(0.95, -0.7, zp + 3.15), rot=(90, 0, 0), color="flamingo")
 
 
 @asset("above_ground_pool", "Backyard Pool", "A lake you can lean on.", 4, "plastic", "large",

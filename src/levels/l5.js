@@ -97,8 +97,14 @@ export function layout(lib, seed = 505) {
   // ---- streets: cars, buses, lamps, people
   for (const g of GRID) {
     for (let t = -180; t <= 180; t += 30) {
-      if (L.rand() < 0.55) L.put(L.pick(['car', 'car', 'pickup_truck', 'delivery_van', 'city_bus', 'motorcycle']), t + L.range(-6, 6), g + (L.rand() < 0.5 ? 3.5 : -3.5), { yaw: L.rand() < 0.5 ? Math.PI / 2 : -Math.PI / 2 });
-      if (L.rand() < 0.45) L.put(L.pick(['car', 'car', 'fire_truck', 'delivery_van', 'city_bus']), g + (L.rand() < 0.5 ? 3.5 : -3.5), t + L.range(-6, 6), { yaw: L.rand() < 0.5 ? 0 : Math.PI });
+      if (L.rand() < 0.55) {
+        const id = L.pick(['car', 'car', 'pickup_truck', 'delivery_van', 'city_bus', 'motorcycle']);
+        L.put(id, t + L.range(-6, 6), g + (L.rand() < 0.5 ? 3.5 : -3.5), { yaw: L.along(id, L.rand() < 0.5 ? Math.PI / 2 : -Math.PI / 2) });
+      }
+      if (L.rand() < 0.45) {
+        const id = L.pick(['car', 'car', 'fire_truck', 'delivery_van', 'city_bus']);
+        L.put(id, g + (L.rand() < 0.5 ? 3.5 : -3.5), t + L.range(-6, 6), { yaw: L.along(id, L.rand() < 0.5 ? 0 : Math.PI) });
+      }
       L.put('street_lamp', t + 8, g + RW / 2 + 1.5, { yaw: Math.PI });
     }
   }
@@ -199,10 +205,10 @@ export function layout(lib, seed = 505) {
   L.put('water_tower', 380, 60);
   L.put('billboard', -200, 40, { yaw: Math.PI / 2 });
   L.put('billboard', 200, -40, { yaw: -Math.PI / 2 });
-  L.put('locomotive', -60, -390, { yaw: Math.PI / 2 });
-  for (let k = 1; k <= 5; k++) L.put('train_carriage', -60 - k * 17, -390, { yaw: Math.PI / 2 });
-  L.put('locomotive', 220, -390, { yaw: -Math.PI / 2 });
-  for (let k = 1; k <= 3; k++) L.put('train_carriage', 220 + k * 17, -390, { yaw: -Math.PI / 2 });
+  L.put('locomotive', -60, -390, { yaw: L.along('locomotive', Math.PI / 2) });
+  for (let k = 1; k <= 5; k++) L.put('train_carriage', -60 - k * 17, -390, { yaw: L.along('train_carriage', Math.PI / 2) });
+  L.put('locomotive', 220, -390, { yaw: L.along('locomotive', -Math.PI / 2) });
+  for (let k = 1; k <= 3; k++) L.put('train_carriage', 220 + k * 17, -390, { yaw: L.along('train_carriage', -Math.PI / 2) });
   for (const [x0, x1, z0, z1] of [
     [-200, 190, 200, 440],
     [-200, 190, -440, -200],

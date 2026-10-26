@@ -344,6 +344,9 @@ def palette_material(slot):
 def finalize(name, recenter=True):
     """Build the object from the builder. Returns (obj, stats)."""
     bm = STATE.bm
+    # make every part's winding consistent and outward (some helpers, and helper workarounds,
+    # produce inward faces; the game renders single-sided)
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
     bmesh.ops.remove_doubles(bm, verts=list(bm.verts), dist=1e-6)
     bmesh.ops.triangulate(bm, faces=list(bm.faces), quad_method="BEAUTY", ngon_method="EAR_CLIP")
     bm.verts.ensure_lookup_table()
