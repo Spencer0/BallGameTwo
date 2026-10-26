@@ -106,9 +106,15 @@ export function occupyNetwork(occ, net, extra = 0.5) {
     if (n.bulb) {
       const e = net.edges[n.arms[0].e];
       const R = n.bulb + e.verge + e.walk + extra;
-      // approximate the circle with two crossed squares
-      occ.add({ x: n.x, z: n.z, hw: R * 0.92, hd: R * 0.92, yaw: 0 }, 'road');
-      occ.add({ x: n.x, z: n.z, hw: R * 0.92, hd: R * 0.92, yaw: Math.PI / 4 }, 'road');
+      // the disc: an inner square plus a ring of tangent slabs (no corners poking out past R)
+      occ.add({ x: n.x, z: n.z, hw: R * 0.7, hd: R * 0.7, yaw: 0 }, 'road');
+      const segs = 16,
+        th = R * 0.45;
+      for (let k = 0; k < segs; k++) {
+        const a = (k / segs) * Math.PI * 2;
+        const rc = R - th / 2;
+        occ.add({ x: n.x + Math.sin(a) * rc, z: n.z + Math.cos(a) * rc, hw: rc * Math.tan(Math.PI / segs) + 0.3, hd: th / 2, yaw: a }, 'road');
+      }
     }
   }
 }

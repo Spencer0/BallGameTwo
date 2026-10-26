@@ -18,7 +18,7 @@ const HOUSES = {
   house_e: { drive: -4.8 },
   house_f: { drive: 'side' },
 };
-const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'house_d', 'house_e', 'house_b'];
+const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'house_d', 'house_e', 'house_f'];
 
 /**
  * One suburban lot. fr = frame on the property line at the lot's centre (yaw faces the road).
@@ -29,12 +29,15 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   const pool = HOUSE_POOL.filter((id) => L.lib.byId.has(id));
   if (!pool.length) return false;
   // reserve the whole lot first: skip it if it would overlap a road, another lot or a building
-  const lotW = pie ? W * 0.75 : W;
+  // pie lots widen away from the bulb: reserve the rectangle that fits inside the wedge's middle
+  const lotW = pie ? Math.min(W * 1.6, 2 * (pie.R + D * 0.4) * Math.sin(pie.half) * 0.92) : W;
   let lotRect = null;
   for (const dd of [D, D - 4, D - 8]) {
     // shallower lots squeeze in where blocks end or curve
-    const [lx, lz] = local(fr, 0, -(0.6 + (dd - 0.6) / 2));
-    const r = { x: lx, z: lz, hw: lotW / 2 - 0.05, hd: (dd - 0.6) / 2, yaw: fr.yaw };
+    // start a little behind the property line and a little narrower than the lot, so curved
+    // frontages (where a straight rectangle's front corners swing back into the road) still fit
+    const [lx, lz] = local(fr, 0, -(1.8 + (dd - 1.8) / 2));
+    const r = { x: lx, z: lz, hw: lotW * 0.38, hd: (dd - 1.8) / 2, yaw: fr.yaw };
     if (!occ.hits(r)) {
       lotRect = r;
       D = dd;
@@ -132,21 +135,34 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
     if (last) fenceLine2(L, fence, right, rightEnd, fences, fenceTint);
     fenceLine2(L, fence, leftEnd, rightEnd, fences, fenceTint);
   } else {
-    // pie lot: fence the widening back yard
-    const a = local(fr, -W / 2 - 3, backStart),
-      b = local(fr, -W / 2 - 7, -D),
-      c = local(fr, W / 2 + 7, -D),
-      d = local(fr, W / 2 + 3, backStart);
-    fenceLine2(L, fence, a, b, fences, fenceTint);
-    fenceLine2(L, fence, b, c, fences, fenceTint);
-    fenceLine2(L, fence, c, d, fences, fenceTint);
+    // pie lot: radial side fences along the wedge edges, the rear line across the wide end
+    const { cx, cz, a, half, R } = pie;
+    const r0 = R - backStart,
+      r1 = R + D;
+    const P = (ang, r) => [cx + Math.sin(ang) * r, cz + Math.cos(ang) * r];
+    fenceLine2(L, fence, P(a - half, r0), P(a - half, r1), fences, fenceTint);
+    fenceLine2(L, fence, P(a + half, r0), P(a + half, r1), fences, fenceTint);
+    fenceLine2(L, fence, P(a - half, r1), P(a + half, r1), fences, fenceTint);
   }
-  const yard = ['trampoline', 'swing_set', 'above_ground_pool', 'garden_shed', 'picnic_table', 'bbq_grill', 'doghouse', 'kiddie_pool', 'pingpong_table', 'hose_reel', 'treehouse'];
-  const n = 1 + Math.floor(L.rand() * 3);
+  // each family's yard has a character, not the same kit everywhere
+  const THEMES = [
+    ['above_ground_pool', 'bbq_grill', 'picnic_table'],
+    ['trampoline', 'swing_set'],
+    ['garden_shed', 'wheelbarrow', 'hose_reel', 'sunflower', 'sunflower'],
+    ['doghouse', 'picnic_table'],
+    ['bbq_grill'],
+    ['pingpong_table', 'picnic_table'],
+    ['treehouse', 'kiddie_pool'],
+    ['garden_shed', 'bbq_grill'],
+    ['swing_set', 'kiddie_pool', 'picnic_table'],
+    [],
+  ];
+  const yard = L.pick(THEMES).filter((id) => L.lib.byId.has(id));
+  const n = yard.length;
   const depth = D + backStart;
   for (let k = 0; k < n && depth > 6; k++) {
     for (let tries = 0; tries < 6; tries++) {
-      const id = L.pick(yard);
+      const id = yard[k];
       const yt = L.lib.byId.get(id);
       if (!yt) break;
       const yw = yt.dims[0] / 2 + 0.4,

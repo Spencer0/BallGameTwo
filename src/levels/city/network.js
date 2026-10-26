@@ -102,9 +102,18 @@ export function offsetPoly(p, L, off, s0 = 0, s1 = L[L.length - 1], step = 0) {
 }
 
 export class Network {
-  constructor() {
+  constructor({ crosswalks = 'all' } = {}) {
     this.nodes = [];
     this.edges = [];
+    this.crosswalks = crosswalks; // 'all' | 'signals'
+  }
+
+  /** would this node be signalised by the default rule (two big roads meeting)? */
+  isSignal(n) {
+    if (n.signal === 'none') return false;
+    const big = new Set(['arterial', 'avenue', 'crosstown', 'boulevard', 'main']);
+    const nb = n.arms.filter((a) => big.has(this.edges[a.e].cls)).length;
+    return nb >= 2 || (nb >= 1 && n.arms.length >= 4);
   }
 
   node(x, z, opts = {}) {
@@ -200,7 +209,11 @@ export class Network {
           trim = Math.sqrt(Math.max(0, n.bulb * n.bulb - (e.w / 2) ** 2));
         }
         arm.trim = trim;
-        arm.cross = n.deg >= 3 && n.crosswalks !== false && e.cls !== 'lane' && e.cls !== 'highway';
+        // 2 = zebra crosswalk + stop line, 1 = stop line only, 0 = nothing. With the 'signals' policy
+        // (suburbs, towns) only signalised junctions (or ones marked crosswalks: true) get zebras.
+        const marked = n.deg >= 3 && n.crosswalks !== false && e.cls !== 'lane' && e.cls !== 'highway';
+        const zebra = this.crosswalks !== 'signals' || n.signal === true || n.crosswalks === true || this.isSignal(n);
+        arm.cross = marked ? (zebra ? 2 : 1) : 0;
         if (arm.end === 0) e.trimA = trim;
         else e.trimB = trim;
         if (arm.end === 0) e.crossA = arm.cross;

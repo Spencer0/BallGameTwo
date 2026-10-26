@@ -859,7 +859,7 @@ def house_c():
     box((W + 0.2, D + 0.2, z0), base=True, color="stone")
     box((W, D, H), at=(0, 0, z0), base=True, color="butter", tint=True)
     box((W, 0.18, 0.18), at=(0, -D / 2 - 0.05, z0 + 2.95), color="snow", lod0=True)
-    box((W + 1.0, D + 1.0, 2.9), at=(0, 0, z0 + H), base=True, taper=(0.5, 0.04), color="charcoal")
+    box((W + 1.0, D + 1.0, 2.9), at=(0, 0, z0 + H), base=True, taper=(0.5, 0.04), color="brick")
     box((W + 1.04, D + 1.04, 0.2), at=(0, 0, z0 + H - 0.05), base=True, color="snow")
     # chimney
     box((0.9, 0.9, 4.0), at=(2.6, 1.3, z0 + H), base=True, color="brick")

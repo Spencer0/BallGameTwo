@@ -195,13 +195,13 @@ def house_d():
     f = -D / 2
     box((W + 0.2, D + 0.2, z0), at=(cx, 0, 0), base=True, color="stone")
     box((W, D, H), at=(cx, 0, z0), base=True, color=wall, tint=True)
-    _gable_x(W, D, z0 + H, 1.55, wall, "charcoal", over=0.45, t=0.24, c=(cx, 0))
+    _gable_x(W, D, z0 + H, 1.55, wall, "cocoa", over=0.45, t=0.24, c=(cx, 0))
     # attached garage on the +X end, stepped down; GARAGE DOOR CENTRED AT x = +4.6 (driveway lines up here)
     gx, GW, GD, gy, gz, GH = 4.6, 4.8, 7.0, -0.55, 0.12, 2.6
     gf = gy - GD / 2
     box((GW + 0.1, GD + 0.1, gz), at=(gx, gy, 0), base=True, color="stone")
     box((GW, GD, GH), at=(gx, gy, gz), base=True, color=wall, tint=True)
-    _gable_x(GW, GD, gz + GH, 1.1, wall, "charcoal", over=0.3, t=0.22, c=(gx, gy))
+    _gable_x(GW, GD, gz + GH, 1.1, wall, "cocoa", over=0.3, t=0.22, c=(gx, gy))
     _garage_door("-y", gf, gx, gz, 3.9, 2.2)
     box((3.9, 1.2, 0.02), at=(gx, gf - 0.6, 0.0), base=True, color="charcoal", lod0=True)
     for k in (-1, 1):
@@ -226,7 +226,7 @@ def house_d():
     box((1.4, 0.45, 0.15), at=(dx, f - 1.82, 0), base=True, color="concrete")
     for k in (-1, 1):
         box((0.16, 0.16, 2.42), at=(dx + k * 1.15, f - 1.45, z0), base=True, color="snow")
-    _gable_y(2.6, 1.7, 2.72, 0.6, "snow", "charcoal", over=0.15, t=0.14, wall_tint=False, c=(dx, f - 0.85))
+    _gable_y(2.6, 1.7, 2.72, 0.6, "snow", "cocoa", over=0.15, t=0.14, wall_tint=False, c=(dx, f - 0.85))
     # sides + back
     _window("-x", x0, -1.4, z0 + 1.6, 1.2, 1.1)
     _window("-x", x0, 1.6, z0 + 1.6, 1.2, 1.1)
@@ -300,7 +300,7 @@ def house_f():
     box((W + 0.2, D + 0.2, z0), at=(0, cyb, 0), base=True, color="stone")
     box((W, D, H), at=(0, cyb, z0), base=True, color=wall, tint=True)
     # one low, wide side-gabled roof sweeps down over the deep porch
-    _gable_x(W, yb1 - yp, z0 + H, 2.6, wall, "charcoal", over=0.4, t=0.26, c=(0, (yp + yb1) / 2))
+    _gable_x(W, yb1 - yp, z0 + H, 2.6, wall, "pine", over=0.4, t=0.26, c=(0, (yp + yb1) / 2))
     # porch deck, steps, stone piers with tapered columns, beam
     box((W + 0.1, yb0 - yp, z0), at=(0, (yp + yb0) / 2, 0), base=True, color="stone")
     box((W - 0.1, yb0 - yp - 0.1, 0.04), at=(0, (yp + yb0) / 2, z0), base=True, color="caramel", lod0=True)
@@ -322,7 +322,7 @@ def house_f():
     # gabled dormer on the front slope
     dy0, dy1 = -3.7, -0.6
     box((3.4, dy1 - dy0, 1.75), at=(0, (dy0 + dy1) / 2, 3.95), base=True, color=wall, tint=True)
-    _gable_y(3.4, dy1 - dy0, 5.7, 0.5, wall, "charcoal", over=0.22, t=0.18, c=(0, (dy0 + dy1) / 2))
+    _gable_y(3.4, dy1 - dy0, 5.7, 0.5, wall, "pine", over=0.22, t=0.18, c=(0, (dy0 + dy1) / 2))
     _panel("-y", dy0, 0, 5.12, 2.7, 0.78, 0.05, "snow", lod0=True)
     _panel("-y", dy0, 0, 5.12, 2.5, 0.62, 0.08, "glass")
     for u in (-0.42, 0.42):

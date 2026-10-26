@@ -136,7 +136,7 @@ export const env = {
   fog: { near: 320, far: 900, k: 75, color: '#FFE0A8' },
   groundY: 0,
   planes: [
-    { x: 0, z: 0, w: 6000, d: 6000, y: -0.5, pattern: 'solid', a: '#5DB55A' },
+    { x: 0, z: 0, w: 6000, d: 6000, y: -0.5, pattern: 'solid', a: '#8FCF4A' },
     { x: 0, z: 0, w: 2 * S + 200, d: 2 * S + 200, y: -0.45, pattern: 'solid', a: '#8FCF4A' },
   ],
   streets: (b) => {

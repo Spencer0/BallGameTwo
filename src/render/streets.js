@@ -94,12 +94,12 @@ void main() {
     }
     // stop lines (inbound side only) and zebra crosswalks
     if (vQ.z > 0.5) {
-      if (v < s0 + 3.2 && abs(u) < hw - 0.2) m = max(m, band(fract(u / 1.1) - 0.5, 0.25));
+      if (vQ.z > 1.5 && v < s0 + 3.2 && abs(u) < hw - 0.2) m = max(m, band(fract(u / 1.1) - 0.5, 0.25));
       bool inA = oneway ? false : u < 0.0;
       if (inA && abs(v - (s0 + 3.6)) < 0.25 && abs(u) < inner) m = 1.0;
     }
     if (vQ.w > 0.5) {
-      if (v > s1 - 3.2 && abs(u) < hw - 0.2) m = max(m, band(fract(u / 1.1) - 0.5, 0.25));
+      if (vQ.w > 1.5 && v > s1 - 3.2 && abs(u) < hw - 0.2) m = max(m, band(fract(u / 1.1) - 0.5, 0.25));
       bool inB = oneway ? true : u > 0.0;
       if (inB && abs(v - (s1 - 3.6)) < 0.25 && abs(u) < inner) m = 1.0;
     }

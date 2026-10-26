@@ -47,7 +47,7 @@ export function paintNetwork(b, net, style = {}) {
     const kind = e.cls === 'lane' && e.dirt ? SK.dirt : SK.road;
     b.strip(e.poly, e.L, -hw, hw, s0, s1, kind, {
       P: [hw, e.lanes, e.markings ? centre : 0, park],
-      Q: [s0, s1, e.crossA ? 1 : 0, e.crossB ? 1 : 0],
+      Q: [s0, s1, e.crossA || 0, e.crossB || 0],
       C: kind === SK.dirt ? ['sand', 'caramel'] : [S.asphalt, S.marking, S.yellow],
       y: e.y,
     });
