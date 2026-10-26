@@ -52,7 +52,7 @@ function buildNet() {
   const net = new Network({ crosswalks: 'signals' });
   const N = (x, z, o) => net.at(x, z, 0.5, o);
   // Maple Avenue: through traffic in and out of the fog
-  const artNodes = [[-S - 60, { exit: true }], [loopPt(T.willowRd)[0], {}], [0, { signal: true }], [SCHOOL.x, {}], [S + 60, { exit: true }]];
+  const artNodes = [[-S - 700, { exit: true }], [loopPt(T.willowRd)[0], {}], [0, { signal: true }], [SCHOOL.x, {}], [S + 700, { exit: true }]];
   for (let k = 0; k < artNodes.length - 1; k++) net.edge(N(artNodes[k][0], ART_Z, artNodes[k][1]), N(artNodes[k + 1][0], ART_Z, artNodes[k + 1][1]), { cls: 'arterial', name: 'Maple Avenue' });
   // the collector loop through all its junctions
   const stops = Object.values(T).sort((a, b) => a - b);

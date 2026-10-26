@@ -225,6 +225,28 @@ export class StreetBuilder {
     }
   }
 
+  /** ribbon along polyline pts [[x,z],...] with a half-width per point (rivers); uv: u lateral, v along */
+  ribbon(pts, halfW, kind, { P = [], Q = [], C = ['charcoal'], y = 0 } = {}) {
+    let v = 0,
+      prev = -1;
+    for (let k = 0; k < pts.length; k++) {
+      const a = pts[Math.max(0, k - 1)],
+        b = pts[Math.min(pts.length - 1, k + 1)];
+      let dx = b[0] - a[0],
+        dz = b[1] - a[1];
+      const l = Math.hypot(dx, dz) || 1;
+      dx /= l;
+      dz /= l;
+      if (k > 0) v += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+      const h = halfW[k];
+      const [x, z] = pts[k];
+      const i0 = this.vert(x + dz * h, y, z - dx * h, -h, v, kind, P, Q, C);
+      const i1 = this.vert(x - dz * h, y, z + dx * h, h, v, kind, P, Q, C);
+      if (prev >= 0) this.index.push(prev, i0, prev + 1, prev + 1, i0, i1);
+      prev = i0;
+    }
+  }
+
   quad(a, b, c, d, flip) {
     // a,b = previous row (u0,u1); d,c = this row (u0,u1). Wind CCW seen from above (+y).
     if (flip) this.index.push(a, d, b, b, d, c);
