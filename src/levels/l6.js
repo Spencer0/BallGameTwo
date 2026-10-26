@@ -819,13 +819,13 @@ function blockYard(ctx, x0, x1, z0, z1, boro = false) {
       for (const y of yards) {
         const d = y.paved ? dep / 2 : y.patio;
         const [px, pz] = at(y.t, y.side * (dep / 2 - d / 2));
-        b.rect(px, pz, along ? YW - 0.4 : d, along ? d : YW - 0.4, 0, SK.solid, { C: [y.pc], y: -0.29 });
+        b.rect(px, pz, along ? YW - 0.4 : d, along ? d : YW - 0.4, 0, SK.solid, { C: [y.pc], y: -0.24 });
       }
-      if (along) b.rect(cx, cz, len, 0.4, 0, SK.solid, { C: ['cocoa'], y: -0.27 });
-      else b.rect(cx, cz, 0.4, len, 0, SK.solid, { C: ['cocoa'], y: -0.27 });
+      if (along) b.rect(cx, cz, len, 0.4, 0, SK.solid, { C: ['cocoa'], y: -0.18 });
+      else b.rect(cx, cz, 0.4, len, 0, SK.solid, { C: ['cocoa'], y: -0.18 });
       for (let t = -len / 2 + YW; t < len / 2; t += YW) {
         const [px, pz] = at(t, 0);
-        b.rect(px, pz, along ? 0.3 : dep, along ? dep : 0.3, 0, SK.solid, { C: ['cocoa'], y: -0.27 });
+        b.rect(px, pz, along ? 0.3 : dep, along ? dep : 0.3, 0, SK.solid, { C: ['cocoa'], y: -0.18 });
       }
     });
     for (const y of yards) {
@@ -1336,7 +1336,7 @@ function westBank(ctx, life) {
     for (const z of [R0 + 20, -400, R1 - 20]) b.rect(RX + 60, z, 95, 22, 0, SK.asphalt, { C: ['charcoal'], y: -0.01 }); // taxiway links
     b.rect(RX + 260, -350, 240, 600, 0, SK.asphalt, { C: ['charcoal'] }); // apron
   });
-  L.put(pickId(L, ['airport_terminal', 'parking_garage']), RX + 350, -350, { yaw: -Math.PI / 2 });
+  L.put(pickId(L, ['airport_terminal', 'parking_garage']), RX + 350, -350, { yaw: Math.PI / 2 }); // jet bridges towards the apron
   L.put(pickId(L, ['control_tower', 'radio_mast']), RX + 270, -720);
   for (const z of [-1050, -950]) L.put(pickId(L, ['hangar', 'garage']), RX + 230, z, { yaw: -Math.PI / 2 });
   const term = L.lib.byId.get('airport_terminal');
@@ -1409,8 +1409,15 @@ function westBank(ctx, life) {
   for (let k = 0; k < 24; k++) L.put('container_stack', -1450 - (k % 4) * 60, 820 + Math.floor(k / 4) * 70, { yaw: (Math.PI / 2) * (k % 2) });
   L.put('cargo_ship', WEST_X0 + 40, 1000, { yaw: L.along('cargo_ship', 0) });
   woods(ctx, { minX: -S, maxX: WEST_X0 - 120, minZ: -S, maxZ: -1500 }, { count: 200, ids: ['pine_tree', 'tree_round'], scale: [2.5, 4] });
-  // a riverside walk along the Jersey shore
-  paint.push((b) => b.rect(WEST_X0 - 12, -250, 6, 2000, 0, SK.path, { P: [3], C: ['concrete', 'stone'], y: -0.08 }));
+  // the Jersey waterfront: a lawn strip with a riverside walk and a row of trees between the towers and the water
+  paint.push((b) => {
+    b.rect((WEST_X0 + SHORE_RD_X) / 2 + 2, -270, WEST_X0 - SHORE_RD_X - 20, 2040, 0, SK.solid, { C: ['leaf'], y: -1.12 });
+    b.rect(WEST_X0 - 12, -250, 6, 2000, 0, SK.path, { P: [3], C: ['concrete', 'stone'], y: -0.08 });
+  });
+  for (let z = -1280; z < 740; z += 22) {
+    const x = WEST_X0 - 24 + L.range(-3, 3);
+    if (!ctx.occ.hits({ x, z, hw: 2, hd: 2, yaw: 0 })) L.put(pickId(L, ['street_tree', 'tree_round']), x, z, { scale: L.range(1, 1.3), tint: L.pick(['leaf', 'pine']) });
+  }
   const walk = [[WEST_X0 - 12, -1240], [WEST_X0 - 12, 740]];
   spawnLoopWalkers(L, life, [...walk, [WEST_X0 - 11, 740], [WEST_X0 - 11, -1240]], 60, ['person_adult', 'person_adult2', 'person_jogger', 'person_kid', 'person_business']);
 }

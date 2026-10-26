@@ -344,7 +344,7 @@ export class World {
       const fill = ty.vol / Math.max(1e-9, ty.dims[0] * ty.dims[1] * ty.dims[2]);
       const treeish = ty.collider && ty.collider.kind === 'cyl' && /tree/.test(ty.id); // a blob of leaves, only when tiny
       ty.treeish = treeish;
-      ty.boxable = !!(this.batchOf[t] && ty.collider && !ty.isCreature && !ty.floats && !/airliner|helicopter|blimp|cloud|balloon|statue|obelisk|observation_tower|bridge_tower|radio_mast|crane|big_wheel|rocket|lighthouse|spire|flag|boat|ship|ferry|tug|canoe|kayak|barge|yacht|sail|duck/.test(ty.id) && (treeish || (ty.collider.kind === 'box' && (ty.dims[1] >= 6 || fill >= 0.55 || /fence/.test(ty.id)))));
+      ty.boxable = !!(this.batchOf[t] && ty.collider && !ty.isCreature && !ty.floats && !/airliner|helicopter|blimp|cloud|balloon|statue|obelisk|observation_tower|bridge_tower|radio_mast|crane|big_wheel|rocket|lighthouse|spire|flag|boat|ship|ferry|tug|canoe|kayak|barge|yacht|sail|duck|bridge|viaduct/.test(ty.id) && (treeish || (ty.collider.kind === 'box' && (ty.dims[1] >= 6 || fill >= 0.55 || /fence/.test(ty.id)))));
       if (ty.boxable) {
         ty.domPal = dominantPal(ty.geo[1] || ty.geo[0]);
         nb += this.countByType[t];
