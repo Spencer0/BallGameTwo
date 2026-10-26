@@ -991,7 +991,7 @@ function plaza(ctx, life) {
     for (let k = 0; k < 55; k++) {
       const [x, z] = at(L.range(-hw, hw), L.range(-hd, hd));
       const it = L.put(L.pick(ids), x, z);
-      if (it) life.grazers.push({ it, cx, cz, yaw, hw, hd, speed: 1.1, still: 0.45 });
+      if (it) life.grazers.push({ it, cx, cz, yaw, hw, hd, speed: 1.1, still: 0.12 });
     }
   }
 }
@@ -1247,7 +1247,7 @@ function borough(ctx, life) {
     for (const side of [1, -1])
       for (let v = (e.trimA || 0) + 8; v < e.len - (e.trimB || 0) - 8; v += 6.5) {
         if (L.rand() > 0.2) continue;
-        const u = side * (e.w / 2 - 1.1);
+        const u = side * (e.w / 2 - 0.8); // tight to the kerb, clear of the traffic lane
         const id = L.pick(parked);
         L.put(id, e.poly[0][0] + dx * v - dz * u, e.poly[0][1] + dz * v + dx * u, { yaw: L.along(id, Math.atan2(dx * side, dz * side)), tint: L.pick(['paper', 'cloud', 'stone', 'slate', 'cocoa', 'tomato', 'sky', 'navy']) });
       }

@@ -165,6 +165,10 @@ export class Life {
       return (f + k) % 16 === 0 ? 16 : 0;
     };
     if (this.crossings.length) this.updateCrossings();
+    // who is where near the camera, in coarse cells: cars yield to people in front of them, people wait
+    // for a gap before stepping off the kerb (only agents in view matter for that)
+    this.pedHash = this.hashAgents(this.peds, 6, near2, cx, cz, this.pedHash);
+    this.carHash = this.hashAgents(this.cars, 12, near2, cx, cz, this.carHash);
     if (this.net) {
       this.updateSignals(dt);
       for (let k = 0; k < this.cars.length; k++) {
@@ -292,6 +296,53 @@ export class Life {
         w.tint[i] = near ? ((k % 2 === 0) === blink ? TINT_RED : PAL.charcoal + 1) : PAL.charcoal + 1;
       }
     }
+  }
+
+  /** agents within near of the camera, bucketed by cell (reuses the map and its arrays) */
+  hashAgents(list, cell, near2, cx, cz, H) {
+    H = H || { cell, map: new Map() };
+    for (const arr of H.map.values()) arr.length = 0;
+    const w = this.w;
+    for (let k = 0; k < list.length; k++) {
+      const a = list[k];
+      if (a.dead) continue;
+      const x = w.x[a.i],
+        z = w.z[a.i];
+      if ((x - cx) ** 2 + (z - cz) ** 2 > near2) continue;
+      const key = (Math.floor(x / cell) + 32768) * 65536 + (Math.floor(z / cell) + 32768);
+      let arr = H.map.get(key);
+      if (!arr) H.map.set(key, (arr = []));
+      arr.push(a);
+    }
+    return H;
+  }
+
+  /** first agent in hash H within r of (x,z) that passes test, or null */
+  nearAgent(H, x, z, r, test = null) {
+    if (!H) return null;
+    const w = this.w,
+      c = H.cell;
+    const x0 = Math.floor((x - r) / c),
+      x1 = Math.floor((x + r) / c),
+      z0 = Math.floor((z - r) / c),
+      z1 = Math.floor((z + r) / c);
+    for (let ix = x0; ix <= x1; ix++)
+      for (let iz = z0; iz <= z1; iz++) {
+        const arr = H.map.get((ix + 32768) * 65536 + (iz + 32768));
+        if (!arr) continue;
+        for (const a of arr) {
+          const dx = w.x[a.i] - x,
+            dz = w.z[a.i] - z;
+          if (dx * dx + dz * dz < r * r && (!test || test(a))) return a;
+        }
+      }
+    return null;
+  }
+
+  /** is a train passing the level crossing near (x,z)? */
+  railBusy(x, z, r = 12) {
+    for (const c of this.crossings) if (c.active && (c.x - x) ** 2 + (c.z - z) ** 2 < r * r) return true;
+    return false;
   }
 
   /** a car at (x,z) heading (hx,hz): is there an active crossing just ahead? */
@@ -553,6 +604,16 @@ export class Life {
         }
       }
     }
+    // someone on the crossing (or stepping off the kerb) right in front: stop for them
+    if (this.pedHash && target > 0) {
+      const ahead = a.len / 2;
+      for (const d of [ahead + 2, ahead + 5.5]) {
+        if (this.nearAgent(this.pedHash, w.x[a.i] + hx * d, w.z[a.i] + hz * d, 1.9)) {
+          target = 0;
+          break;
+        }
+      }
+    }
     const acc = target > a.v ? 2.6 : 7;
     a.v += Math.max(-acc * dt, Math.min(acc * dt, target - a.v));
     if (a.v < 0) a.v = 0;
@@ -678,6 +739,12 @@ export class Life {
         at(wk.pts, wk.L, p.s, p);
         p.dir = bx * p.hx + bz * p.hz >= 0 ? 1 : -1;
       }
+      // the sidewalk runs over the tracks: hold back while the gates are down
+      if (!scared && this.crossings.length && this.railBusy(w.x[i], w.z[i], 14)) {
+        p.pause = 0.4;
+        this.pose(p, 0);
+        return;
+      }
       p.s += p.dir * speed * dt;
       const len = wk.L[wk.L.length - 1];
       if (p.s < 0 || p.s > len) {
@@ -685,10 +752,26 @@ export class Life {
         p.s = Math.max(0, Math.min(len, p.s));
         const links = p.path ? null : wk.links[end];
         if (links && links.length && !scared) {
-          const lk = links[Math.floor(Math.random() * links.length)];
+          const lk = p.next ?? links[Math.floor(Math.random() * links.length)];
           const tw = this.net.walks[lk.w];
           const q = lk.end === 0 ? tw.pts[0] : tw.pts[tw.pts.length - 1];
-          p.cross = { x0: w.x[i], z0: w.z[i], x1: q[0], z1: q[1], t: 0, len: Math.max(0.5, Math.hypot(q[0] - w.x[i], q[1] - w.z[i])), walk: lk.w, end: lk.end };
+          const len2 = Math.hypot(q[0] - w.x[i], q[1] - w.z[i]);
+          // across a road: wait at the kerb for a gap in the traffic (and never across a live level crossing)
+          let wait = false;
+          if (len2 > 5) {
+            for (const t of [0.2, 0.5, 0.8]) {
+              const sx = w.x[i] + (q[0] - w.x[i]) * t,
+                sz = w.z[i] + (q[1] - w.z[i]) * t;
+              if (this.nearAgent(this.carHash, sx, sz, 11, (c) => c.v > 0.6) || this.railBusy(sx, sz)) wait = true;
+            }
+          }
+          if (wait) {
+            p.next = lk; // keep the same crossing in mind; look again in a moment
+            p.pause = 0.35;
+          } else {
+            p.next = null;
+            p.cross = { x0: w.x[i], z0: w.z[i], x1: q[0], z1: q[1], t: 0, len: Math.max(0.5, len2), walk: lk.w, end: lk.end };
+          }
         } else {
           p.dir = -p.dir; // turn around (or loop paths)
           if (p.path && p.path.loop) p.s = end === 0 ? len : 0;

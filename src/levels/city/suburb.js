@@ -94,7 +94,12 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
   if (L.rand() < 0.7) {
     const id = L.pick(['car', 'suv', 'hatchback', 'pickup_truck', 'car', 'suv'].filter((i) => L.lib.byId.has(i)));
     const [cx, cz] = local(fr, gx, -Math.min(driveLen - 3, setback * 0.55));
-    L.put(id, cx, cz, { yaw: L.along(id, fr.yaw + (L.rand() < 0.75 ? Math.PI : 0)) });
+    // neighbours' driveways can run side by side: one car per spot
+    const parked = ctx.driveCars || (ctx.driveCars = []);
+    if (!parked.some(([px, pz]) => (px - cx) ** 2 + (pz - cz) ** 2 < 3.2 * 3.2)) {
+      parked.push([cx, cz]);
+      L.put(id, cx, cz, { yaw: L.along(id, fr.yaw + (L.rand() < 0.75 ? Math.PI : 0)) });
+    }
   }
   // detached garage at the back for houses without one
   if (typeof info.drive !== 'number' && L.rand() < 0.45 && D > 26) {
@@ -318,7 +323,7 @@ function fenceLine2(L, id, [x0, z0], [x1, z1], dedupe, tint, occ = null) {
 }
 
 /** A parking lot: stalls painted and filled. Local frame: u across the rows (local x), v along them (local z). */
-export function parkingLot(ctx, cx, cz, w, d, yaw, { fill = 0.6, ids = ['car', 'suv', 'hatchback', 'pickup_truck'], stall = 2.7, depth = 5.4, tints = null } = {}) {
+export function parkingLot(ctx, cx, cz, w, d, yaw, { fill = 0.6, ids = ['car', 'suv', 'hatchback', 'car'], stall = 2.7, depth = 5.4, tints = null } = {}) {
   const { L, paint } = ctx;
   paint.push((b) => b.rect(cx, cz, w, d, yaw, SK.parking, { P: [stall, depth], C: ['charcoal', 'paper'], uv0: [w / 2, d / 2] }));
   const period = 2 * depth + 6;

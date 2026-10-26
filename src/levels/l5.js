@@ -384,8 +384,18 @@ export function layout(lib, seed = 505) {
   // ---- life
   trafficLights(L, life, net, { id: pickId(L, ['signal_post', 'traffic_light']) });
   stopSigns(L, net);
+  // the streets round the courthouse square carry traffic circling the square, as they would on a court day
+  const bySquare = (e) => {
+    const [ax, az] = e.poly[0],
+      [bx, bz] = e.poly[e.poly.length - 1];
+    const mx = (ax + bx) / 2,
+      mz = (az + bz) / 2;
+    return mx >= SQUARE.minX - 1 && mx <= SQUARE.maxX + 1 && mz >= SQUARE.minZ - 1 && mz <= SQUARE.maxZ + 1 && e.tag !== 'main';
+  };
+  for (const e of net.edges) if (bySquare(e)) e.draw = 5;
   const laneW = (l) => {
     const e = net.edges[l.e];
+    if (bySquare(e)) return 9;
     return e.cls === 'arterial' ? 2 : e.cls === 'main' ? 11 : e.cls === 'lane' ? 0.35 : e.tag === 'river' || e.tag === 'water' ? 1.4 : 1;
   };
   spawnTraffic(L, life, net, 260, [['car', 6], ['suv', 4], ['hatchback', 3], ['pickup_truck', 6], ['delivery_van', 1.5], ['mail_truck', 0.6], ['tractor', 0.6], ['school_bus', 0.4], ['police_car', 0.3], ['motorcycle', 0.8], ['garbage_truck', 0.3], ['fire_truck', 0.15]], { laneWeight: laneW });
@@ -488,6 +498,15 @@ function courthouseSquare(ctx, life) {
     if (L.rand() < 0.75) L.put(L.pick(['person_grandpa', 'person_adult', 'person_adult2']), hx + dx + Math.sin(a) * 0.4, cz + dz + Math.cos(a) * 0.4, { yaw: a });
   }
   flock(L, life, front + 10, cz + 4, 9);
+  // people on the square: round the walk that rings the courthouse, and along the diagonals to the corners
+  {
+    const hwz = tt.dims[0] / 2 + 3,
+      hwx = tt.dims[2] / 2 + 3;
+    const ring = [[hx - hwx, cz - hwz], [hx + hwx, cz - hwz], [hx + hwx, cz + hwz], [hx - hwx, cz + hwz], [hx - hwx, cz - hwz]];
+    spawnLoopWalkers(L, life, ring, 14);
+    for (const [ax, az, bx2, bz2] of [[x0, z0, hx - hwx, cz - hwz], [x0, z1, hx - hwx, cz + hwz], [front, cz - 8, x1, z0], [front, cz + 8, x1, z1]])
+      spawnLoopWalkers(L, life, [[ax, az], [bx2, bz2], [bx2 + 0.8, bz2], [ax + 0.8, az]], 4);
+  }
   flock(L, life, x0 + 26, z0 + 26, 5);
   // people strolling the walks round the courthouse
   const hwz = tt.dims[0] / 2 + 3,
