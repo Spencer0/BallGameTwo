@@ -302,6 +302,73 @@ export class World {
   }
 
   /** Fill instance buffers from cells visible to the camera. */
+  /** Does segment a->b pass through instance i's yawed box (inflated by m)? Slab test in object space. */
+  segmentHitsBox(i, ax, ay, az, bx, by, bz, m) {
+    const t = this.types[this.type[i]];
+    const s = this.scale[i];
+    const c = Math.cos(this.yaw[i]),
+      sn = Math.sin(this.yaw[i]);
+    const px = ax - this.x[i],
+      pz = az - this.z[i];
+    const ox = c * px - sn * pz,
+      oz = sn * px + c * pz,
+      oy = ay - this.y[i];
+    const qx = bx - ax,
+      qz = bz - az;
+    const dx = c * qx - sn * qz,
+      dz = sn * qx + c * qz,
+      dy = by - ay;
+    const hx = t.dims[0] * 0.5 * s + m,
+      hz = t.dims[2] * 0.5 * s + m;
+    let t0 = 0.02,
+      t1 = 0.98;
+    // x slab
+    if (Math.abs(dx) < 1e-12) {
+      if (Math.abs(ox) > hx) return false;
+    } else {
+      let u = (-hx - ox) / dx,
+        v = (hx - ox) / dx;
+      if (u > v) [u, v] = [v, u];
+      if (u > t0) t0 = u;
+      if (v < t1) t1 = v;
+      if (t0 > t1) return false;
+    }
+    // y slab (base at 0)
+    if (Math.abs(dy) < 1e-12) {
+      if (oy < -m || oy > t.dims[1] * s + m) return false;
+    } else {
+      let u = (-m - oy) / dy,
+        v = (t.dims[1] * s + m - oy) / dy;
+      if (u > v) [u, v] = [v, u];
+      if (u > t0) t0 = u;
+      if (v < t1) t1 = v;
+      if (t0 > t1) return false;
+    }
+    // z slab
+    if (Math.abs(dz) < 1e-12) return Math.abs(oz) <= hz;
+    let u = (-hz - oz) / dz,
+      v = (hz - oz) / dz;
+    if (u > v) [u, v] = [v, u];
+    if (u > t0) t0 = u;
+    if (v < t1) t1 = v;
+    return t0 <= t1;
+  }
+
+  /** Is the camera inside instance i's yawed box (plus a small margin for the outline hull)? */
+  cameraInside(i, camX, camY, camZ) {
+    const t = this.types[this.type[i]];
+    const s = this.scale[i];
+    const c = Math.cos(this.yaw[i]),
+      sn = Math.sin(this.yaw[i]);
+    const dx = camX - this.x[i],
+      dz = camZ - this.z[i];
+    const lx = c * dx - sn * dz,
+      lz = sn * dx + c * dz,
+      ly = camY - this.y[i];
+    const m = 0.06 * Math.max(t.dims[0], t.dims[1], t.dims[2]) * s;
+    return Math.abs(lx) < t.dims[0] * 0.5 * s + m && Math.abs(lz) < t.dims[2] * 0.5 * s + m && ly > -m && ly < t.dims[1] * s + m;
+  }
+
   updateRender(camera, focalPx) {
     for (let k = 0; k < this.batches.length; k++) {
       this.batches[k].n0 = 0;
@@ -355,24 +422,15 @@ export class World {
             dy = this.y[i] - camY,
             dz = this.z[i] - camZ;
           const d = Math.sqrt(dx * dx + dy * dy + dz * dz) + 1e-6;
-          // camera inside (or nearly inside) this object: hide it so we see through it
-          if (d < this.bound[i] * 0.85) continue;
-          // object between the camera and the ball (or Lint at its base): hide it (Katamari-style see-through)
+          // camera inside (or nearly inside) this object's box: hide it so we see through it. (A bounding-sphere
+          // test hid long thin props such as knives whenever they neared the bottom corners of the view.)
+          if (d < this.bound[i] * 1.1 && this.cameraInside(i, camX, camY, camZ)) continue;
+          // object between the camera and the ball (or Lint at its base): hide it (Katamari-style see-through).
+          // Exact sight-segment vs yawed-box test: a sphere test hid flat props (knives, books) lying in the
+          // foreground, especially toward the bottom corners of the view, though they couldn't block the ball.
           if (F && d * d < sl2 && this.bound[i] > F.r * 0.25) {
-            const oy = this.y[i] + this.bound[i] * 0.6 - camY;
-            const rr = this.bound[i] * 0.8 + F.r * 0.35;
-            let hidden = false;
-            for (let pass = 0; pass < 2 && !hidden; pass++) {
-              const ty = pass === 0 ? sy : sy - F.r * 1.1; // ball centre, then ball base
-              const l2 = sx * sx + ty * ty + sz * sz;
-              const t = (dx * sx + oy * ty + dz * sz) / l2;
-              if (t <= 0 || t >= 1) continue;
-              const ex = dx - sx * t,
-                ey = oy - ty * t,
-                ez = dz - sz * t;
-              if (ex * ex + ey * ey + ez * ez < rr * rr) hidden = true;
-            }
-            if (hidden) continue;
+            const m = F.r * 0.15;
+            if (this.segmentHitsBox(i, camX, camY, camZ, F.x, F.y, F.z, m) || this.segmentHitsBox(i, camX, camY, camZ, F.x, F.y - F.r * 0.7, F.z, m)) continue;
           }
           const px = (this.bound[i] * 2 * focalPx) / d;
           if (px < cullPx) continue;
