@@ -145,9 +145,9 @@ void main() {
     col = mix(A, B, m);
   } else if (k == 11) { // dirt road: two worn tracks
     col = mix(A, B, max(band(u - 0.9, 0.35), band(u + 0.9, 0.35)) * 0.8);
-  } else if (k == 13) { // water
-    float w = sin(u * 0.17 + uTime * 0.8) * 0.5 + sin(v * 0.23 - uTime * 0.6) * 0.5;
-    col = mix(A, B, aa(0.72, w));
+  } else if (k == 13) { // water: small light streaks drifting with the current
+    float w = sin(v * 0.33 + u * 0.11 + uTime * 1.1) + sin(u * 0.47 - v * 0.07 - uTime * 0.8);
+    col = mix(A, B, aa(1.62, w));
   }
   float f = smoothstep(uFogNear, uFogFar, vFogDepth);
   gl_FragColor = vec4(mix(col, uFogColor, f), 1.0);

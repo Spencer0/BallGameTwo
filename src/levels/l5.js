@@ -141,8 +141,8 @@ export const env = {
   ],
   streets: (b) => {
     const r = riverPoly();
-    b.strip(r.pts, r.L, -RIVER_W / 2, RIVER_W / 2, 0, r.L[r.L.length - 1], SK.water, { C: ['teal', '#4FCBBE'], y: -0.25 });
-    b.disc(LAKE.x, LAKE.z, LAKE.r, SK.water, { C: ['teal', '#4FCBBE'], y: -0.25, segs: 64 });
+    b.strip(r.pts, r.L, -RIVER_W / 2, RIVER_W / 2, 0, r.L[r.L.length - 1], SK.water, { C: ['teal', 'mint'], y: -0.25 });
+    b.disc(LAKE.x, LAKE.z, LAKE.r, SK.water, { C: ['teal', 'mint'], y: -0.25, segs: 64 });
     paintNetwork(b, net);
   },
   blocks: [
@@ -456,11 +456,12 @@ function eastBank(ctx, life) {
     const it = L.put(id, up[0][0], up[0][1]);
     if (it) life.movers.push({ its: [it], offs: [0], route: [...up, ...down], speed: 4, s: s0, kind: 'boat' });
   }
-  // the bridges
-  const rb = pickId(L, ['road_bridge']);
+  // the bridges (if the bridge model is missing, pave the span so the road doesn't stop at the water)
   if (L.lib.byId.has('road_bridge')) {
     L.put('road_bridge', riverX(HWY_Z), HWY_Z, { yaw: 0, y: -4.05 });
     L.put('road_bridge', riverX(-560), -560, { yaw: 0, y: -4.05 });
+  } else {
+    for (const e of net.edges) if (!e.paint && e.cls !== 'rail') paint.push((b) => b.strip(e.poly, e.L, -e.w / 2, e.w / 2, 0, e.len, SK.road, { P: [e.w / 2, e.lanes, 1, 0], Q: [0, e.len, 0, 0], C: ['charcoal', 'paper', 'sun'], y: 0.05 }));
   }
   if (L.lib.byId.has('rail_bridge')) L.put('rail_bridge', riverX(RAIL_Z), RAIL_Z, { yaw: 0, y: -4.05 });
   flock(L, ctx.life || life, LAKE.x - 200, LAKE.z - 200, 6, { id: pickId(L, ['pigeon']) });
@@ -488,7 +489,18 @@ function farms(ctx, life) {
     if (occ.hits(r)) continue;
     occ.add(r, 'field');
     const kind = L.rand();
-    if (kind < 0.55) {
+    // windbreak: a row of trees along one edge of most plots
+    if (L.rand() < 0.6) {
+      const along = L.rand() < 0.5;
+      const n = Math.floor((along ? w : d) / 9);
+      for (let k = 0; k < n; k++) {
+        const t = (k + 0.5) / n;
+        const x = along ? cx - w / 2 + w * t : cx - w / 2 + 3;
+        const z = along ? cz - d / 2 + 3 : cz - d / 2 + d * t;
+        L.put(L.rand() < 0.6 ? 'tree_round' : 'pine_tree', x + L.range(-1, 1), z + L.range(-1, 1), { scale: L.range(0.9, 1.3) });
+      }
+    }
+    if (kind < 0.72) {
       // crop field: rows painted, a scarecrow, sometimes the combine at work
       const [a, b] = L.pick(crops);
       paint.push((bb) => bb.rect(cx, cz, w - 4, d - 4, L.rand() < 0.5 ? 0 : Math.PI / 2, SK.field, { P: [2.2], C: [a, b], y: -0.15 }));
@@ -509,7 +521,7 @@ function farms(ctx, life) {
       const c = [[cx - w / 2 + 2, cz - d / 2 + 2], [cx + w / 2 - 2, cz - d / 2 + 2], [cx + w / 2 - 2, cz + d / 2 - 2], [cx - w / 2 + 2, cz + d / 2 - 2]];
       for (let k = 0; k < 4; k++) fenceLine(L, f, c[k][0], c[k][1], c[(k + 1) % 4][0], c[(k + 1) % 4][1], { dedupe: fences, gaps: k === 0 ? [[w / 2 - 4, w / 2 + 4]] : [] });
       const animal = L.pick(['cow', 'cow', 'sheep', 'horse']);
-      for (let k = 0; k < 6 + Math.floor(L.rand() * 6); k++) {
+      for (let k = 0; k < 10 + Math.floor(L.rand() * 8); k++) {
         const it = L.put(animal, cx + L.range(-w / 2 + 6, w / 2 - 6), cz + L.range(-d / 2 + 6, d / 2 - 6));
         if (it) life.grazers.push({ it, cx, cz, yaw: 0, hw: w / 2 - 5, hd: d / 2 - 5, speed: animal === 'horse' ? 1.2 : 0.4, still: 0.7 });
       }
