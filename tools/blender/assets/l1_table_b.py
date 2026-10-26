@@ -155,7 +155,7 @@ def button():
 @asset("thumbtack", "Thumbtack", "Lands point-up. Every. Single. Time.", 1, "metal", "tiny",
        variants=["tomato", "sky", "sun", "leaf"], col="cyl", fill=0.3)
 def thumbtack():
-    _lathe([(0.0, 0.0), (0.0026, 0.0003), (0.0042, 0.001), (0.0048, 0.0016)], color="tomato", segs=8, tint=True)
+    _lathe([(0.0026, 0.0), (0.0042, 0.0007), (0.0048, 0.0016)], color="tomato", segs=10, tint=True)
     cyl(0.0058, 0.0013, at=(0, 0, 0.0016), color="tomato", segs=12, tint=True, bevel=0.0004)
     cyl(0.0006, 0.0075, at=(0, 0, 0.0029), r2=0.00005, color="stone", segs=6)
 

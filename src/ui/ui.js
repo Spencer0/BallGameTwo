@@ -125,7 +125,7 @@ export class UI {
     document.body.classList.remove('playing');
     const s = this.app.save.data;
     const node = el(`
-      <section class="screen title-screen bg-dots" style="--bg: var(--flamingo)">
+      <section class="screen title-screen see-through" style="--bg: var(--flamingo)">
         <div class="title-top">
           <h1 class="logo"><span>Lint</span><span>Roller</span></h1>
           <p class="tagline">A very tidy game about a very small bunny.</p>
@@ -169,7 +169,7 @@ export class UI {
         </button>`;
     }).join('');
     const node = el(`
-      <section class="screen levels-screen bg-dots" style="--bg: var(--sky)">
+      <section class="screen levels-screen see-through" style="--bg: var(--sky)">
         <header class="topbar">
           <button class="btn btn-round small" data-act="back-title" aria-label="Back">${ICON.back}</button>
           <h2 class="display">Pick a Mess</h2>
@@ -297,7 +297,8 @@ export class UI {
         <div id="hud-goal"></div>
       </div>
       <div id="hud-time" class="pill">${ICON.clock}<span>0:00</span></div>
-      <div id="hud-card"><span class="ic"></span><span class="nm"></span></div>
+      <div id="hud-card"><span class="ic"></span><span class="nm"></span><b class="new">new!</b></div>
+      <div id="hud-title"><span class="t1"></span><span class="t2"></span></div>
       <div id="hud-stamp"></div>
       <div id="hud-banner"></div>
       <button id="hud-finish" class="btn btn-primary">${ICON.check}<span>Finish</span></button>
@@ -316,7 +317,9 @@ export class UI {
       banner: $('#hud-banner'),
       finish: $('#hud-finish'),
       hint: $('#hud-hint'),
+      title: $('#hud-title'),
     };
+    this.lastCard = 0;
     $('#hud-pause').addEventListener('click', () => {
       this.app.audio.unlock();
       this.app.sfx.tap();
@@ -345,7 +348,12 @@ export class UI {
     $('.m2', this.h.barWrap).style.left = pos(L.target * STAR_RATIOS[1]) + '%';
     $('.m3', this.h.barWrap).style.left = pos(L.target * STAR_RATIOS[2]) + '%';
     this.h.barWrap.classList.toggle('stars', timed);
-    this.hudState = { size: '', time: '', bar: -1, urgent: false };
+    this.hudState = { size: '', time: '', bar: -1, urgent: false, warned60: L.time <= 60, warned30: false };
+    $('.t1', this.h.title).textContent = L.name;
+    $('.t2', this.h.title).textContent = timed ? `Roll up to ${formatSize(L.target)} in ${formatTime(L.time)}` : `Zen: roll up to ${formatSize(L.target)}, no rush`;
+    this.h.title.classList.remove('go');
+    void this.h.title.offsetWidth;
+    this.h.title.classList.add('go');
     this.h.hint.classList.add('show');
     clearTimeout(this.hintT);
     this.hintT = setTimeout(() => this.h.hint.classList.remove('show'), 6000);
@@ -374,14 +382,34 @@ export class UI {
           this.h.timeWrap.classList.toggle('urgent', urgent);
         }
         if (s.timeLeft <= 10 && s.timeLeft > 0) this.app.sfx.tick(true);
+        if (!st.warned60 && s.timeLeft <= 60) {
+          st.warned60 = true;
+          this.hudWarn('One minute left!');
+        }
+        if (!st.warned30 && s.timeLeft <= 30) {
+          st.warned30 = true;
+          this.hudWarn('30 seconds! Hurry!');
+        }
       }
     }
   }
 
-  hudPickup(type) {
+  hudWarn(text) {
+    this.h.banner.innerHTML = `${ICON.clock}<span>${esc(text)}</span>`;
+    this.h.banner.classList.add('show', 'warn');
+    this.app.sfx.tick(false);
+    setTimeout(() => this.h.banner.classList.remove('show', 'warn'), 2200);
+  }
+
+  hudPickup(type, rel, isNew) {
+    const now = performance.now();
+    // small stuff arrives in bursts: don't strobe the card, but always announce new or big things
+    if (!isNew && rel < 0.25 && now - this.lastCard < 420) return;
+    this.lastCard = now;
     this.h.cardIc.setAttribute('style', this.iconStyle(type.id, 34));
     this.h.cardNm.textContent = type.name;
     const c = this.h.card;
+    c.classList.toggle('is-new', !!isNew);
     c.classList.remove('pop');
     void c.offsetWidth;
     c.classList.add('pop');
@@ -498,6 +526,7 @@ export class UI {
             ${rec.newBest && result.pickups > 0 ? '<span class="chip hot">New best!</span>' : ''}
             ${rec.unlockedNext ? `<span class="chip">${ICON.check}<b>Unlocked ${esc(LEVELS[L.n].name)}</b></span>` : ''}
             <span class="chip">${result.pickups} things · ${items.length} kinds</span>
+            ${result.biggest ? `<span class="chip">Biggest: ${esc(result.biggest.name)}</span>` : ''}
             ${rec.newTypes.length ? `<span class="chip hot">${rec.newTypes.length} new in collection</span>` : ''}
           </div>
           <div class="res-items">${grid || '<p class="sub">Nothing at all. Bold.</p>'}</div>

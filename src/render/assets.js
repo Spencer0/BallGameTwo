@@ -105,8 +105,17 @@ export class AssetLibrary {
     });
   }
 
-  async loadPack(name) {
-    if (this.loadedPacks.has(name)) return;
+  loadPack(name) {
+    if (this.loadedPacks.has(name)) return Promise.resolve();
+    if (!this.inflight) this.inflight = new Map();
+    if (!this.inflight.has(name)) {
+      const p = this._loadPack(name).finally(() => this.inflight.delete(name));
+      this.inflight.set(name, p);
+    }
+    return this.inflight.get(name);
+  }
+
+  async _loadPack(name) {
     const gltf = await loader.loadAsync(ASSET_BASE.url + 'packs/' + name + '.glb');
     gltf.scene.updateMatrixWorld(true);
     gltf.scene.traverse((o) => {

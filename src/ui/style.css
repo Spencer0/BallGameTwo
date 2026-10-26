@@ -62,6 +62,13 @@ svg { display: block; width: 100%; height: 100%; }
 .bg-dots { background-color: var(--bg); background-image: radial-gradient(rgba(42,30,63,.13) 2.6px, transparent 3.2px);
   background-size: 24px 24px; animation: drift 14s linear infinite; }
 @keyframes drift { to { background-position: 48px 24px; } }
+/* menus over the live attract scene */
+.see-through { background: linear-gradient(to bottom, rgba(42,30,63,.0) 0%, rgba(42,30,63,.0) 18%, color-mix(in srgb, var(--bg) 55%, transparent) 55%, var(--bg) 100%); }
+.levels-screen.see-through { background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 70%, transparent), color-mix(in srgb, var(--bg) 92%, transparent)); }
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+  .see-through { background: linear-gradient(to bottom, transparent 18%, var(--bg) 100%); }
+  .levels-screen.see-through { background: var(--bg); }
+}
 .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; box-sizing: border-box;
   padding: calc(var(--sat) + 16px) var(--gutter-r) calc(var(--sab) + 16px) var(--gutter-l);
   background: rgba(42,30,63,.55); opacity: 0; transition: opacity .2s; z-index: 20; }
@@ -185,6 +192,18 @@ body.playing #hud { display: block; }
   padding: 2px 14px 2px 4px; box-shadow: 0 4px 0 var(--ink); white-space: nowrap; opacity: 0; }
 #hud-card .ic { width: 34px; height: 34px; flex: none; }
 #hud-card .nm { font-weight: 800; font-size: 18px; padding-top: 2px; }
+#hud-card .new { display: none; background: var(--flamingo); color: var(--paper); font-size: 12px; text-transform: uppercase; border: 2px solid var(--ink);
+  border-radius: 999px; padding: 1px 6px 0; margin-left: 2px; }
+#hud-card.is-new .new { display: inline-block; }
+#hud-title { position: absolute; left: var(--gutter-l); right: var(--gutter-r); top: 38%; display: flex; flex-direction: column; align-items: center;
+  gap: 6px; text-align: center; opacity: 0; pointer-events: none; }
+#hud-title .t1 { font-family: var(--font-display); font-size: 46px; line-height: 1; color: var(--paper); -webkit-text-stroke: 2.5px var(--ink);
+  paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); }
+#hud-title .t2 { font-weight: 800; font-size: 17px; background: var(--sun); border: 3px solid var(--ink); border-radius: 999px; padding: 3px 14px 1px; box-shadow: 0 4px 0 var(--ink); }
+#hud-title.go { animation: titlecard 2.6s ease-out forwards; }
+@keyframes titlecard { 0% { opacity: 0; transform: translateY(20px) scale(.9); } 12% { opacity: 1; transform: none; }
+  80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-16px); } }
+#hud-banner.warn { background: var(--tomato); color: var(--paper); }
 #hud-card.pop { animation: card 1.3s ease-out forwards; }
 @keyframes card { 0% { transform: translateX(-50%) scale(0); opacity: 1; } 12% { transform: translateX(-50%) scale(1.15); opacity: 1; }
   20% { transform: translateX(-50%) scale(1); opacity: 1; } 80% { transform: translateX(-50%) scale(1); opacity: 1; }

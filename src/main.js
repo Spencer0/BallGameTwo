@@ -76,6 +76,12 @@ class App {
     window.addEventListener('pointerdown', unlock, { capture: true });
     window.addEventListener('touchend', unlock, { capture: true });
     document.addEventListener('visibilitychange', () => this.onVisibility());
+    // the rotate-your-phone overlay hides the game: pause underneath it
+    const landscape = matchMedia('(orientation: landscape) and (max-height: 540px)');
+    const onOrient = () => {
+      if (landscape.matches && this.session && !this.session.over && !this.session.attract) this.pause();
+    };
+    if (landscape.addEventListener) landscape.addEventListener('change', onOrient);
     this.canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
       this.contextLost = true;
@@ -107,7 +113,11 @@ class App {
     if (lvl) {
       // dev / test shortcut: straight into a level
       await this.startLevel(Math.max(0, Math.min(5, parseInt(lvl) - 1)), params.get('mode') || 'timed', { skipStory: true });
-    } else this.ui.showTitle();
+    } else {
+      this.startAttract();
+      this.ui.showTitle();
+      setTimeout(() => this.prefetch(), 1500);
+    }
     const loop = (now) => {
       this.frame(now);
       requestAnimationFrame(loop);
@@ -115,25 +125,62 @@ class App {
     requestAnimationFrame(loop);
   }
 
+  /** Menus float over a live scene: Lint tidying the breakfast table on autopilot. */
+  startAttract() {
+    if (this.session && this.session.attract) return;
+    this.input.setEnabled(false);
+    if (this.session) {
+      this.session.dispose();
+      this.session = null;
+    }
+    const s = new Session(this, LEVELS[0], 'zen');
+    s.attract = true;
+    s.build();
+    s.world.lodPx = this.quality.lodPx;
+    s.world.cullPx = this.quality.cullPx;
+    s.world.setOutlines(this.quality.outlines);
+    this.session = s;
+    const fakeInput = { x: 0, y: 0, turn: 0, override: null };
+    this.attractInput = fakeInput;
+    this.attractPilot = new Autopilot({ get session() { return s; }, input: fakeInput });
+    this.attractPilot.skill = 0.7;
+  }
+
+  /** Warm the asset packs for every unlocked level, one at a time, while the player is in menus. */
+  async prefetch() {
+    const want = new Set();
+    LEVELS.slice(0, this.save.data.unlocked).forEach((L) => L.packs.forEach((p) => want.add(p)));
+    for (const p of want) {
+      if (this.session && !this.session.over) return; // never compete with gameplay
+      await this.lib.loadPack(p).catch(() => {});
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+
   wireEvents() {
     const ev = this.events;
     ev.on('pickup', (e) => {
+      if (e.session.attract) return;
       this.sfx.pickup(e.type.mat, e.rel, e.combo);
-      this.ui.hudPickup(e.type);
+      const isNew = !this.save.data.seen[e.type.id] && e.session.collected.get(e.type.id) === 1;
+      this.ui.hudPickup(e.type, e.rel, isNew);
       if (e.rel > 0.2) this.haptic('pick');
     });
-    ev.on('tiny', () => this.sfx.tiny());
+    ev.on('tiny', (e) => !e.session.attract && this.sfx.tiny());
     ev.on('bump', (e) => {
+      if (e.session.attract) return;
       this.sfx.bump(e.impact, e.knocked);
       this.haptic('bump');
     });
-    ev.on('wobble', () => this.sfx.wobble());
+    ev.on('wobble', (e) => !e.session.attract && this.sfx.wobble());
     ev.on('milestone', (e) => {
+      if (e.session.attract) return;
       this.sfx.milestone(Math.round(Math.log10(e.size) * 3));
       this.ui.hudStamp(formatSize(e.size) + '!');
       this.haptic('big');
     });
     ev.on('target', (e) => {
+      if (e.session.attract) return;
       this.sfx.target();
       this.ui.hudTarget(e.session.mode === 'timed');
       this.haptic('big');
@@ -181,7 +228,19 @@ class App {
     const s = this.session;
     if (this.autopilot) this.autopilot.update(dt);
     this.input.update();
-    if (s && !this.contextLost) {
+    if (s && s.attract && !this.contextLost) {
+      // attract mode: autopilot, half rate is plenty behind menus
+      this.attractPilot.update(dt);
+      const o = this.attractInput.override;
+      this.attractInput.x = o ? o.x * 0.8 : 0;
+      this.attractInput.y = o ? o.y * 0.8 : 0;
+      s.update(dt, this.attractInput);
+      if ((this.frames & 1) === 0) s.render(this.renderer);
+      if (s.ball.diameter > 0.45 || s.time > 300) {
+        s.attract = false; // force a fresh demo
+        this.startAttract();
+      }
+    } else if (s && !this.contextLost) {
       if (!s.over) {
         for (let k = 1; k < this.simSpeed && !s.over && !s.paused; k++) {
           if (this.autopilot) this.autopilot.update(1 / 60);
@@ -208,21 +267,23 @@ class App {
     this.orbit += dt * 0.35;
     const r = s.rVis;
     const cam = this.camera;
-    cam.position.set(b.pos.x + Math.sin(this.orbit) * r * 5, b.pos.y + r * 1.4, b.pos.z + Math.cos(this.orbit) * r * 5);
-    cam.lookAt(b.pos.x, b.pos.y - r * 1.9, b.pos.z);
+    const orbitR = r * 6.2;
+    cam.position.set(b.pos.x + Math.sin(this.orbit) * orbitR, b.pos.y + r * 2.0, b.pos.z + Math.cos(this.orbit) * orbitR);
+    cam.lookAt(b.pos.x, b.pos.y - r * 2.1, b.pos.z);
     cam.near = r * 0.05;
     cam.far = r * 900;
     cam.updateProjectionMatrix();
     s.ballGroup.rotateY(dt * 0.25);
     s.particles.update(dt);
-    s.lint.update(dt, b, this.orbit + Math.PI, s.lint.scale, s.env.groundAt(b.pos.x, b.pos.z));
-    if (Math.random() < dt * 0.6) s.lint.celebrate(0.7);
+    // Lint stands beside the ball facing the camera (the camera sits at angle `orbit` from the ball)
+    s.lint.showOff(dt, b, this.orbit, Math.max(s.env.groundAt(b.pos.x, b.pos.z), b.pos.y - b.r));
+    if (Math.random() < dt * 0.5) s.lint.celebrate(0.7);
   }
 
   // ------------------------------------------------------------ flow
   playMusicForState() {
     if (!this.audio.ctx) return;
-    if (this.session && !this.session.over) {
+    if (this.session && !this.session.over && !this.session.attract) {
       const song = SONGS[this.session.level.theme];
       this.music.play(song);
       this.sfx.setKey(song.id);
@@ -274,7 +335,7 @@ class App {
 
   pause() {
     const s = this.session;
-    if (!s || s.over || s.paused) return;
+    if (!s || s.over || s.paused || s.attract) return;
     s.paused = true;
     this.input.setEnabled(false);
     this.ui.showPause(s);
@@ -312,12 +373,8 @@ class App {
     this.ui.closeOverlay();
     this.ui.hudEnd();
     this.input.setEnabled(false);
-    if (this.session) {
-      this.session.dispose();
-      this.session = null;
-    }
     if (this.audio.ctx) this.audio.duck.gain.setTargetAtTime(1, this.audio.now, 0.1);
-    this.renderer.clear();
+    this.startAttract();
     this.ui.showLevels();
     this.playMusicForState();
   }
@@ -410,7 +467,7 @@ class App {
 
   onVisibility() {
     if (document.hidden) {
-      if (this.session && !this.session.over) this.pause();
+      if (this.session && !this.session.over && !this.session.attract) this.pause();
       this.audio.suspend();
     } else {
       this.audio.resume();

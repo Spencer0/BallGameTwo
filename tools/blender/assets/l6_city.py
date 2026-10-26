@@ -418,17 +418,14 @@ def apartment_tower():
     w, d, H = 30.0, 20.0, 84.0
     box((w, d, H), base=True, color="bubblegum", tint=True)
     box((w + 0.6, d + 0.6, 4.5), base=True, color="charcoal")
-    fl = 4.0
+    fl = 4.2
     nf = int((H - 6.0) / fl)
     step = 2 if _lod1() else 1
     for i in range(0, nf, step):
         z = 6.0 + i * fl
-        box((w * 0.84, d + 5.0, 1.0 * step), at=(0, 0, z), base=True, color="snow")
-        box((w * 0.84, d + 5.2, 1.0), at=(0, 0, z + 1.0), base=True, color="snow", lod0=True)
-        box((w * 0.8, d + 0.4, 1.6), at=(0, 0, z + 2.0), base=True, color="glass", lod0=True)
-    if not _lod1():
-        for x in (-w * 0.42, -w * 0.14, w * 0.14, w * 0.42):
-            box((0.9, d + 5.4, nf * fl - 1.0), at=(x, 0, 6.0), base=True, color="bubblegum", tint=True)
+        box((w * 0.84, d + 5.0, 1.5 * step), at=(0, 0, z), base=True, color="snow")
+    for x in (-w * 0.14, w * 0.14):
+        box((0.9, d + 5.4, nf * fl - 2.0), at=(x, 0, 6.0), base=True, color="bubblegum", tint=True, lod0=True)
     # stair core, rooftop water tank on legs
     box((7.0, 7.0, H + 5.0), at=(w / 2 - 1.0, 0, 0), base=True, color="cloud")
     box((w + 1.2, d + 1.2, 1.2), at=(0, 0, H), base=True, color="snow")
@@ -734,11 +731,12 @@ def giant_statue():
     # head, bun, nose in the air
     hz = z0 + 43.0
     cyl(2.0, 4.0, at=(0, 0, z0 + 36.0), color=G, tint=True, segs=8)
-    sphere(5.0, at=(0, 0, hz), color=G, tint=True, segs=14, rings=9)
-    sphere(3.6, at=(0.0, 1.5, hz + 5.2), color=G, tint=True, segs=10, rings=7)
-    sphere(1.8, at=(0.0, 2.4, hz + 8.4), color=G, tint=True, segs=8, rings=5)
-    sphere(1.1, at=(0, -5.0, hz + 0.3), scale=(1, 1.3, 0.9), rot=(-20, 0, 0), color=G, tint=True, segs=8, rings=5)
-    eyes((0, -4.45, hz + 1.5), 3.4, 0.62, pitch=-20)
+    hz += 0.6
+    sphere(5.6, at=(0, 0, hz), color=G, tint=True, segs=14, rings=9)
+    sphere(3.8, at=(0.0, 2.4, hz + 5.0), color=G, tint=True, segs=10, rings=7)
+    sphere(1.2, at=(0, -5.6, hz + 0.2), scale=(1, 1.3, 0.9), rot=(-20, 0, 0), color=G, tint=True, segs=8, rings=5)
+    eyes((0, -5.0, hz + 1.6), 3.8, 0.75, pitch=-20)
+    torus(5.0, 0.7, at=(0, 0.6, hz + 2.6), rot=(-14, 0, 0), color="flamingo", segs=14, rsegs=4)
     # arm akimbo
     tube([(-6.0, 0.0, z0 + 33.5), (-10.0, -1.0, z0 + 28.5), (-6.0, -1.5, z0 + 23.5)], 1.8, color=G, tint=True,
          segs=8)

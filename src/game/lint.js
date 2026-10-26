@@ -119,6 +119,26 @@ export class Lint {
     this.earR.rotation.set(this.earAng[1] * 0.8, 0, -0.18 - this.earAng[1] * 0.3);
   }
 
+  /** Results pose: stand beside the ball, facing the camera at yaw `faceYaw`, waving the ears. */
+  showOff(dt, ball, faceYaw, groundY) {
+    this.t += dt;
+    const s = this.scale;
+    const side = faceYaw + Math.PI / 2;
+    const d = ball.r + s * 0.45;
+    this.hopV -= 14 * dt;
+    this.hop = Math.max(0, this.hop + this.hopV * dt);
+    if (this.hop === 0 && this.hopV < 0) this.hopV = 0;
+    this.group.position.set(ball.pos.x + Math.sin(side) * d, groundY + this.hop * s * 0.35, ball.pos.z + Math.cos(side) * d);
+    this.group.rotation.y = faceYaw;
+    this.rig.rotation.x = -0.08;
+    this.rig.position.y = 0;
+    this.footL.position.set(-0.13, 0, 0.07);
+    this.footR.position.set(0.13, 0, 0.07);
+    const w = Math.sin(this.t * 6);
+    this.earL.rotation.set(0.1, 0, 0.35 + w * 0.25);
+    this.earR.rotation.set(0.1, 0, -0.35 + w * 0.25);
+  }
+
   dispose() {
     this.mat.dispose();
     this.outMat.dispose();

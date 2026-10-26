@@ -524,22 +524,23 @@ def windmill():
     hub = Vector((0, -3.6, 14.2))
     cyl(0.4, 2.0, at=(0, -2.6, 14.2), rot=(90, 0, 0), base=False, color="cocoa", segs=8)
     sphere(0.65, at=tuple(hub), color="cocoa", segs=8, rings=5)
-    Ls = 10.4
+    Ls = 11.4
+    k = Ls / 10.4
     for i in range(4):
-        phi = 45 + 90 * i
+        phi = 30 + 90 * i
         r = math.radians(phi)
         d = Vector((math.sin(r), 0, math.cos(r)))
         p = Vector((math.cos(r), 0, -math.sin(r)))
         c = hub + d * (Ls / 2)
         box((0.36, 0.32, Ls), at=tuple(c), rot=(0, phi, 0), color="cocoa")
-        pc = hub + d * 6.2 + p * 1.05 + Vector((0, 0.1, 0))
-        box((1.9, 0.12, 7.6), at=tuple(pc), rot=(0, phi, 0), color="sand")
+        pc = hub + d * 6.2 * k + p * 1.1 + Vector((0, 0.1, 0))
+        box((2.0, 0.12, 7.6 * k), at=tuple(pc), rot=(0, phi, 0), color="sand")
         if not _lod1():
             for j in range(6):
-                q = hub + d * (2.75 + j * 1.38) + p * 1.05 + Vector((0, -0.02, 0))
-                box((2.0, 0.14, 0.12), at=tuple(q), rot=(0, phi, 0), color="cocoa")
-            q = hub + d * 6.2 + p * 2.0 + Vector((0, -0.02, 0))
-            box((0.12, 0.14, 7.6), at=tuple(q), rot=(0, phi, 0), color="cocoa")
+                q = hub + d * (2.75 + j * 1.38) * k + p * 1.1 + Vector((0, -0.02, 0))
+                box((2.1, 0.14, 0.12), at=tuple(q), rot=(0, phi, 0), color="cocoa")
+            q = hub + d * 6.2 * k + p * 2.1 + Vector((0, -0.02, 0))
+            box((0.12, 0.14, 7.6 * k), at=tuple(q), rot=(0, phi, 0), color="cocoa")
 
 
 @asset("water_tower", "Water Tower", "The town's biggest cup of water. Please do not stir.", L, "metal", "large",
@@ -771,13 +772,17 @@ def bakery():
     for y in (-1.5, 1.5):
         _win(W / 2, y, 1.4, 1.6, 2.0, face="+x", sill="cocoa")
     # giant loaf sign on posts
-    for x in (-2.0, 2.0):
-        box((0.3, 0.3, 1.6), at=(x, 0.5, H + 0.4), base=True, color="ink_soft")
-    sphere(1.0, at=(0, 0.3, H + 2.6), scale=(4.6, 1.7, 1.55), color="caramel", segs=16, rings=8)
-    for i in range(4):
-        x = -2.6 + i * 1.75
-        box((0.42, 0.22, 2.0), at=(x, 0.3 - 1.35, H + 3.3), rot=(70, 0, 0), color="sand")
-    box((0.3, 0.3, 0.06), at=(0, 0.3, H + 4.2), color="caramel", lod0=True)
+    for x in (-2.2, 2.2):
+        box((0.35, 0.35, 1.9), at=(x, 0.5, H + 0.4), base=True, color="ink_soft")
+    lz, lh, lx, ly = H + 2.0, 2.3, 4.5, 1.7
+    cyl(1.0, 0.45, at=(0, 0.5, lz), scale=(lx, ly, 1), color="cocoa", segs=16)
+    lathe([(math.cos(math.radians(a)), 0.45 + lh * math.sin(math.radians(a))) for a in (0, 25, 50, 70, 90)],
+          at=(0, 0.5, lz), scale=(lx, ly, 1), color="caramel", segs=16)
+    for x in (-2.7, -0.9, 0.9, 2.7):
+        h = 0.45 + lh * math.sqrt(1 - (x / lx) ** 2)
+        slope = math.degrees(math.atan(lh * x / (lx * lx * math.sqrt(1 - (x / lx) ** 2))))
+        sphere(1.0, at=(x, 0.5, lz + h - 0.08), scale=(0.3, 1.2, 0.22), rot=(0, slope, 28), color="sand", segs=8,
+               rings=4)
 
 
 @asset("billboard", "Billboard", "Toast: it's bread, but braver. Ad space available.", L, "paper", "large",
@@ -921,19 +926,14 @@ def town_fountain():
     sphere(0.35, at=(0, 0, 4.7), color="sun", segs=8, rings=5)
     cyl(0.16, 1.4, at=(0, 0, 4.9), r2=0.08, color="sky", segs=6)
     sphere(0.38, at=(0, 0, 6.35), scale=(1, 1, 0.8), color="sky", segs=8, rings=5)
-    # arcing streams of water
-    n1 = 8 if not _lod1() else 4
-    for i in range(n1):
-        a = math.radians(22.5 + 360 * i / n1)
-        c, s = math.cos(a), math.sin(a)
-        tube([(2.15 * c, 2.15 * s, 2.95), (2.6 * c, 2.6 * s, 2.6), (2.95 * c, 2.95 * s, 1.6), (3.05 * c, 3.05 * s, 0.75)],
-             0.13, r_end=0.09, color="sky", segs=5, smooth_path=1)
-    n2 = 6 if not _lod1() else 3
-    for i in range(n2):
-        a = math.radians(360 * i / n2)
-        c, s = math.cos(a), math.sin(a)
-        tube([(1.15 * c, 1.15 * s, 4.45), (1.45 * c, 1.45 * s, 4.1), (1.6 * c, 1.6 * s, 2.9)], 0.1, r_end=0.07,
-             color="sky", segs=5, smooth_path=1)
+    # water spilling over each rim as a glossy bell
+    lathe([(0, 0.72), (3.1, 0.72), (2.95, 1.5), (2.65, 2.3), (2.4, 2.75), (2.28, 2.97), (0, 2.97)], color="sky",
+          segs=20)
+    lathe([(0, 2.8), (1.72, 2.8), (1.6, 3.5), (1.4, 4.1), (1.25, 4.47), (0, 4.47)], color="sky", segs=14)
+    for i in range(10):
+        a = math.radians(36 * i)
+        sphere(0.22, at=(3.1 * math.cos(a), 3.1 * math.sin(a), 0.82), scale=(1, 1, 0.6), color="snow", segs=6, rings=3,
+               lod0=True)
     for (x, y) in ((1.5, -2.6), (-2.0, -1.8), (2.6, 1.2), (-0.6, 3.0)):
         cyl(0.14, 0.03, at=(x, y, 0.75), color="sun", segs=6, lod0=True)
 
@@ -980,27 +980,29 @@ def gazebo():
                 _poly3d([q0, q1, (ax, ay, zt - 0.5)], 0.04, ("sun", "tomato", "sky")[(i + j) % 3])
 
 
-def _toy_horse(origin, yaw, body, saddle, lod1):
-    """Carousel horse facing local -Y, built around `origin` and turned by yaw (degrees)."""
+def _toy_horse(origin, yaw, body, saddle, lod1, s=1.35):
+    """Carousel horse facing local -Y, built around `origin`, turned by yaw (degrees), scaled by s."""
     ca, sa = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
 
     def w(p):
-        return (origin[0] + p[0] * ca - p[1] * sa, origin[1] + p[0] * sa + p[1] * ca, origin[2] + p[2])
+        x, y, z = p[0] * s, p[1] * s, p[2] * s
+        return (origin[0] + x * ca - y * sa, origin[1] + x * sa + y * ca, origin[2] + z)
 
     if lod1:
-        box((0.45, 1.2, 0.5), at=w((0, 0, 0)), rot=(0, 0, yaw), color=body)
-        box((0.35, 0.45, 0.8), at=w((0, -0.6, 0.45)), rot=(-25, 0, yaw), color=body)
+        box((0.45 * s, 1.2 * s, 0.5 * s), at=w((0, 0, 0)), rot=(0, 0, yaw), color=body)
+        box((0.35 * s, 0.45 * s, 0.8 * s), at=w((0, -0.6, 0.45)), rot=(-25, 0, yaw), color=body)
+        box((0.5 * s, 0.4 * s, 0.14 * s), at=w((0, 0, 0.27)), rot=(0, 0, yaw), color=saddle)
         return
-    capsule(0.27, 0.65, at=w((0, 0, 0)), rot=(90, 0, yaw), color=body, segs=8)
-    tube([w((0, -0.4, 0.1)), w((0, -0.6, 0.55)), w((0, -0.65, 0.7))], 0.17, color=body, segs=6)
-    box((0.24, 0.55, 0.26), at=w((0, -0.82, 0.68)), rot=(30, 0, yaw), color=body)
-    tube([w((0, -0.3, 0.32)), w((0, -0.55, 0.78))], 0.07, color=saddle, segs=4)
+    capsule(0.27 * s, 0.65 * s, at=w((0, 0, 0)), rot=(90, 0, yaw), color=body, segs=8)
+    tube([w((0, -0.4, 0.1)), w((0, -0.6, 0.55)), w((0, -0.65, 0.7))], 0.17 * s, color=body, segs=6)
+    box((0.24 * s, 0.55 * s, 0.26 * s), at=w((0, -0.82, 0.68)), rot=(30, 0, yaw), color=body)
+    tube([w((0, -0.3, 0.32)), w((0, -0.55, 0.78))], 0.07 * s, color=saddle, segs=4)
     for k in (-1, 1):
-        tube([w((k * 0.13, -0.3, -0.15)), w((k * 0.13, -0.6, -0.3)), w((k * 0.13, -0.5, -0.6))], 0.065,
+        tube([w((k * 0.13, -0.3, -0.15)), w((k * 0.13, -0.6, -0.3)), w((k * 0.13, -0.5, -0.6))], 0.065 * s,
              color=body, segs=4)
-        tube([w((k * 0.13, 0.35, -0.15)), w((k * 0.13, 0.55, -0.7))], 0.065, color=body, segs=4)
-    box((0.58, 0.45, 0.12), at=w((0, 0.0, 0.27)), rot=(0, 0, yaw), color=saddle)
-    tube([w((0, 0.55, 0.1)), w((0, 0.8, -0.1)), w((0, 0.85, -0.45))], 0.08, color=saddle, segs=4)
+        tube([w((k * 0.13, 0.35, -0.15)), w((k * 0.13, 0.55, -0.7))], 0.065 * s, color=body, segs=4)
+    box((0.58 * s, 0.45 * s, 0.12 * s), at=w((0, 0.0, 0.27)), rot=(0, 0, yaw), color=saddle)
+    tube([w((0, 0.55, 0.1)), w((0, 0.8, -0.1)), w((0, 0.85, -0.45))], 0.08 * s, color=saddle, segs=4)
 
 
 @asset("carousel", "Carousel", "Round and round forever. The horses are not going anywhere.", L, "wood",
@@ -1033,7 +1035,7 @@ def carousel():
         ar = math.radians(a)
         px, py = 4.4 * math.cos(ar), 4.4 * math.sin(ar)
         cyl(0.07, zc - 0.8, at=(px, py, 0.8), color="sun", segs=5)
-        _toy_horse((px, py, 2.05 + 0.4 * (i % 2)), a, "snow", ("sky", "tomato")[i % 2], lod1)
+        _toy_horse((px, py, 2.2 + 0.45 * (i % 2)), a, "snow", ("sky", "tomato")[i % 2], lod1)
 
 
 @asset("church", "Village Church", "The bells are lovely. The bells are also at 7 a.m.", L, "stone", "landmark",
@@ -1199,25 +1201,25 @@ def ferris_wheel():
             tube([(x, y, 0.8), (0, y * 0.75, zc)], 0.5, color="cobalt", segs=8)
         tube([(-4.8, y * 0.95, 7.0), (4.8, y * 0.95, 7.0)], 0.3, color="cobalt", segs=6)
     cyl(0.9, 5.0, at=(0, 0, zc), rot=(90, 0, 0), base=False, color="sun", segs=10)
-    for y in (-1.6, 1.6):
-        torus(R, 0.38, at=(0, y, zc), rot=(90, 0, 0), color="snow", segs=36, rsegs=6)
-        torus(R * 0.62, 0.2, at=(0, y, zc), rot=(90, 0, 0), color="snow", segs=28, rsegs=4, lod0=True)
-        ns = 16 if not lod1 else 8
-        for i in range(ns):
-            phi = 360.0 * i / ns
-            r = math.radians(phi)
-            box((0.3, 0.3, R), at=(math.sin(r) * R / 2, y, zc + math.cos(r) * R / 2), rot=(0, phi, 0), color="snow")
+    for y in (-1.1, 1.1):
+        torus(R, 0.42, at=(0, y, zc), rot=(90, 0, 0), color="snow", segs=36, rsegs=6)
+    torus(R * 0.55, 0.3, at=(0, 0, zc), rot=(90, 0, 0), color="tomato", segs=24, rsegs=4, lod0=True)
+    ns = 12 if not lod1 else 8
+    for i in range(ns):
+        phi = 360.0 * i / ns + 15
+        r = math.radians(phi)
+        box((0.45, 0.45, R), at=(math.sin(r) * R / 2, 0, zc + math.cos(r) * R / 2), rot=(0, phi, 0), color="snow")
     # gondolas
     ng = 12
     cols = ("tomato", "sun", "sky")
     for i in range(ng):
         a = math.radians(360.0 * i / ng + 15)
         px, pz = R * math.cos(a), zc + R * math.sin(a)
-        cyl(0.13, 3.6, at=(px, 0, pz), rot=(90, 0, 0), base=False, color="ink_soft", segs=4, lod0=True)
-        box((0.14, 0.14, 1.0), at=(px, 0, pz - 1.0), base=True, color="ink_soft")
-        cyl(1.3, 1.5, at=(px, 0, pz - 2.9), color=cols[i % 3], segs=10)
-        cyl(1.42, 0.55, at=(px, 0, pz - 1.4), r2=0.25, color=cols[i % 3], segs=10)
-        cyl(1.34, 0.6, at=(px, 0, pz - 2.0), color="glass", segs=10, lod0=True)
+        cyl(0.13, 2.6, at=(px, 0, pz), rot=(90, 0, 0), base=False, color="ink_soft", segs=4, lod0=True)
+        box((0.16, 0.16, 0.8), at=(px, 0, pz - 0.8), base=True, color="ink_soft")
+        cyl(1.55, 1.7, at=(px, 0, pz - 3.3), color=cols[i % 3], segs=10)
+        cyl(1.7, 0.6, at=(px, 0, pz - 1.6), r2=0.3, color=cols[i % 3], segs=10)
+        cyl(1.6, 0.7, at=(px, 0, pz - 2.4), color="glass", segs=10, lod0=True)
 
 
 @asset("apartment_block", "Apartment Block", "Forty kitchens, forty dinners, one very tired lift.", L, "stone",

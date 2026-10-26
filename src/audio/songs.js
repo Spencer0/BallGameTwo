@@ -103,8 +103,8 @@ const shufA = ['Bbmaj7 G7', 'Cm7 F7', 'Dm7 G7', 'Cm7 F7', 'Fm7 Bb7', 'Ebmaj7 Ab7
 const shufB = ['D7', 'D7', 'G7', 'G7', 'C7', 'C7', 'F7', 'F7'];
 const shufComp = { type: 'comp', inst: 'epiano', rhythm: 'x.....x.........', vel: 0.7 };
 const shufMel =
-  'D5/4 F5/2 D5/2 B4/4 D5/4  Eb5/2 D5/2 C5/2 Bb4/2 A4/4 C5/4  F5/4 A5/4 G5/2 F5/2 D5/4  Eb5/4 C5/2 A4/2 Bb4/8 ' +
-  'Ab4/2 C5/2 Eb5/2 F5/2 D5/4 Bb4/4  G5/4 Eb5/4 Gb5/4 F5/4  F5/2 E5/2 D5/2 B4/2 G4/4 B4/4  C5/6 A4/2 Bb4/8';
+  'D5/4 F5/2 D5/2 B4/4 D5/4  Eb5/2 D5/2 C5/2 Bb4/2 A4/4 C5/4  F5/4 A5/4 G5/2 F5/2 D5/4  Eb5/4 C5/2 Bb4/2 A4/8 ' +
+  'Ab4/2 C5/2 Eb5/2 F5/2 D5/4 Bb4/4  G5/4 Eb5/4 Gb5/4 F5/4  F5/2 E5/2 D5/2 B4/2 G4/4 B4/4  C5/6 Bb4/2 A4/8';
 const shufMelB =
   'F#5/4 A5/4 C6/4 A5/4  F#5/2 E5/2 D5/4 r/8  B5/4 D6/4 F5/4 D5/4  B4/2 C5/2 D5/4 r/8 ' +
   'E5/4 G5/4 Bb5/4 G5/4  E5/2 D5/2 C5/4 r/8  A5/4 C6/4 Eb5/4 C5/4  A4/4 C5/4 Eb5/4 F5/4';
@@ -129,7 +129,7 @@ const strutBass = { type: 'bass', style: 'synth', pat: [0, 2, 4, 6, 8, 10, 12, 1
 const strutComp = { type: 'comp', inst: 'epiano', rhythm: '....x-......x-x.', vel: 0.7 };
 const strutMel =
   'B4/2 D5/2 E5/4 D5/2 B4/2 G4/4  A4/2 B4/2 C#5/4 E5/8  B4/2 D5/2 E5/4 G5/2 E5/2 D5/4  F#5/4 E5/4 C#5/8 ' +
-  'E5/2 G5/2 B5/8 A5/4  A5/2 G5/2 F#5/4 D#5/8  E5/12 r/4  r/8 B4/2 D5/2 E5/4';
+  'E5/2 G5/2 B5/8 A5/4  A5/2 G5/2 F#5/4 D#5/8  E5/12 r/4  r/8 B4/2 D#5/2 F#5/4';
 const strutMelB =
   'C5/4 E5/4 G5/8  F#5/4 E5/4 D5/8  B4/4 D5/4 F#5/8  E5/4 G5/4 B5/8 ' +
   'A5/4 C6/4 A5/8  G5/2 F#5/2 D#5/4 B4/8  E5/16  r/16';
