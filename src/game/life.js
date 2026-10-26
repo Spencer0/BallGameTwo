@@ -68,6 +68,7 @@ export class Life {
     const net = this.net;
     if (net) {
       this.laneCars = net.lanes.map(() => []);
+      this.laneIncoming = new Int16Array(net.lanes.length); // cars in a junction headed into each lane
       this.nodeBusy = new Int16Array(net.nodes.length);
       this.nodeLane = new Int32Array(net.nodes.length).fill(-1);
       this.entries = net.lanes.filter((l) => net.nodes[l.from].exit).map((l) => l.id);
@@ -291,7 +292,10 @@ export class Life {
     const arr = this.laneCars[a.lane];
     const k = arr.indexOf(a);
     if (k >= 0) arr.splice(k, 1);
-    if (a.conn) this.leaveNode(a);
+    if (a.conn) {
+      this.leaveNode(a);
+      if (a.next >= 0) this.laneIncoming[a.next] = Math.max(0, this.laneIncoming[a.next] - 1);
+    }
   }
 
   leaveNode(a) {
@@ -420,12 +424,14 @@ export class Life {
         }
         if (!hold && n.stop && this.nodeBusy[lane.to] > 0 && this.nodeLane[lane.to] !== a.lane) hold = true;
         if (!hold && a.next >= 0) {
-          // don't enter if the start of the next lane is occupied
+          // don't enter if the start of the next lane is occupied or another car is already turning into it
+          if (this.laneIncoming[a.next] > 0) hold = true;
           const nx = this.laneCars[a.next];
           for (let k = 0; k < nx.length; k++) if (nx[k].s < nx[k].len + 3) hold = true;
         }
         if (hold) gap = Math.min(gap, toEnd - 0.5);
-      }
+        a.hold = hold;
+      } else a.hold = false;
       if (gap < Infinity) target = Math.min(target, Math.max(0, (gap - 2.5) * 1.1));
     }
     // a train coming through the level crossing ahead
@@ -458,6 +464,11 @@ export class Life {
     a.s += a.v * dt;
     // advance along lane / connector
     if (!a.conn) {
+      if (a.s >= lane.len && a.hold && !net.nodes[lane.to].exit) {
+        // told to wait but arrived too fast to stop smoothly: stop at the line rather than barge in
+        a.s = lane.len - 0.05;
+        a.v = 0;
+      }
       if (a.s >= lane.len) {
         const n = net.nodes[lane.to];
         if (n.exit) {
@@ -472,6 +483,7 @@ export class Life {
           a.conn = this.connector(a.lane, a.next);
           a.s -= lane.len;
           a.seg = 1;
+          this.laneIncoming[a.next]++;
           this.nodeBusy[lane.to]++;
           if (this.nodeLane[lane.to] < 0) this.nodeLane[lane.to] = a.lane;
           a.wait = 0;
@@ -480,6 +492,7 @@ export class Life {
     }
     if (a.conn && a.s >= a.conn.len) {
       this.leaveNode(a);
+      this.laneIncoming[a.next]--;
       const arr = this.laneCars[a.lane];
       arr.splice(arr.indexOf(a), 1);
       a.s -= a.conn.len;
