@@ -35,6 +35,7 @@ export class ObjType {
     this.geo = [null, null]; // LOD0, LOD1
     this.bound = 0.5 * Math.hypot(meta.dims[0], meta.dims[1], meta.dims[2]);
     this.isCreature = meta.flags.includes('creature');
+    this.floats = meta.flags.includes('float');
   }
 }
 

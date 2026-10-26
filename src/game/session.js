@@ -401,6 +401,28 @@ export class Session {
       }
     }
     this.comboT -= dt;
+    // dust kicked up when rolling fast on the ground
+    const b = this.ball;
+    const sp = Math.hypot(b.vel.x, b.vel.z);
+    this.dustT = (this.dustT || 0) - dt;
+    if (b.grounded && sp > 3.2 * b.r && this.dustT <= 0) {
+      this.dustT = 0.09;
+      const inv = 1 / sp;
+      this.particles.emit(
+        b.pos.x - b.vel.x * inv * b.r * 0.9 + (Math.random() - 0.5) * b.r,
+        b.pos.y - b.r * 0.85,
+        b.pos.z - b.vel.z * inv * b.r * 0.9 + (Math.random() - 0.5) * b.r,
+        -b.vel.x * 0.15,
+        b.r * 0.6,
+        -b.vel.z * 0.15,
+        b.r * 0.22,
+        0.45,
+        'paper',
+        1,
+        0,
+        1.2,
+      );
+    }
     this.updateCreatures(dt);
     this.updateFallers(dt);
     this.updateWobbles(dt);

@@ -49,8 +49,8 @@ fetched binary asset packs).
 Attached objects are *baked into a single dynamic mesh in ball-local space* the moment their
 pickup animation finishes:
 
-- Preallocated typed arrays (positions, normals, outline normals, colours; Uint32 index) sized
-  for `CRUST_MAX_VERTS` (90k High / 50k Low). Appending an object writes its (LOD-chosen)
+- Preallocated typed arrays (positions, normals, outline normals, palette indices, outline-width sizes;
+  Uint32 index) sized for 90k vertices / 2048 items, shared by every level (allocated once). Appending an object writes its (LOD-chosen)
   vertices transformed into ball space and uploads only the changed range (`addUpdateRange`).
 - Items are kept in append order. **Knock-off** removes the most recent items → just shrink
   the draw range. Removed items become world objects again.
@@ -63,12 +63,12 @@ pickup animation finishes:
 
 ## 5. Physics & collision (custom, allocation-free)
 
-- Ball: position, velocity, radius. Input → acceleration in camera space. Top speed and accel
-  scale with radius (`v_max ≈ 2.7·r^0.92 /s`), so feel is constant across scales.
+- Ball: position, velocity, radius. Input → acceleration in camera space. Top speed, acceleration and
+  gravity scale linearly with radius (`v_max = 4.4 r/s`), so the feel is identical at every scale.
 - Ground: level ground height `h(x,z)` (flat or terraced) + **support surfaces**: tops of
   uncollectible box colliders (tables, beds, cars, roofs) under the ball.
-- **Climbing**: pushing into a box whose top is ≤ `CLIMB_MAX·r` above the ball's bottom makes the
-  ball climb (Katamari-like wall climb), then roll onto the top.
+- **Climbing**: pushing into anything whose top is ≤ `1.6·r` above the ball's bottom makes the
+  ball climb (Katamari-like wall climb), then roll onto the top. Such low obstacles never bounce the ball.
 - Object colliders: yaw-rotated box, vertical cylinder, or sphere (from the catalog). Sphere-vs-shape
   tests in object local space, no allocations (scratch vectors are module-level).
 - **Broadphase**: uniform grid (`cellSize` per level). Each cell stores instance indices and the max
@@ -79,23 +79,24 @@ pickup animation finishes:
 
 | Problem | Solution |
 |---|---|
-| Thousands of objects in the city | Per-type `InstancedMesh`; per-level object count budget (L6 ≈ 6k). Draw calls bounded by *types visible*, not objects. |
-| Overdraw / far stuff | **Cell culling**: the grid is tested against the camera frustum; only visible cells contribute. Instance buffers are rebuilt from visible cells every 3 frames (or on fast camera moves) by copying cached 16-float matrices — no per-frame allocation. |
+| Thousands of objects in the city | Per-type `InstancedMesh` (LOD0, LOD1, outline twin sharing the LOD0 instance buffer); draw calls are bounded by *types visible*, not objects. Blob shadows for all near objects are one more instanced draw. |
+| Overdraw / far stuff | **Cell culling**: the grid is tested against the camera frustum and the (ball-scaled) view distance; only visible cells contribute. Instance buffers are refilled from visible cells every frame by copying cached 16-float matrices (≈0.2 ms for thousands of instances) — no per-frame allocation. Objects whose bounds contain the camera are skipped (see-through). |
 | Detail at distance | **LOD**: per instance, projected size `size / distance` picks LOD0, LOD1, or *culled* (below ~2 px). Outlines only on LOD0. Big landmarks have a min-LOD1 distance, so skylines stay. |
 | Tiny objects in huge levels | **Tiny-object cutoff**: when `size < 2.5 %` of the ball radius, an object is no longer simulated as a collider; rolling over its cell auto-collects it in bulk (counted for the log and growth, a puff of particles, no individual animation or crust entry). Its draw distance shrinks to near zero. |
 | Stuck items explode in count | Crust merge + burial (§4). |
-| Float precision | Each level is its own world in metres; the largest is 2.6 km, so float32 positions are fine (≤ 0.25 mm error at 2.6 km). **Depth precision** is the real risk: near/far planes are scaled with the ball (`near = 0.04·r`, `far = clamp(700·r)`), and the fog end is always before `far`. A floating origin is not needed; documented if larger worlds are ever added. |
+| Float precision | Each level is its own world in metres; the largest is 2.6 km, so float32 positions are fine (≤ 0.25 mm error at 2.6 km). **Depth precision** is the real risk: near/far planes are scaled with the smoothed camera radius (`near = 0.06·R`, `far = 900·R`, a constant 15 000:1 ratio at every scale), and outdoor fog ends well before `far`. A floating origin is not needed; documented if larger worlds are ever added. |
 | Camera range | Camera distance and height are functions of ball radius with spring smoothing; FOV fixed, so the screen-space size of the ball stays roughly constant. |
 | Physics step at scale | Fixed timestep (1/60) in *radius-normalised* units (speeds and gravity scale with r), max 4 substeps; tunnelling is prevented because per-step travel is < 0.2·r. |
-| Memory | All per-level GPU resources are disposed on level exit; asset packs for later levels are lazily fetched; crust buffers are reused across levels. No `new` in the frame loop (vector/matrix scratch pools, particle pools). |
+| Memory | All per-level GPU resources are disposed on level exit; asset packs are streamed per level (each level lists the packs it needs; unlocked levels are prefetched in the background from the menus); crust buffers are reused across levels. No `new` in the frame loop (scratch vectors/matrices, pooled particles and fly-in meshes). Verified by `tests/profile.mjs` (flat heap and GPU resource counts across level switches). |
 
 ## 7. Performance strategy
 
-- Quality tiers (Low / Medium / High) control: device pixel ratio cap (1.0 / 1.5 / 2.0),
-  outlines (off far / LOD0 only / all LOD0), blob shadows, particle count, crust capacity,
-  view distance multiplier, max instances per type.
-- **Auto quality**: rolling 2 s window of frame times; > 22 ms avg → drop one tier (or reduce DPR
-  in 0.25 steps first); < 13 ms for 12 s → allow one step back up to the user's chosen tier.
+- Quality tiers (Low / Medium / High) control: device pixel ratio cap (1.0 / 1.5 / 2.0), world outlines
+  (off / on / on — the ball and Lint always keep theirs), LOD switch distance (projected size 60 / 36 / 22 px),
+  small-object cull size (3 / 2 / 1.3 px), blob shadows (off / on / on) and particle budget (40 / 70 / 100 %).
+- **Auto quality** (default): starts at Medium; rolling 2 s windows of frame time; > 22 ms average → first
+  lower the pixel ratio in 12.5 % steps (to 75 %), then drop a tier; < 13 ms sustained for 12 s → step back
+  up, never above High. The settings screen shows the tier currently in use.
 - iOS hygiene: no per-frame allocations, `powerPreference: 'high-performance'`, antialias off at
   DPR ≥ 2, `webglcontextlost` handled (pause + rebuild on restore), audio context resumed on
   visibility change, and the loop stops in the background.

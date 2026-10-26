@@ -353,7 +353,7 @@ export class World {
             const n = b.n0++;
             copy16(this.mat, i * 16, b.lod0.instanceMatrix.array, n * 16);
             b.lod0.geometry.attributes.aTint.array[n] = this.tint[i];
-            if (sh && ns < shCap && this.state[i] !== MOVING_AIR) {
+            if (sh && ns < shCap && !this.types[this.type[i]].floats) {
               const t = this.types[this.type[i]];
               const s = this.scale[i];
               const o = ns++ * 16;

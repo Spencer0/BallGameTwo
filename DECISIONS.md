@@ -19,8 +19,12 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
   big pickups still dominate.
 - Knock-off: impacts above 0.6× top speed shed `1 + (impact−0.6)·5` most-recent items. Exact volume bookkeeping
   (each crust item stores the volume it added).
-- Climbing: pushing into an obstacle whose top is within 2.3 radii climbs it (Katamari-style). This is how
-  small balls reach table tops and beds.
+- Climbing: pushing into an obstacle whose top is within **1.6 radii** of the ball's bottom climbs it, from any
+  contact angle (Katamari-style). 2.3 r was tried first: a 1 m ball mounted sofas and wandered on furniture tops.
+  Low obstacles also never bounce or knock items loose — they're steps, not walls. (A ball perched on a low
+  edge used to jitter in place because the contact was neither "ground" nor "wall".)
+- Dollhouse walls in the House level are 1.1 m: they keep rooms meaningful until the ball is ~1.4 m, then
+  become climbable.
 - Camera: auto-follow toward direction of travel (not while deliberately reversing) + **double-tap quick turn**.
   No separate camera control was needed in testing; keyboard Q/E exists for desktop.
 - Zen mode: "Finish & inspect" in the pause menu ends the level; reaching the target counts as completed.
@@ -37,6 +41,15 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
 - Instances whose bounds contain the camera are culled (you see through them) — otherwise an outline hull
   around the camera floods the screen with ink.
 - Sky is a gradient canvas texture as the scene background (cheap; no extra geometry).
+- Room walls (bedroom) are inward-facing planes: from outside they are back-face culled, so the camera can
+  swing behind a wall and see through it instead of being shoved into the ball.
+- Outdoor fog and view distance scale with the ball (`far = k × camera radius`): the world literally opens up
+  as you grow, and culling distance follows.
+- All asset winding is normalised in `finalize()` (recalc outward normals per part). Some helpers (torus,
+  lathe pole caps) produced inward faces that Blender's double-sided thumbnails hid but the game's back-face
+  culling would expose.
+- Results/postcard: Lint stands beside the ball facing the camera instead of pushing it from behind (which hid
+  the ball).
 
 ## Pipeline
 - Blender 4.5 LTS was not preinstalled; installed from the official tarball. EEVEE/Workbench need a GL
@@ -50,6 +63,11 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
   with a look-ahead scheduler; instruments are synthesised (FM e-piano, clav, brass, whistle, kazoo, drums).
 - Pickup sounds are quantised to the current song's key; combos climb a pentatonic scale.
 
+## Testing
+- The autopilot (test bot) targets the best nearby pickup (size/distance), bans targets it got stuck on,
+  respects climbability and has line of sight against walls. It's deliberately simple; its completion times
+  set the timer budgets (each timer ≈ 1.6–2.4× the bot's time to goal).
+
 ## Platform / extras
 - **Hosting is a claude.ai artifact**, which forbids service workers and page-initiated downloads. So:
   no offline/Add-to-Home-Screen PWA; the **postcard** is shown as an image to press-and-hold (save/share via
@@ -57,5 +75,10 @@ Calls made along the way that the brief left open. Newest at the bottom of each 
 - Fonts: Shrikhand + Baloo 2 from Google Fonts (the only external resource), with system fallbacks.
 - Haptics: `navigator.vibrate` where available; on iOS 18+ a hidden switch control is toggled (Safari plays
   a system haptic for switches). Older iOS has no web haptics.
-- Extras chosen for effort/impact: collection log, 10 unlockable ball skins, postcard. Skipped: PWA (blocked
-  by the host).
+- Extras chosen for effort/impact: collection log, 10 unlockable ball skins, postcard, attract-mode menus
+  (the title floats over a live demo of Lint rolling up the table). Skipped: PWA (blocked by the host).
+- Asset packs ship twice: meshopt-compressed (needs WebAssembly) and quantized-only. The game probes
+  WebAssembly at boot and falls back, in case the host's content policy forbids WASM compilation.
+- Sound follows the iPhone's silent switch (default Web Audio session); no `audioSession` override.
+- A performance overlay is hidden behind a triple-tap on the size readout, so frame rate can be checked on a
+  real phone.

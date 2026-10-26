@@ -384,9 +384,12 @@ class App {
 
   onSessionEnd(result) {
     this.input.setEnabled(false);
-    this.ui.hudEnd();
     this.music.stop(1.2);
-    if (result.reason === 'time') this.sfx.timeUp();
+    if (result.reason === 'time') {
+      this.sfx.timeUp();
+      this.ui.hudStamp("Time's up!", 'goal');
+      setTimeout(() => this.ui.hudEnd(), 1250);
+    } else this.ui.hudEnd();
     const i = result.level.n - 1;
     const before = this.unlockContext();
     const rec = this.save.recordResult(i, result.level.id, result);
