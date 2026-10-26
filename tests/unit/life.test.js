@@ -105,7 +105,8 @@ test('signals cycle and cars stop for the ball', () => {
   }
   assert.equal(phases.size, 6);
   // park the ball right in front of a car: it must stop
-  const a = sim.cars.find((c) => !c.conn && c.v > 1);
+  // a car with plenty of lane ahead (so it can't simply turn away from the ball)
+  const a = sim.cars.find((c) => !c.conn && c.v > 1 && sim.net.lanes[c.lane].len - c.s > 35);
   assert.ok(a);
   session.ball.pos.x = world.x[a.i] + a.hx * 8;
   session.ball.pos.z = world.z[a.i] + a.hz * 8;
