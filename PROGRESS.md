@@ -52,9 +52,15 @@ Jank fixed:
   growth 0.75, new star ladder; the bot now reaches the goal at ~30 %.
 - Finale used to pop over the City results after 2.6 s, hiding them.
 - Outdoor levels were exhausted in a minute: bigger maps, per-level pace/growth/stars (see DESIGN.md).
+- Results card on short phones (SE): rows were squashed together, then scrolled; now a compact layout fits
+  without scrolling and the action row never wraps.
 
-## Next
-- 30-minute soak profile across levels; publish artifact.
+## Final verification
+- Playthrough bot: all 6 levels × Zen and Timed complete, next level unlocks, no console errors.
+- 32-minute soak across all six levels (load/dispose every ~45 s): heap flat at 37–39 MB once all packs are
+  cached, 11 shader programs throughout, geometry counts return to baseline, no console errors.
+- Screens at iPhone SE / 14 sizes, persistence across reload, finale flow, single-page build as hosted.
+- Published: https://claude.ai/artifact/WY8bjgJp4aa1vB6BNitPUB
 
 ## Known issues
 - Performance numbers come from desktop Chromium + SwiftShader, not a physical iPhone.
