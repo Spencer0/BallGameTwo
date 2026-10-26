@@ -69,8 +69,8 @@ export class Life {
     if (net) {
       this.laneCars = net.lanes.map(() => []);
       this.laneIncoming = new Int16Array(net.lanes.length); // cars in a junction headed into each lane
-      this.nodeBusy = new Int16Array(net.nodes.length);
-      this.nodeLane = new Int32Array(net.nodes.length).fill(-1);
+      this.nodeOcc = net.nodes.map(() => []); // cars currently driving through each junction
+      this.conflictCache = new Map();
       this.entries = net.lanes.filter((l) => net.nodes[l.from].exit).map((l) => l.id);
       // signal state per node
       this.sig = net.nodes.map((n) => (n.signal ? { t: Math.random() * 30, phase: 0 } : null));
@@ -299,9 +299,48 @@ export class Life {
   }
 
   leaveNode(a) {
-    const node = this.net.lanes[a.lane].to;
-    this.nodeBusy[node] = Math.max(0, this.nodeBusy[node] - 1);
-    if (this.nodeBusy[node] === 0) this.nodeLane[node] = -1;
+    const occ = this.nodeOcc[this.net.lanes[a.lane].to];
+    const k = occ.indexOf(a);
+    if (k >= 0) occ.splice(k, 1);
+  }
+
+  /** do the paths of two junction movements cross (or merge)? cached per pair */
+  conflicts(fromA, toA, fromB, toB) {
+    if (toA === toB) return true;
+    const key = fromA * 73856093 + toA * 19349663 + fromB * 83492791 + toB;
+    let c = this.conflictCache.get(key);
+    if (c !== undefined) return c;
+    // conflict if the two paths ever come closer than a car's width plus a margin
+    const dense = (P) => {
+      const out = [];
+      for (let i = 1; i < P.length; i++) {
+        const n = Math.max(1, Math.ceil(Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])));
+        for (let k = 0; k < n; k++) out.push([P[i - 1][0] + ((P[i][0] - P[i - 1][0]) * k) / n, P[i - 1][1] + ((P[i][1] - P[i - 1][1]) * k) / n]);
+      }
+      out.push(P[P.length - 1]);
+      return out;
+    };
+    const A = dense(this.connector(fromA, toA).pts),
+      B = dense(this.connector(fromB, toB).pts);
+    c = false;
+    for (let i = 0; i < A.length && !c; i++) for (let j = 0; j < B.length && !c; j++) if ((A[i][0] - B[j][0]) ** 2 + (A[i][1] - B[j][1]) ** 2 < 2.8 * 2.8) c = true;
+    this.conflictCache.set(key, c);
+    return c;
+  }
+
+  /** may car a (at the end of its lane, heading for a.next) enter the junction now? */
+  junctionClear(a) {
+    const occ = this.nodeOcc[this.net.lanes[a.lane].to];
+    for (let k = 0; k < occ.length; k++) {
+      const o = occ[k];
+      if (o.lane === a.lane) {
+        // the car ahead from my own lane: wait until it has pulled clear
+        if (o.s < o.len + 3) return false;
+        continue;
+      }
+      if (this.conflicts(a.lane, a.next, o.lane, o.next)) return false;
+    }
+    return true;
   }
 
   connector(from, to) {
@@ -422,7 +461,7 @@ export class Life {
             if (a.v < 0.3) a.wait += dt;
           }
         }
-        if (!hold && n.stop && this.nodeBusy[lane.to] > 0 && this.nodeLane[lane.to] !== a.lane) hold = true;
+        if (!hold && a.next >= 0 && toEnd < 8 && !this.junctionClear(a)) hold = true;
         if (!hold && a.next >= 0) {
           // don't enter if the start of the next lane is occupied or another car is already turning into it
           if (this.laneIncoming[a.next] > 0) hold = true;
@@ -484,8 +523,7 @@ export class Life {
           a.s -= lane.len;
           a.seg = 1;
           this.laneIncoming[a.next]++;
-          this.nodeBusy[lane.to]++;
-          if (this.nodeLane[lane.to] < 0) this.nodeLane[lane.to] = a.lane;
+          this.nodeOcc[lane.to].push(a);
           a.wait = 0;
         }
       }

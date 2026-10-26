@@ -81,9 +81,10 @@ void main() {
     col = mix(col, uB, edge);
   } else if (uPattern == 9) { // plain checks
     col = mix(uA, uB, mod(floor(p.x) + floor(p.y), 2.0));
-  } else if (uPattern == 8) { // water ripples
-    float w = sin(p.x * 1.7 + uTime * 0.8) * 0.5 + sin(p.y * 2.3 - uTime * 0.6) * 0.5;
-    col = mix(uA, uB, aastep(0.72, w));
+  } else if (uPattern == 8) { // water: small light streaks drifting (same language as the street-mesh water)
+    vec2 q = vWorld.xz;
+    float w = sin(q.y * 0.33 + q.x * 0.11 + uTime * 1.1) + sin(q.x * 0.47 - q.y * 0.07 - uTime * 0.8);
+    col = mix(uA, uB, aastep(1.62, w));
   }
   col *= uShade;
   float f = smoothstep(uFogNear, uFogFar, vFogDepth);
@@ -352,4 +353,51 @@ export class Environment {
     this.group.removeFromParent();
     for (const d of this.disposables) d.dispose();
   }
+}
+
+/**
+ * Sky dome for outdoor levels: colour by view elevation, so the horizon always meets the fog colour
+ * (no seam however the camera pitches). stops: [[t, colour], ...] with t = 0 at the zenith, 1 at the horizon.
+ */
+export function makeSkyDome(stops, horizon) {
+  const cols = stops.map(([, c]) => linearRGB(HEX[c] || c));
+  const ts = stops.map(([t]) => Math.min(0.97, t));
+  cols.push(linearRGB(HEX[horizon] || horizon));
+  ts.push(1);
+  while (cols.length < 6) {
+    cols.push(cols[cols.length - 1].clone());
+    ts.push(1.01 + cols.length * 0.01);
+  }
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uCol: { value: cols.slice(0, 6) }, uT: { value: ts.slice(0, 6) } },
+    vertexShader: /* glsl */ `
+      varying vec3 vDir;
+      void main() {
+        vDir = position;
+        vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        gl_Position = p.xyww; // on the far plane
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uCol[6];
+      uniform float uT[6];
+      varying vec3 vDir;
+      void main() {
+        float e = normalize(vDir).y;
+        float t = 1.0 - clamp(e / 0.55, 0.0, 1.0); // 0 zenith-ish .. 1 horizon and below
+        vec3 c = uCol[0];
+        for (int k = 1; k < 6; k++) {
+          float a = clamp((t - uT[k - 1]) / max(1e-4, uT[k] - uT[k - 1]), 0.0, 1.0);
+          if (t >= uT[k - 1]) c = mix(uCol[k - 1], uCol[k], a);
+        }
+        gl_FragColor = vec4(c, 1.0);
+        #include <colorspace_fragment>
+      }`,
+    side: THREE.BackSide,
+    depthWrite: false,
+    depthTest: false,
+  });
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), mat);
+  m.renderOrder = -10;
+  m.frustumCulled = false;
+  return m;
 }

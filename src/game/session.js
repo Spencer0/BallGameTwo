@@ -6,7 +6,7 @@ import { Ball, PHYS } from './ball.js';
 import { Crust } from './crust.js';
 import { FollowCamera } from './camera.js';
 import { Particles, SHAPE } from './particles.js';
-import { Environment, makeBlobMaterial } from '../render/environment.js';
+import { Environment, makeBlobMaterial, makeSkyDome } from '../render/environment.js';
 import { makeToonMaterial, makeOutlineMaterial, makeCoreMaterial, shared, linearRGB } from '../render/materials.js';
 import { SKINS, PATTERNS } from './skins.js';
 import { PAL, HEX } from '../render/palette.js';
@@ -92,6 +92,9 @@ export class Session {
     this.scene.background = this.env.skyTexture;
     if (mod.env.fog) {
       linearRGB(HEX[mod.env.fog.color] || mod.env.fog.color, shared.uFogColor.value);
+      // outdoors: a dome that always meets the fog colour at the horizon
+      this.skyDome = makeSkyDome(mod.env.sky, mod.env.fog.color);
+      this.scene.add(this.skyDome);
     } else {
       shared.uFogNear.value = 1e7;
       shared.uFogFar.value = 2e7;
@@ -625,6 +628,7 @@ export class Session {
   }
 
   render(renderer) {
+    if (this.skyDome) this.skyDome.position.copy(this.camera.position);
     const b = this.ball;
     this.focus = this.focus || { x: 0, y: 0, z: 0, r: 0 };
     this.focus.x = b.pos.x;
@@ -663,6 +667,10 @@ export class Session {
     this.world.dispose();
     this.env.dispose();
     this.ballGroup.remove(this.crust.mesh, this.crust.outline);
+    if (this.skyDome) {
+      this.skyDome.geometry.dispose();
+      this.skyDome.material.dispose();
+    }
     this.coreGeo.dispose();
     this.coreMat.dispose();
     this.coreOutMat.dispose();

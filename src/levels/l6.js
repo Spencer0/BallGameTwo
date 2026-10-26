@@ -205,15 +205,15 @@ export const env = {
   fog: { near: 600, far: 1700, k: 70, color: '#FF9E7A' },
   groundY: 0,
   planes: [
-    { x: 0, z: 0, w: 20000, d: 20000, y: -2.5, pattern: 'water', a: 'cobalt', b: '#5B7BE4', cell: 30 },
+    { x: 0, z: 0, w: 20000, d: 20000, y: -2.5, pattern: 'water', a: 'cobalt', b: 'sky', cell: 30 },
     // central park lawns and lakes
     { x: (PARK.minX + PARK.maxX) / 2, z: (PARK.minZ + PARK.maxZ) / 2, w: PARK.maxX - PARK.minX - 12, d: PARK.maxZ - PARK.minZ - 12, y: -0.6, pattern: 'lawn', a: 'leaf', b: '#4DB86A', cell: 14 },
-    { x: -60, z: -1380, r: 95, y: -0.4, pattern: 'water', a: 'sky', b: '#8AD2F7', cell: 12 },
-    { x: 120, z: -820, r: 55, y: -0.4, pattern: 'water', a: 'sky', b: '#8AD2F7', cell: 10 },
+    { x: -60, z: -1380, r: 95, y: -0.4, pattern: 'water', a: 'cobalt', b: 'sky', cell: 12 },
+    { x: 120, z: -820, r: 55, y: -0.4, pattern: 'water', a: 'cobalt', b: 'sky', cell: 10 },
     // borough park + stadium plaza
-    { x: 1800, z: -1500, w: 300, d: 360, y: -0.6, pattern: 'lawn', a: 'leaf', b: '#4DB86A', cell: 14 },
+    { x: 1800, z: -1500, w: 300, d: 360, y: -0.6, pattern: 'solid', a: 'leaf' },
     // airport grass
-    { x: -1830, z: -350, w: 560, d: 2000, y: -0.6, pattern: 'lawn', a: 'lime', b: '#8DCE47', cell: 20 },
+    { x: -1830, z: -350, w: 560, d: 2000, y: -0.6, pattern: 'solid', a: '#8FCF4A' },
   ],
   streets: (b) => {
     landPolys(b);
@@ -426,7 +426,7 @@ export function layout(lib, seed = 606) {
   }
   const blimp = L.put('blimp', 1800, -800, { y: 260 });
   if (blimp) life.movers.push({ its: [blimp], offs: [0], route: ring(1800, -1000, 260, 32), speed: 9, y: 260, air: true, kind: 'blimp' });
-  for (let k = 0; k < 40; k++) L.put('fluffy_cloud', L.range(-S, S), L.range(-S, S), { y: L.range(260, 520), scale: L.range(0.8, 1.8), yaw: L.range(0, 6.28) });
+  for (let k = 0; k < 40; k++) L.put('fluffy_cloud', L.range(-S, S), L.range(-S, S), { y: L.range(480, 820), scale: L.range(0.8, 1.8), yaw: L.range(0, 6.28) });
   return L;
 }
 

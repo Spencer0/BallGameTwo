@@ -91,11 +91,11 @@ export const env = {
     [0.62, '#A9DDF8'],
     [1, 'butter'],
   ],
-  fog: { near: 160, far: 420, k: 70, color: '#D9EEF0' },
+  fog: { near: 160, far: 420, k: 70, color: '#F4EFC8' },
   groundY: 0,
   planes: [
-    { x: 0, z: 0, w: 3000, d: 3000, y: -0.12, pattern: 'lawn', a: 'leaf', b: '#47B064', cell: 14 },
-    { x: 0, z: 0, w: 2 * S + 120, d: 2 * S + 120, y: -0.08, pattern: 'lawn', a: 'lime', b: '#8DCE47', cell: 5 },
+    { x: 0, z: 0, w: 3000, d: 3000, y: -0.12, pattern: 'solid', a: '#5DB55A' },
+    { x: 0, z: 0, w: 2 * S + 120, d: 2 * S + 120, y: -0.08, pattern: 'lawn', a: 'lime', b: '#94D348', cell: 5 },
   ],
   streets: (b) => paintNetwork(b, net),
   blocks: [
@@ -215,7 +215,7 @@ function maplePark(ctx) {
   const px = cx - 25,
     pz = cz - 2;
   paint.push((b) => {
-    b.disc(px, pz, 17, SK.water, { C: ['teal', 'sky'], segs: 40 });
+    b.disc(px, pz, 17, SK.water, { C: ['cobalt', 'sky'], segs: 40 });
     b.disc(px, pz, 21, SK.path, { r0: 18.5, P: [1.25], C: ['sand', 'caramel'], radialUV: true, segs: 48 });
     // spokes to the street sidewalks
     b.rect(px, pz + 31, 2.5, 20, 0, SK.path, { P: [1.25], C: ['sand', 'caramel'] });

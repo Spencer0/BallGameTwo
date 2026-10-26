@@ -149,6 +149,7 @@ class App {
     s.build();
     s.world.lodPx = this.quality.lodPx;
     s.world.cullPx = this.quality.cullPx;
+    s.world.farPx = this.quality.farPx || 0;
     s.world.setOutlines(this.quality.outlines);
     this.session = s;
     const fakeInput = { x: 0, y: 0, turn: 0, override: null };
@@ -221,6 +222,8 @@ class App {
     if (s) {
       s.world.lodPx = this.quality.lodPx;
       s.world.cullPx = this.quality.cullPx;
+      s.world.farPx = this.quality.farPx || 0;
+    s.world.farPx = this.quality.farPx || 0;
       s.world.setOutlines(this.quality.outlines);
       s.world.shadowsOn = this.quality.shadows;
       s.particles.budget = this.quality.particles;
@@ -365,6 +368,7 @@ class App {
     s.levelIndex = i;
     s.world.lodPx = this.quality.lodPx;
     s.world.cullPx = this.quality.cullPx;
+    s.world.farPx = this.quality.farPx || 0;
     s.world.setOutlines(this.quality.outlines);
     this.session = s;
     // warm up: compile shaders for every batch once before revealing

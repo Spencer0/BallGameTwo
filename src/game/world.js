@@ -23,6 +23,67 @@ function copy16(src, so, dst, d) {
   for (let k = 0; k < 16; k++) dst[d + k] = src[so + k];
 }
 
+/** area-weighted most common palette index of a geometry (for far impostor boxes) */
+function dominantPal(geo) {
+  const pal = geo.attributes.aPal.array,
+    pos = geo.attributes.position.array,
+    idx = geo.index.array;
+  const acc = new Float64Array(64);
+  for (let k = 0; k < idx.length; k += 3) {
+    const a = idx[k] * 3,
+      b = idx[k + 1] * 3,
+      c = idx[k + 2] * 3;
+    const ux = pos[b] - pos[a],
+      uy = pos[b + 1] - pos[a + 1],
+      uz = pos[b + 2] - pos[a + 2];
+    const vx = pos[c] - pos[a],
+      vy = pos[c + 1] - pos[a + 1],
+      vz = pos[c + 2] - pos[a + 2];
+    const area = Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+    acc[pal[idx[k] * 2] & 63] += area;
+  }
+  let best = 0;
+  for (let k = 1; k < 64; k++) if (acc[k] > acc[best]) best = k;
+  return best;
+}
+
+/** Far-away box-like buildings: one instanced unit box, scaled per instance, in the type's main colour. */
+class BoxBatch {
+  constructor(cap) {
+    const g = new THREE.BoxGeometry(1, 1, 1);
+    g.translate(0, 0.5, 0);
+    const n = g.attributes.position.count;
+    const pal = new Uint8Array(n * 2);
+    for (let k = 0; k < n; k++) pal[k * 2 + 1] = 1; // every vertex takes the instance tint
+    g.setAttribute('aPal', new THREE.BufferAttribute(pal, 2));
+    g.setAttribute('aOutN', g.attributes.normal);
+    const tint = new THREE.InstancedBufferAttribute(new Float32Array(cap), 1);
+    tint.setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute('aTint', tint);
+    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e9);
+    this.mesh = new THREE.InstancedMesh(g, toonMaterial, cap);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.frustumCulled = false;
+    this.mesh.count = 0;
+    this.n = 0;
+  }
+  flush() {
+    const m = this.mesh,
+      n = this.n;
+    m.count = n;
+    m.visible = n > 0;
+    if (n > 0) {
+      m.instanceMatrix.clearUpdateRanges();
+      m.instanceMatrix.addUpdateRange(0, n * 16);
+      m.instanceMatrix.needsUpdate = true;
+      const t = m.geometry.attributes.aTint;
+      t.clearUpdateRanges();
+      t.addUpdateRange(0, n);
+      t.needsUpdate = true;
+    }
+  }
+}
+
 class TypeBatch {
   constructor(type, cap, quality) {
     this.type = type;
@@ -124,6 +185,8 @@ export class World {
     this.batchOf = [];
     this.countByType = new Uint32Array(this.types.length);
     this.lodPx = 26; // projected size (px) above which LOD0 is used
+    this.farPx = 0; // below this, box-like buildings draw as plain boxes (0 = off)
+    this.boxBatch = null;
     this.cullPx = 1.6; // below this an object isn't drawn
     this.viewDist = 1e9;
     this.visibleCount = 0;
@@ -272,6 +335,20 @@ export class World {
       this.batches.push(b);
       this.batchOf[t] = b;
     }
+    // impostor boxes for big box-like types (buildings)
+    let nb = 0;
+    for (let t = 0; t < this.types.length; t++) {
+      const ty = this.types[t];
+      ty.boxable = !!(this.batchOf[t] && ty.collider && ty.collider.kind === 'box' && ty.dims[1] >= 6 && !ty.isCreature && !ty.floats);
+      if (ty.boxable) {
+        ty.domPal = dominantPal(ty.geo[1] || ty.geo[0]);
+        nb += this.countByType[t];
+      }
+    }
+    if (nb > 0) {
+      this.boxBatch = new BoxBatch(nb);
+      scene.add(this.boxBatch.mesh);
+    }
   }
   /** One instanced draw for soft blob shadows under nearby (LOD0) objects. */
   buildShadows(scene, cap) {
@@ -386,7 +463,10 @@ export class World {
       z1 = this.cz(camZ + vd);
     const stamp = ++this.stampId;
     const lodPx = this.lodPx,
-      cullPx = this.cullPx;
+      cullPx = this.cullPx,
+      farPx = this.farPx;
+    const BB = this.boxBatch;
+    if (BB) BB.n = 0;
     // camera -> focus segment for occluder hiding
     const F = this.focus;
     let sx = 0,
@@ -438,6 +518,36 @@ export class World {
           const b = this.batchOf[this.type[i]];
           if (!b) continue;
           visible++;
+          if (px < farPx && b.type.boxable && BB) {
+            // far away: a plain box in the building's main colour
+            const t = b.type,
+              s = this.scale[i];
+            const o = BB.n++ * 16,
+              m = BB.mesh.instanceMatrix.array;
+            const c = Math.cos(this.yaw[i]),
+              sn = Math.sin(this.yaw[i]);
+            const sx = t.dims[0] * s,
+              sy = t.dims[1] * s,
+              sz = t.dims[2] * s;
+            m[o] = c * sx;
+            m[o + 1] = 0;
+            m[o + 2] = -sn * sx;
+            m[o + 3] = 0;
+            m[o + 4] = 0;
+            m[o + 5] = sy;
+            m[o + 6] = 0;
+            m[o + 7] = 0;
+            m[o + 8] = sn * sz;
+            m[o + 9] = 0;
+            m[o + 10] = c * sz;
+            m[o + 11] = 0;
+            m[o + 12] = this.x[i];
+            m[o + 13] = this.y[i];
+            m[o + 14] = this.z[i];
+            m[o + 15] = 1;
+            BB.mesh.geometry.attributes.aTint.array[o / 16] = this.tint[i] || t.domPal + 1;
+            continue;
+          }
           if (px > lodPx) {
             const n = b.n0++;
             copy16(this.mat, i * 16, b.lod0.instanceMatrix.array, n * 16);
@@ -476,6 +586,7 @@ export class World {
       }
     }
     for (let k = 0; k < this.batches.length; k++) this.batches[k].flush();
+    if (BB) BB.flush();
     this.visibleCount = visible;
     if (this.shadows) {
       this.shadows.count = ns;

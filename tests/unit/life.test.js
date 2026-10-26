@@ -123,3 +123,25 @@ test('a picked-up car is dropped for good', () => {
   assert.ok(a.dead);
   assert.ok(!sim.laneCars.some((arr) => arr.includes(a)));
 });
+
+test('no two cars ever overlap, junctions included', () => {
+  const { sim, world } = setup(70, 0);
+  let worst = Infinity,
+    at = '';
+  for (let k = 0; k < 3000; k++) {
+    sim.update(1 / 30);
+    if (k % 10) continue;
+    const live = sim.cars.filter((a) => !a.dead);
+    for (let i = 0; i < live.length; i++)
+      for (let j = i + 1; j < live.length; j++) {
+        const a = live[i],
+          b = live[j];
+        const d = Math.hypot(world.x[a.i] - world.x[b.i], world.z[a.i] - world.z[b.i]);
+        if (d < worst) {
+          worst = d;
+          at = `frame ${k}: ${a.conn ? 'junction' : 'lane ' + a.lane} / ${b.conn ? 'junction' : 'lane ' + b.lane}`;
+        }
+      }
+  }
+  assert.ok(worst > 2.4, `closest cars ${worst.toFixed(2)} m (${at})`);
+});

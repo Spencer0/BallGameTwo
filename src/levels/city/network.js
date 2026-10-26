@@ -248,8 +248,9 @@ export class Network {
       e.laneIds = [[], []];
       if (!e.traffic || e.cls === 'rail' || e.cls === 'path') continue;
       const dirs = e.oneway ? [0] : [0, 1];
-      const per = e.oneway ? e.lanes : e.lanes;
-      const lw = e.oneway ? e.w / per : e.w / 2 / per;
+      const per = e.lanes;
+      const park = e.parking === 'angled' ? 5.5 : 0; // traffic stays out of the parking bays
+      const lw = e.oneway ? (e.w - 2 * park) / per : (e.w / 2 - park) / per;
       for (const dir of dirs) {
         // dir 0: a -> b, dir 1: b -> a (polyline reversed)
         const p = dir === 0 ? e.poly : [...e.poly].reverse();
@@ -259,10 +260,10 @@ export class Network {
         const c0 = dir === 0 ? e.crossA : e.crossB,
           c1 = dir === 0 ? e.crossB : e.crossA;
         const s0 = t0 + (c0 ? 3.5 : 0) + 0.5,
-          s1 = L[L.length - 1] - t1 - (c1 ? 4 : 0) - 0.5;
+          s1 = L[L.length - 1] - t1 - (c1 ? 6.2 : 1.5); // stop well behind the crosswalk / junction
         if (s1 - s0 < 2) continue;
         for (let j = 0; j < per; j++) {
-          const off = e.oneway ? -e.w / 2 + lw * (j + 0.5) : lw * (j + 0.5);
+          const off = e.oneway ? -e.w / 2 + park + lw * (j + 0.5) : lw * (j + 0.5);
           const pts = offsetPoly(p, L, off, s0, s1).map(([x, z]) => [x, z]);
           const lane = { id: this.lanes.length, e: e.id, dir, j, pts, L: polyLen(pts), from: dir === 0 ? e.a : e.b, to: dir === 0 ? e.b : e.a, w: lw, speed: e.speed, y: e.y };
           lane.len = lane.L[lane.L.length - 1];

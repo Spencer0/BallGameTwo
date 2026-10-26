@@ -136,13 +136,13 @@ export const env = {
   fog: { near: 320, far: 900, k: 75, color: '#FFE0A8' },
   groundY: 0,
   planes: [
-    { x: 0, z: 0, w: 6000, d: 6000, y: -0.5, pattern: 'lawn', a: 'leaf', b: '#47B064', cell: 40 },
-    { x: 0, z: 0, w: 2 * S + 200, d: 2 * S + 200, y: -0.45, pattern: 'lawn', a: 'lime', b: '#8DCE47', cell: 9 },
+    { x: 0, z: 0, w: 6000, d: 6000, y: -0.5, pattern: 'solid', a: '#5DB55A' },
+    { x: 0, z: 0, w: 2 * S + 200, d: 2 * S + 200, y: -0.45, pattern: 'solid', a: '#8FCF4A' },
   ],
   streets: (b) => {
     const r = riverPoly();
-    b.strip(r.pts, r.L, -RIVER_W / 2, RIVER_W / 2, 0, r.L[r.L.length - 1], SK.water, { C: ['teal', 'mint'], y: -0.25 });
-    b.disc(LAKE.x, LAKE.z, LAKE.r, SK.water, { C: ['teal', 'mint'], y: -0.25, segs: 64 });
+    b.strip(r.pts, r.L, -RIVER_W / 2, RIVER_W / 2, 0, r.L[r.L.length - 1], SK.water, { C: ['cobalt', 'sky'], y: -0.25 });
+    b.disc(LAKE.x, LAKE.z, LAKE.r, SK.water, { C: ['cobalt', 'sky'], y: -0.25, segs: 64 });
     paintNetwork(b, net);
   },
   blocks: [
