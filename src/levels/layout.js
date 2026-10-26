@@ -23,6 +23,8 @@ export class Layout {
     this.hash = new Map(); // spatial hash of placed items for overlap tests
     this.hcell = Math.max(1e-3, (bounds.maxX - bounds.minX) / 160);
     this.maxR = 0;
+    this.paint = []; // (streetBuilder) => void: extra street-surface pieces (driveways, parking, plazas)
+    this.life = null; // movers for the life system (traffic, pedestrians, animals, ...)
   }
 
   /** cell size for the overlap hash; set once from the level's scale before placing */

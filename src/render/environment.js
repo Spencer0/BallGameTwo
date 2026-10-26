@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { HEX } from './palette.js';
 import { shared, linearRGB, makeToonMaterial, makeOutlineMaterial } from './materials.js';
+import { StreetBuilder, makeStreetMaterial } from './streets.js';
 
 export const PATTERN = { solid: 0, gingham: 1, boards: 2, tiles: 3, lawn: 4, carpet: 5, stripes: 6, asphalt: 7, water: 8, checks: 9, roadz: 10, roadx: 11 };
 
@@ -189,6 +190,21 @@ export class Environment {
       m.renderOrder = -1;
       this.group.add(m);
       this.disposables.push(geo, mat);
+    }
+    // street surface (roads, sidewalks, lots...): one merged mesh painted by the level
+    if (spec.streets) {
+      const b = new StreetBuilder();
+      spec.streets(b);
+      if (b.index.length) {
+        const geo = b.build();
+        const mat = makeStreetMaterial(sharedTime);
+        const m = new THREE.Mesh(geo, mat);
+        m.renderOrder = -1;
+        m.frustumCulled = false;
+        this.group.add(m);
+        this.disposables.push(geo, mat);
+        this.streetTris = b.index.length / 3;
+      }
     }
     // room walls: inward-facing planes (invisible from outside, so the camera can pass behind them)
     for (const w of spec.walls || []) {

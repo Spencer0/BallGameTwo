@@ -262,6 +262,7 @@ class App {
         if (!s.over) this.ui.hudFrame(s);
         if (s.mode === 'timed' && !s.over) this.music.tempoScale = s.timeLeft < 30 ? 1.07 : 1;
       } else this.resultsCamera(dt);
+      if (this.debugView) this.applyDebugView();
       s.render(this.renderer);
       if (!s.paused) this.auto.frame(dt);
     }
@@ -270,6 +271,25 @@ class App {
     const cpu = performance.now() - c0;
     this.stats.cpuMs = (this.stats.cpuMs || cpu) * 0.95 + cpu * 0.05;
     this.stats.cpuMax = Math.max(this.stats.cpuMax || 0, cpu);
+  }
+
+  /** test/review hook: window.__game.debugView = { pos, look, fov, near, far, noFog } overrides the camera */
+  applyDebugView() {
+    const v = this.debugView,
+      cam = this.camera;
+    cam.position.set(v.pos[0], v.pos[1], v.pos[2]);
+    cam.lookAt(v.look[0], v.look[1], v.look[2]);
+    cam.fov = v.fov ?? 62;
+    cam.near = v.near ?? 1;
+    cam.far = v.far ?? 20000;
+    cam.updateProjectionMatrix();
+    cam.updateMatrixWorld();
+    if (v.noFog) {
+      shared.uFogNear.value = 1e7;
+      shared.uFogFar.value = 2e7;
+    }
+    this.session.world.viewDist = cam.far;
+    this.focalPx = shared.uResolution.value.y / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
   }
 
   resultsCamera(dt) {

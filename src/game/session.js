@@ -12,6 +12,7 @@ import { SKINS, PATTERNS } from './skins.js';
 import { PAL, HEX } from '../render/palette.js';
 import * as rules from './rules.js';
 import { Lint } from './lint.js';
+import { Life } from './life.js';
 
 const STEP = 1 / 60;
 const _m = new THREE.Matrix4();
@@ -81,8 +82,12 @@ export class Session {
     const L = this.level;
     const lib = this.lib;
     const mod = L.mod;
+    // layout first: it may add street-surface pieces (driveways, lots, parking) to the environment
+    const layout = mod.layout(lib);
+    const paint = layout.paint || [];
+    const spec = paint.length ? { ...mod.env, streets: (b) => { if (mod.env.streets) mod.env.streets(b); for (const f of paint) f(b); } } : mod.env;
     // environment
-    this.env = new Environment(mod.env);
+    this.env = new Environment(spec);
     this.scene.add(this.env.group);
     this.scene.background = this.env.skyTexture;
     if (mod.env.fog) {
@@ -117,7 +122,6 @@ export class Session {
       }
     }
     // world
-    const layout = mod.layout(lib);
     this.layoutMissing = [...layout.missing];
     const b = mod.bounds;
     const pad = 4;
@@ -135,6 +139,8 @@ export class Session {
       if (it.on) this.world.restOn[i] = placed.get(it.on) ?? -1;
       if (t.flags.includes('wander') && !it.on) this.creatures.push({ i, heading: Math.random() * 6.28, timer: 0, speed: 0 });
     }
+    // life: traffic, pedestrians, animals, trains, boats... (outdoor levels)
+    this.life = layout.life ? new Life(this, layout.life, (it) => placed.get(it) ?? -1) : null;
     this.world.buildBatches(this.scene, this.game.quality);
     this.world.buildShadows(this.scene, 1500);
     this.world.shadowsOn = this.game.quality.shadows;
@@ -248,6 +254,7 @@ export class Session {
     f.mesh.visible = true;
 
     w.remove(i);
+    if (this.life) this.life.release(i);
     this.dropChildren(i);
     const vol = t.vol * w.scale[i] ** 3;
     const before = ball.diameter;
@@ -273,6 +280,7 @@ export class Session {
     const w = this.world;
     const t = w.types[w.type[i]];
     w.remove(i);
+    if (this.life) this.life.release(i);
     this.dropChildren(i);
     this.ball.r = rules.grow(this.ball.r, t.vol * w.scale[i] ** 3, w.size[i], this.growth);
     this.count(t);
@@ -434,6 +442,7 @@ export class Session {
       );
     }
     this.updateCreatures(dt);
+    if (this.life) this.life.update(dt);
     this.updateFallers(dt);
     this.updateWobbles(dt);
     this.updateBallVisual(dt);

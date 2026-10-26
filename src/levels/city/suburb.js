@@ -1,0 +1,289 @@
+// Suburban building blocks: a full residential lot (house, driveway, garage, yard, fences), parking lots
+// with cars in their stalls, and woods filling leftover land.
+import { SK } from '../../render/streets.js';
+import { local } from './frontage.js';
+
+/** first id in the list that exists in the asset library */
+export function pickId(L, ids) {
+  for (const id of ids) if (L.lib.byId.has(id)) return id;
+  return ids[ids.length - 1];
+}
+
+// house id -> where the driveway meets the house (local x of the garage door, null = beside the house)
+const HOUSES = {
+  house_a: { drive: 'side' },
+  house_b: { drive: 'side' },
+  house_c: { drive: 'side' },
+  house_d: { drive: 4.6 },
+  house_e: { drive: -4.8 },
+  house_f: { drive: 'side' },
+};
+const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'house_d', 'house_e', 'house_b'];
+
+/**
+ * One suburban lot. fr = frame on the property line at the lot's centre (yaw faces the road).
+ * e = the street edge (for verge/walk widths). opts: W (frontage), D (depth), first/last (fence ends), pie.
+ */
+export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false } = {}) {
+  const { L, occ, fences, paint } = ctx;
+  const pool = HOUSE_POOL.filter((id) => L.lib.byId.has(id));
+  if (!pool.length) return false;
+  // reserve the whole lot first: skip it if it would overlap a road, another lot or a building
+  const lotW = pie ? W * 0.75 : W;
+  let lotRect = null;
+  for (const dd of [D, D - 4, D - 8]) {
+    // shallower lots squeeze in where blocks end or curve
+    const [lx, lz] = local(fr, 0, -(0.6 + (dd - 0.6) / 2));
+    const r = { x: lx, z: lz, hw: lotW / 2 - 0.05, hd: (dd - 0.6) / 2, yaw: fr.yaw };
+    if (!occ.hits(r)) {
+      lotRect = r;
+      D = dd;
+      break;
+    }
+  }
+  if (!lotRect) return false;
+  occ.add(lotRect, 'lot');
+  const IN_LOT = ctx.inLot || (ctx.inLot = new Set(['lot']));
+  const house = L.pick(pool);
+  const t = L.lib.byId.get(house);
+  const hw = t.dims[0] / 2,
+    hd = t.dims[2] / 2;
+  const setback = 7.5 + L.rand() * 2;
+  const mirror = L.rand() < 0.5 ? -1 : 1; // flip the plan so the street isn't a copy-paste
+  const info = HOUSES[house] || { drive: 'side' };
+  // the house: front facade at `setback` behind the property line, facing the road
+  const [hx, hz] = local(fr, 0, -(setback + hd));
+  const rect = { x: hx, z: hz, hw: hw + 0.4, hd: hd + 0.4, yaw: fr.yaw };
+  if (occ.hits(rect, IN_LOT)) return false;
+  occ.add(rect, 'bld');
+  // garage-door houses can't be mirrored without moving the door: keep their native side
+  const flip = typeof info.drive === 'number' ? 1 : mirror;
+  L.put(house, hx, hz, { yaw: fr.yaw });
+  // driveway: from the property line to the garage door (or alongside the house)
+  const gx = typeof info.drive === 'number' ? info.drive : flip * (hw + 2.2);
+  const driveLen = typeof info.drive === 'number' ? setback : setback + hd * 1.3;
+  const [dx, dz] = local(fr, gx, -driveLen / 2);
+  const apronLen = Math.max(0, e.verge - 0.3);
+  const [ax, az] = local(fr, gx, e.walk + apronLen / 2);
+  paint.push((b) => {
+    b.rect(dx, dz, 3.4, driveLen, fr.yaw, SK.drive, { C: ['cloud', 'cloud', 'stone'] });
+    if (apronLen > 0.2) b.rect(ax, az, 3.4, apronLen, fr.yaw, SK.drive, { C: ['cloud', 'cloud', 'stone'] });
+    // front path from the sidewalk to the door
+    const [px, pz] = local(fr, -gx * 0.25, -setback / 2);
+    b.rect(px, pz, 1.2, setback, fr.yaw, SK.drive, { C: ['concrete', 'concrete', 'stone'] });
+  });
+  occ.add({ x: dx, z: dz, hw: 1.9, hd: driveLen / 2, yaw: fr.yaw }, 'drive');
+  // a car or two in the driveway
+  if (L.rand() < 0.7) {
+    const id = L.pick(['car', 'suv', 'hatchback', 'pickup_truck', 'car', 'suv'].filter((i) => L.lib.byId.has(i)));
+    const [cx, cz] = local(fr, gx, -Math.min(driveLen - 3, setback * 0.55));
+    L.put(id, cx, cz, { yaw: L.along(id, fr.yaw + (L.rand() < 0.75 ? Math.PI : 0)) });
+  }
+  // detached garage at the back for houses without one
+  if (typeof info.drive !== 'number' && L.rand() < 0.45 && D > 26) {
+    const gt = L.lib.byId.get('garage');
+    if (gt) {
+      const [gx2, gz2] = local(fr, gx, -(setback + hd * 2 + 1 + gt.dims[2] / 2));
+      const gr = { x: gx2, z: gz2, hw: gt.dims[0] / 2, hd: gt.dims[2] / 2, yaw: fr.yaw };
+      if (!occ.hits(gr, IN_LOT) && setback + hd * 2 + gt.dims[2] + 2 < D) {
+        occ.add(gr, 'bld');
+        L.put('garage', gx2, gz2, { yaw: fr.yaw });
+      }
+    }
+  }
+  // curb: mailbox and street tree in the verge (or at the back of the sidewalk)
+  const vergeMid = e.verge > 0.8 ? e.walk + e.verge / 2 : -0.6;
+  {
+    const [mx, mz] = local(fr, gx - flip * 2.4, vergeMid);
+    L.put('mailbox', mx, mz, { yaw: fr.yaw });
+    const tree = pickId(L, ['street_tree', 'tree_round']);
+    const [tx, tz] = local(fr, -gx * 0.7 + (pie ? 0 : -flip * 3), vergeMid);
+    L.put(tree, tx, tz, { scale: L.range(0.85, 1.1) });
+    if (L.rand() < 0.3) {
+      const [bx, bz] = local(fr, gx + flip * 2.4, vergeMid);
+      L.put('wheelie_bin', bx, bz, { yaw: fr.yaw });
+    }
+  }
+  // front garden: foundation bushes, a bed of flowers, the odd ornament or bike
+  for (let k = 0; k < 3; k++) {
+    const [bx, bz] = local(fr, -gx * 0.15 + (k - 1) * hw * 0.55, -(setback - 1.3));
+    if (L.rand() < 0.8) L.put('bush', bx, bz, { scale: L.range(0.5, 0.7) });
+  }
+  if (L.rand() < 0.3) {
+    const id = L.pick(['garden_gnome', 'flamingo_ornament', 'sunflower', 'birdbath']);
+    const [ox, oz] = local(fr, -gx * 0.6, -setback * 0.45);
+    L.put(id, ox, oz);
+  }
+  if (L.rand() < 0.18) {
+    const id = L.pick(['bicycle', 'tricycle', 'lawn_mower', 'wheelbarrow']);
+    const [ox, oz] = local(fr, gx * 0.55, -setback * 0.6);
+    L.put(id, ox, oz, { yaw: fr.yaw + L.range(-0.6, 0.6) });
+  }
+  // back yard: fence the sides behind the house and the rear line; fill with the family's stuff
+  const fence = pickId(L, ['privacy_fence', 'picket_fence']);
+  const backStart = -(setback + hd * 2 + 0.8);
+  const fenceTint = 'caramel';
+  if (!pie) {
+    const left = local(fr, -W / 2, backStart),
+      leftEnd = local(fr, -W / 2, -D),
+      right = local(fr, W / 2, backStart),
+      rightEnd = local(fr, W / 2, -D);
+    fenceLine2(L, fence, left, leftEnd, fences, fenceTint);
+    if (last) fenceLine2(L, fence, right, rightEnd, fences, fenceTint);
+    fenceLine2(L, fence, leftEnd, rightEnd, fences, fenceTint);
+  } else {
+    // pie lot: fence the widening back yard
+    const a = local(fr, -W / 2 - 3, backStart),
+      b = local(fr, -W / 2 - 7, -D),
+      c = local(fr, W / 2 + 7, -D),
+      d = local(fr, W / 2 + 3, backStart);
+    fenceLine2(L, fence, a, b, fences, fenceTint);
+    fenceLine2(L, fence, b, c, fences, fenceTint);
+    fenceLine2(L, fence, c, d, fences, fenceTint);
+  }
+  const yard = ['trampoline', 'swing_set', 'above_ground_pool', 'garden_shed', 'picnic_table', 'bbq_grill', 'doghouse', 'kiddie_pool', 'pingpong_table', 'hose_reel', 'treehouse'];
+  const n = 1 + Math.floor(L.rand() * 3);
+  const depth = D + backStart;
+  for (let k = 0; k < n && depth > 6; k++) {
+    for (let tries = 0; tries < 6; tries++) {
+      const id = L.pick(yard);
+      const yt = L.lib.byId.get(id);
+      if (!yt) break;
+      const yw = yt.dims[0] / 2 + 0.4,
+        yd = yt.dims[2] / 2 + 0.4;
+      if (yd * 2 > depth - 1 || yw * 2 > W - 2) continue;
+      const rx = L.range(-W / 2 + yw + 0.6, W / 2 - yw - 0.6);
+      const rz = L.range(backStart - yd - 0.5, -D + yd + 0.6);
+      const [x, z] = local(fr, rx, rz);
+      const yaw = fr.yaw + (L.rand() < 0.5 ? 0 : Math.PI / 2);
+      const r = { x, z, hw: yw, hd: yd, yaw };
+      if (occ.hits(r, IN_LOT)) continue;
+      occ.add(r, 'yard');
+      L.put(id, x, z, { yaw });
+      break;
+    }
+  }
+  // a shade tree in many back yards
+  if (L.rand() < 0.55 && depth > 8) {
+    const [x, z] = local(fr, L.range(-W / 3, W / 3), -D + 3.5);
+    const r = { x, z, hw: 1.2, hd: 1.2, yaw: 0 };
+    if (!occ.hits(r, IN_LOT)) {
+      occ.add(r, 'yard');
+      L.put(L.pick(['tree_round', 'tree_round', 'pine_tree']), x, z, { scale: L.range(0.7, 0.95) });
+    }
+  }
+  // the family dog lives in the back yard
+  if (L.rand() < 0.45) {
+    const [x, z] = local(fr, L.range(-W / 3, W / 3), (backStart - D) / 2);
+    const dog = L.put('dog', x, z);
+    if (dog) (ctx.yardDogs || (ctx.yardDogs = [])).push({ it: dog, fr, W, z0: backStart, z1: -D });
+  }
+  (ctx.lots || (ctx.lots = [])).push({ fr, W, D, setback, gx, driveLen, house });
+  return true;
+}
+
+function fenceLine2(L, id, [x0, z0], [x1, z1], dedupe, tint) {
+  const t = L.lib.byId.get(id);
+  if (!t) return;
+  const panel = Math.max(t.dims[0], t.dims[2]);
+  const len = Math.hypot(x1 - x0, z1 - z0);
+  if (len < panel * 0.5) return;
+  const n = Math.max(1, Math.round(len / panel));
+  const s = Math.min(1.1, Math.max(0.9, len / (n * panel)));
+  const ux = (x1 - x0) / len,
+    uz = (z1 - z0) / len;
+  const yaw = L.along(id, Math.atan2(ux, uz));
+  for (let k = 0; k < n; k++) {
+    const c = (k + 0.5) * (len / n);
+    const x = x0 + ux * c,
+      z = z0 + uz * c;
+    const key = Math.round(x) + ',' + Math.round(z);
+    if (dedupe.has(key)) continue;
+    dedupe.add(key);
+    L.put(id, x, z, { yaw, scale: s, tint });
+  }
+}
+
+/** A parking lot: stalls painted and filled. Local frame: u across the rows (local x), v along them (local z). */
+export function parkingLot(ctx, cx, cz, w, d, yaw, { fill = 0.6, ids = ['car', 'suv', 'hatchback', 'pickup_truck'], stall = 2.7, depth = 5.4 } = {}) {
+  const { L, paint } = ctx;
+  paint.push((b) => b.rect(cx, cz, w, d, yaw, SK.parking, { P: [stall, depth], C: ['charcoal', 'paper'], uv0: [w / 2, d / 2] }));
+  const period = 2 * depth + 6;
+  const have = ids.filter((i) => L.lib.byId.has(i));
+  const c = Math.cos(yaw),
+    s = Math.sin(yaw);
+  const cars = [];
+  for (let u0 = 0; u0 < w; u0 += period) {
+    for (const uc of [u0 + depth / 2, u0 + depth + 6 + depth / 2]) {
+      if (uc + depth / 2 > w + 0.01) continue;
+      for (let v = stall / 2; v < d; v += stall) {
+        if (L.rand() > fill) continue;
+        const id = L.pick(have);
+        const lx = uc - w / 2,
+          lz = v - d / 2;
+        const x = cx + c * lx + s * lz,
+          z = cz - s * lx + c * lz;
+        // car long axis along the stall (local x); nose in or out
+        cars.push(L.put(id, x, z, { yaw: L.along(id, yaw + Math.PI / 2) + (L.rand() < 0.5 ? Math.PI : 0) }));
+      }
+    }
+  }
+  return cars;
+}
+
+/** Fill land nobody uses with woods, keeping off everything in the occupancy map. */
+export function woods(ctx, R, { count = 400, ids = ['pine_tree', 'tree_round'], scale = [0.85, 1.3], minRoadDist = 0, net = null } = {}) {
+  const { L, occ } = ctx;
+  let placed = 0;
+  for (let k = 0; k < count * 4 && placed < count; k++) {
+    const x = L.range(R.minX, R.maxX),
+      z = L.range(R.minZ, R.maxZ);
+    if (minRoadDist && net && roadDistance(net, x, z) < minRoadDist) continue;
+    const id = L.pick(ids);
+    const t = L.lib.byId.get(id);
+    if (!t) continue;
+    const sc = L.range(scale[0], scale[1]);
+    const r = { x, z, hw: t.dims[0] * 0.3 * sc, hd: t.dims[2] * 0.3 * sc, yaw: 0 };
+    if (occ.hits(r)) continue;
+    occ.add({ ...r, hw: r.hw * 0.7, hd: r.hd * 0.7 }, 'tree');
+    L.put(id, x, z, { scale: sc });
+    placed++;
+  }
+  return placed;
+}
+
+/** distance from (x,z) to the nearest road centreline of the network */
+export function roadDistance(net, x, z) {
+  let best = Infinity;
+  for (const e of net.edges) {
+    if (e.cls === 'path' || e.cls === 'rail') continue;
+    const p = e.poly;
+    for (let k = 1; k < p.length; k++) {
+      const ax = p[k - 1][0],
+        az = p[k - 1][1];
+      const dx = p[k][0] - ax,
+        dz = p[k][1] - az;
+      const l2 = dx * dx + dz * dz || 1e-9;
+      let t = ((x - ax) * dx + (z - az) * dz) / l2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const ex = ax + dx * t - x,
+        ez = az + dz * t - z;
+      const d = Math.sqrt(ex * ex + ez * ez);
+      if (d < best) best = d;
+    }
+  }
+  return best;
+}
+
+/** a painted sports court: solid surface with a border line, no overlapping pieces */
+export function court(b, SKk, x, z, w, d, yaw, col, line = 'paper') {
+  const lw = 0.35;
+  b.rect(x, z, w - 2 * lw, d - 2 * lw, yaw, SKk.solid, { C: [col] });
+  const c = Math.cos(yaw),
+    s = Math.sin(yaw);
+  const at = (lx, lz) => [x + c * lx + s * lz, z - s * lx + c * lz];
+  for (const [lx, lz, rw, rd] of [[0, -d / 2 + lw / 2, w, lw], [0, d / 2 - lw / 2, w, lw], [-w / 2 + lw / 2, 0, lw, d - 2 * lw], [w / 2 - lw / 2, 0, lw, d - 2 * lw], [0, 0, w - 2 * lw, lw * 0.6]]) {
+    const [px, pz] = at(lx, lz);
+    b.rect(px, pz, rw, rd, yaw, SKk.solid, { C: [line] });
+  }
+}
