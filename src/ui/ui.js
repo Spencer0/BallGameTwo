@@ -302,7 +302,8 @@ export class UI {
       <div id="hud-stamp"></div>
       <div id="hud-banner"></div>
       <button id="hud-finish" class="btn btn-primary">${ICON.check}<span>Finish</span></button>
-      <div id="hud-hint">Drag anywhere to roll · Double-tap to turn around</div>`;
+      <div id="hud-hint">Drag anywhere to roll · Double-tap to turn around</div>
+      <div id="hud-stats"></div>`;
     this.h = {
       size: $('#hud-size'),
       bar: $('#hud-bar i'),
@@ -324,6 +325,18 @@ export class UI {
       this.app.audio.unlock();
       this.app.sfx.tap();
       this.app.pause();
+    });
+    // triple-tap the size readout: performance overlay
+    let taps = [];
+    $('#hud-size-wrap').addEventListener('pointerdown', () => {
+      const now = performance.now();
+      taps = taps.filter((t) => now - t < 600);
+      taps.push(now);
+      if (taps.length >= 3) {
+        taps = [];
+        this.statsOn = !this.statsOn;
+        $('#hud-stats').classList.toggle('show', this.statsOn);
+      }
     });
     this.h.finish.addEventListener('click', () => {
       this.app.sfx.tap();
@@ -361,6 +374,11 @@ export class UI {
 
   hudFrame(s) {
     const st = this.hudState;
+    if (this.statsOn && (st.statT = (st.statT || 0) + 1) % 15 === 0) {
+      const g = this.app,
+        r = g.renderer.info.render;
+      $('#hud-stats').textContent = `${(1000 / g.stats.frameMs).toFixed(0)} fps · cpu ${g.stats.cpuMs.toFixed(1)} ms · ${r.calls} draws · ${(r.triangles / 1000).toFixed(0)}k tris · ${g.qualityName}${g.dprScale < 1 ? ' ' + g.dprScale : ''} · ${s.world.visibleCount} objs`;
+    }
     const txt = formatSize(s.ball.diameter);
     if (txt !== st.size) {
       st.size = txt;
@@ -542,6 +560,7 @@ export class UI {
         </div>
       </section>`);
     this.setScreen(node, 'results');
+    setTimeout(() => this.app.sfx.babble(verdict, mood === 'shocked' ? 81 : 76), 1500);
     if (timed) {
       node.querySelectorAll('.rs').forEach((s, k) => {
         if (k < result.stars) {

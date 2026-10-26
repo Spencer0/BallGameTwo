@@ -781,7 +781,7 @@ def bakery():
     for x in (-2.7, -0.9, 0.9, 2.7):
         h = 0.45 + lh * math.sqrt(1 - (x / lx) ** 2)
         slope = math.degrees(math.atan(lh * x / (lx * lx * math.sqrt(1 - (x / lx) ** 2))))
-        sphere(1.0, at=(x, 0.5, lz + h - 0.08), scale=(0.3, 1.2, 0.22), rot=(0, slope, 28), color="sand", segs=8,
+        sphere(1.0, at=(x, 0.5, lz + h - 0.16), scale=(0.3, 1.15, 0.22), rot=(0, slope, 28), color="sand", segs=8,
                rings=4)
 
 
@@ -926,14 +926,17 @@ def town_fountain():
     sphere(0.35, at=(0, 0, 4.7), color="sun", segs=8, rings=5)
     cyl(0.16, 1.4, at=(0, 0, 4.9), r2=0.08, color="sky", segs=6)
     sphere(0.38, at=(0, 0, 6.35), scale=(1, 1, 0.8), color="sky", segs=8, rings=5)
-    # water spilling over each rim as a glossy bell
-    lathe([(0, 0.72), (3.1, 0.72), (2.95, 1.5), (2.65, 2.3), (2.4, 2.75), (2.28, 2.97), (0, 2.97)], color="sky",
-          segs=20)
-    lathe([(0, 2.8), (1.72, 2.8), (1.6, 3.5), (1.4, 4.1), (1.25, 4.47), (0, 4.47)], color="sky", segs=14)
-    for i in range(10):
-        a = math.radians(36 * i)
-        sphere(0.22, at=(3.1 * math.cos(a), 3.1 * math.sin(a), 0.82), scale=(1, 1, 0.6), color="snow", segs=6, rings=3,
-               lod0=True)
+    # arcing jets: four from the top spout, four from the middle bowl
+    for i in range(4):
+        a = math.radians(45 + 90 * i)
+        c, sn = math.cos(a), math.sin(a)
+        tube([(0.15 * c, 0.15 * sn, 5.6), (0.9 * c, 0.9 * sn, 6.0), (1.5 * c, 1.5 * sn, 5.0), (1.75 * c, 1.75 * sn, 2.85)],
+             0.2, r_end=0.13, color="sky", segs=6, smooth_path=1)
+        a = math.radians(90 * i)
+        c, sn = math.cos(a), math.sin(a)
+        tube([(2.1 * c, 2.1 * sn, 2.8), (2.9 * c, 2.9 * sn, 3.0), (3.4 * c, 3.4 * sn, 2.0), (3.55 * c, 3.55 * sn, 0.75)],
+             0.22, r_end=0.14, color="sky", segs=6, smooth_path=1)
+        sphere(0.3, at=(3.55 * c, 3.55 * sn, 0.75), scale=(1, 1, 0.45), color="snow", segs=6, rings=3, lod0=True)
     for (x, y) in ((1.5, -2.6), (-2.0, -1.8), (2.6, 1.2), (-0.6, 3.0)):
         cyl(0.14, 0.03, at=(x, y, 0.75), color="sun", segs=6, lod0=True)
 
@@ -1010,7 +1013,7 @@ def _toy_horse(origin, yaw, body, saddle, lod1, s=1.35):
 def carousel():
     lod1 = _lod1()
     cyl(6.0, 0.7, color="sun", segs=16)
-    cyl(5.85, 0.1, at=(0, 0, 0.7), color="snow", segs=16)
+    cyl(5.85, 0.1, at=(0, 0, 0.7), color="sky", segs=16)
     cyl(1.2, 4.2, at=(0, 0, 0.8), color="tomato", tint=True, segs=12)
     for i in range(6):
         a = math.radians(60 * i + 30)
@@ -1202,13 +1205,13 @@ def ferris_wheel():
         tube([(-4.8, y * 0.95, 7.0), (4.8, y * 0.95, 7.0)], 0.3, color="cobalt", segs=6)
     cyl(0.9, 5.0, at=(0, 0, zc), rot=(90, 0, 0), base=False, color="sun", segs=10)
     for y in (-1.1, 1.1):
-        torus(R, 0.42, at=(0, y, zc), rot=(90, 0, 0), color="snow", segs=36, rsegs=6)
+        torus(R, 0.6, at=(0, y, zc), rot=(90, 0, 0), color="snow", segs=36, rsegs=6)
     torus(R * 0.55, 0.3, at=(0, 0, zc), rot=(90, 0, 0), color="tomato", segs=24, rsegs=4, lod0=True)
     ns = 12 if not lod1 else 8
     for i in range(ns):
         phi = 360.0 * i / ns + 15
         r = math.radians(phi)
-        box((0.45, 0.45, R), at=(math.sin(r) * R / 2, 0, zc + math.cos(r) * R / 2), rot=(0, phi, 0), color="snow")
+        box((0.6, 0.6, R), at=(math.sin(r) * R / 2, 0, zc + math.cos(r) * R / 2), rot=(0, phi, 0), color="snow")
     # gondolas
     ng = 12
     cols = ("tomato", "sun", "sky")

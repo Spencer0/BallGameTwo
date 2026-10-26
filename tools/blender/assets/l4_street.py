@@ -122,13 +122,13 @@ def traffic_cone():
        variants=["tomato", "sun", "lime", "sky"], col="cyl", fill=0.55)
 def fire_hydrant():
     lathe([(0, 0), (0.2, 0), (0.2, 0.06), (0.15, 0.08), (0.14, 0.55), (0.18, 0.56), (0.18, 0.62), (0.15, 0.63),
-           (0.13, 0.7), (0.07, 0.76), (0, 0.77)], color="tomato", tint=True, segs=14)
+           (0.13, 0.7), (0.07, 0.76), (0, 0.77)], color="tomato", tint=True, segs=12)
     cyl(0.04, 0.05, at=(0, 0, 0.75), color="cloud", segs=6)
     for k in (-1, 1):
-        cyl(0.06, 0.08, at=(k * 0.15, 0, 0.42), rot=(0, k * 90, 0), color="tomato", tint=True, segs=10)
-        cyl(0.07, 0.04, at=(k * 0.225, 0, 0.42), rot=(0, 90, 0), base=False, color="cloud", segs=6)
-    cyl(0.085, 0.08, at=(0, -0.13, 0.33), rot=(90, 0, 0), color="tomato", tint=True, segs=12)
-    cyl(0.095, 0.05, at=(0, -0.235, 0.33), rot=(90, 0, 0), base=False, color="cloud", segs=6)
+        cyl(0.06, 0.08, at=(k * 0.15, 0, 0.42), rot=(0, k * 90, 0), color="tomato", tint=True, segs=8)
+        cyl(0.06, 0.04, at=(k * 0.225, 0, 0.42), rot=(0, 90, 0), base=False, color="cloud", segs=6)
+    cyl(0.085, 0.08, at=(0, -0.13, 0.33), rot=(90, 0, 0), color="tomato", tint=True, segs=10)
+    cyl(0.09, 0.05, at=(0, -0.235, 0.33), rot=(90, 0, 0), base=False, color="cloud", segs=6)
     tube([(0.15, -0.07, 0.42), (0.1, -0.2, 0.3), (0.05, -0.24, 0.33)], 0.008, color="stone", segs=4, lod0=True)
 
 
@@ -249,7 +249,7 @@ def phone_booth():
     sphere(0.07, at=(0, 0, 2.55), color="sun", segs=8, rings=5)
     for (sx, sy) in ((0.78, 1.03), (1.03, 0.78)):
         box((sx, sy, 0.15), at=(0, 0, 1.98), base=True, color="snow")
-        box((sx * 0.94, sy * 0.94, 1.38), at=(0, 0, 0.5), base=True, color="glass")
+        box((sx * 0.95, sy, 1.38), at=(0, 0, 0.5), base=True, color="glass")
     for i in range(4):
         _panel("-y", -0.515, -0.24 + i * 0.16, 2.055, 0.1, 0.08, 0.01, "ink", lod0=True)
     for z in (0.95, 1.4):
@@ -409,8 +409,9 @@ def playground_slide():
              smooth_path=1)
     # the chute: side profile strip extruded across Y
     pts = []
-    for i in range(9):
-        t = i / 8
+    n = 5 if _lod1() else 9
+    for i in range(n):
+        t = i / (n - 1)
         x = -0.55 + 2.05 * t
         z = zt + 0.08 - (zt - 0.25) * (3 * t * t - 2 * t * t * t)
         pts.append((x, z))
@@ -435,7 +436,7 @@ def motorcycle():
     for k in (-1, 1):
         cyl(0.09, 0.08, at=(0.0, k * 0.17, 0.4), rot=(90, 0, 0), base=False, color="stone", segs=8)
     sphere(0.26, at=(0.12, 0, 0.8), scale=(1.35, 0.78, 0.6), color="tomato", tint=True, segs=12, rings=7)
-    sphere(0.22, at=(-0.36, 0, 0.78), scale=(1.5, 0.75, 0.32), color="ink_soft", segs=10, rings=5)
+    sphere(0.22, at=(-0.36, 0, 0.78), scale=(1.5, 0.75, 0.32), color="ink_soft", segs=8, rings=5)
     sphere(0.2, at=(-0.68, 0, 0.73), scale=(1.4, 0.55, 0.4), rot=(0, -12, 0), color="tomato", tint=True, segs=10,
            rings=5)
     torus(r + 0.04, 0.05, at=(0.72, 0, r), rot=(90, 0, 0), arc=150, color="tomato", tint=True, segs=10, rsegs=4,
@@ -444,7 +445,7 @@ def motorcycle():
         tube([(0.72, k * 0.09, r), (0.5, k * 0.09, 1.02)], 0.035, color="stone", segs=6)
         tube([(-0.72, k * 0.09, r), (-0.3, k * 0.12, 0.62)], 0.03, color="stone", segs=5)
     tube([(0.42, -0.36, 1.12), (0.5, -0.2, 1.06), (0.5, 0.2, 1.06), (0.42, 0.36, 1.12)], 0.025, color="stone",
-         segs=5)
+         segs=4)
     for k in (-1, 1):
         cyl(0.035, 0.12, at=(0.42, k * 0.38, 1.12), rot=(90, 0, 0), base=False, color="ink_soft", segs=6)
         tube([(0.46, k * 0.27, 1.08), (0.44, k * 0.3, 1.28)], 0.01, color="stone", segs=4, lod0=True)
@@ -475,17 +476,20 @@ def dumpster():
     box((W * 0.53, 0.06, D * 1.1), at=(W * 0.27, D * 0.62, zt), base=True, rot=(-12, 0, 0), bevel=0.02,
         color="ink_soft")
     # resident
-    rx, ry, rz = 0.55, -0.1, zt + 0.12
-    sphere(0.24, at=(rx, ry, rz), scale=(1, 0.9, 0.85), color="stone", segs=10, rings=6)
-    sphere(0.16, at=(rx, ry - 0.17, rz - 0.01), scale=(1.55, 0.6, 0.55), color="charcoal", segs=10, rings=5)
+    rx, ry, rz = 0.6, -0.15, zt + 0.2
+    sphere(0.33, at=(rx, ry + 0.05, rz - 0.12), scale=(1.1, 0.9, 0.8), color="stone", segs=10, rings=6)
+    sphere(0.3, at=(rx, ry, rz + 0.12), scale=(1.12, 0.95, 0.88), color="stone", segs=12, rings=7)
     for k in (-1, 1):
-        extrude([(-0.07, 0), (0.07, 0), (0, 0.13)], 0.06, at=(rx + k * 0.15, ry + 0.02, rz + 0.13),
-                rot=(90, 0, -k * 15), color="stone")
-        sphere(0.04, at=(rx + k * 0.08, ry - 0.24, rz + 0.01), scale=(1, 0.5, 1.15), color="snow", segs=6, rings=4)
-        sphere(0.022, at=(rx + k * 0.08, ry - 0.262, rz + 0.0), scale=(1, 0.5, 1.15), color="ink", segs=6, rings=4)
-        sphere(0.06, at=(rx + k * 0.17, ry - 0.42, zt + 0.03), scale=(1, 1.3, 0.6), color="charcoal", segs=6,
+        extrude([(-0.09, 0), (0.09, 0), (0, 0.17)], 0.07, at=(rx + k * 0.2, ry + 0.02, rz + 0.3),
+                rot=(90, 0, -k * 18), color="charcoal")
+    sphere(0.2, at=(rx, ry - 0.2, rz + 0.15), scale=(1.65, 0.45, 0.5), color="charcoal", segs=10, rings=5)
+    sphere(0.12, at=(rx, ry - 0.25, rz + 0.0), scale=(1.2, 0.9, 0.75), color="snow", segs=8, rings=5)
+    sphere(0.045, at=(rx, ry - 0.36, rz + 0.04), color="ink", segs=6, rings=4)
+    for k in (-1, 1):
+        sphere(0.055, at=(rx + k * 0.12, ry - 0.27, rz + 0.16), scale=(1, 0.5, 1.15), color="snow", segs=6, rings=4)
+        sphere(0.032, at=(rx + k * 0.12, ry - 0.3, rz + 0.155), scale=(1, 0.5, 1.15), color="ink", segs=6, rings=4)
+        sphere(0.08, at=(rx + k * 0.22, ry - 0.42, zt + 0.08), scale=(1, 1.3, 0.6), color="charcoal", segs=6,
                rings=4)
-    sphere(0.035, at=(rx, ry - 0.3, rz - 0.07), color="ink", segs=6, rings=4)
     box((0.4, 0.3, 0.02), at=(-0.4, -0.2, zt + 0.08), rot=(10, -6, 25), color="paper", lod0=True)
 
 
@@ -581,8 +585,8 @@ def bus_stop():
 @asset("car", "Car", "Four wheels, one cup holder, endless snack crumbs.", 4, "metal", "large",
        variants=["tomato", "sky", "sun", "mint", "flamingo", "tangerine", "lavender"], col="box", fill=0.65)
 def car():
-    r, wy = 0.38, 0.78
-    _wheels((-1.32, 1.32), wy, r, r, 0.3)
+    r, wy = 0.42, 0.76
+    _wheels((-1.32, 1.32), wy, r, r, 0.34)
     box((4.15, 1.78, 0.74), at=(0, 0, 0.3), base=True, bevel=0.3, color="tomato", tint=True)
     box((2.3, 1.62, 0.66), at=(-0.28, 0, 0.92), base=True, taper=(0.72, 0.84), bevel=0.14, color="glass")
     box((1.82, 1.46, 0.15), at=(-0.32, 0, 1.52), base=True, bevel=0.06, color="tomato", tint=True)
@@ -697,9 +701,9 @@ def delivery_van():
         box((0.06, 0.22, 0.4), at=(-3.02, k * 0.85, 1.3), color="tomato")
         _panel("-y" if k < 0 else "+y", k * 1.1, -0.2, 1.8, 0.05, 2.2, 0.02, "ink_soft", lod0=True)
     # parcel logo on both flanks
-    box((1.25, 2.24, 1.0), at=(-1.4, 0, 1.3), base=True, color="sand")
-    box((0.2, 2.26, 1.0), at=(-1.4, 0, 1.3), base=True, color="cocoa", lod0=True)
-    box((1.25, 2.26, 0.14), at=(-1.4, 0, 1.95), base=True, color="cocoa", lod0=True)
+    box((1.3, 2.24, 1.05), at=(-1.3, 0, 1.75), rot=(0, 12, 0), color="caramel")
+    box((0.22, 2.26, 1.05), at=(-1.3, 0, 1.75), rot=(0, 12, 0), color="sand", lod0=True)
+    box((2.6, 2.24, 0.18), at=(-0.95, 0, 0.75), base=True, color="snow")
     _panel("-x", -3.05, 0, 1.8, 0.05, 2.3, 0.03, "ink_soft", lod0=True)
     box((0.3, 0.12, 0.25), at=(2.1, -1.1, 2.15), base=True, color="tangerine", tint=True)  # mirror
     box((0.3, 0.12, 0.25), at=(2.1, 1.1, 2.15), base=True, color="tangerine", tint=True)
@@ -802,7 +806,8 @@ def house_a():
         _panel("-y", -D / 2, x, 1.15, 1.6, 0.3, 0.35, "cocoa", lod0=True)
         for i, c in enumerate(("flamingo", "sun", "flamingo", "sun")):
             sphere(0.14, at=(x - 0.6 + i * 0.4, -D / 2 - 0.2, 1.35), color=c, segs=6, rings=4, lod0=True)
-    box((0.5, 0.7, 1.2), at=(-W / 2 - 0.2, -1.5, 0), base=True, rot=(0, 0, 0), color="leaf")
+    for (x, y, rr) in ((-W / 2 - 0.1, -2.2, 0.7), (-W / 2 + 0.6, -D / 2 - 0.5, 0.6), (W / 2 - 0.4, -D / 2 - 0.5, 0.55)):
+        sphere(rr, at=(x, y, rr * 0.8), color="leaf", segs=8, rings=5)
 
 
 @asset("house_b", "A-Frame House", "Mostly roof. The architect had one idea and committed.", 4, "wood", "large",
@@ -892,7 +897,7 @@ def house_c():
 @asset("garage", "Garage", "Has never once contained a car.", 4, "wood", "large",
        variants=["snow", "sky", "butter", "mint", "bubblegum"], col="box", fill=0.85)
 def garage():
-    W, D, H, z0 = 4.0, 5.6, 2.6, 0.15
+    W, D, H, z0 = 4.0, 4.8, 2.6, 0.15
     box((W + 0.2, D + 0.2, z0), base=True, color="stone")
     box((W, D, H), at=(0, 0, z0), base=True, color="snow", tint=True)
     _gable_y(W, D, z0 + H, 1.35, "snow", "brick", over=0.3, t=0.2)
@@ -906,8 +911,8 @@ def garage():
     _panel("-y", f, 0, z0 + H + 0.55, 0.7, 0.45, 0.06, "glass")
     sphere(0.12, at=(1.85, f - 0.12, z0 + 2.4), scale=(1, 0.6, 1), color="butter", segs=6, rings=4, lod0=True)
     _window("+x", W / 2, -0.5, z0 + 1.5, 1.2, 0.9, sill=False)
-    _door("+x", W / 2, 1.6, z0, 0.9, 2.0, color="cocoa")
-    box((3.3, 1.5, 0.02), at=(0, f - 0.75, 0.0), base=True, color="charcoal")
+    _door("+x", W / 2, 1.3, z0, 0.9, 2.0, color="cocoa")
+    box((3.3, 0.9, 0.02), at=(0, f - 0.45, 0.0), base=True, color="charcoal")
     for i, c in enumerate(("tomato", "sky")):
         cyl(0.18, 0.22, at=(-W / 2 - 0.3, -1.8 + i * 0.45, 0), color=c, segs=8, lod0=True)
 

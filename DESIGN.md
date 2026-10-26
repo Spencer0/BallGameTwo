@@ -88,14 +88,14 @@ Each level is a separate world sized for its scale. Sizes are ball **diameter**.
 
 | # | Name | World | Start | Target | Timed limit | Theme music |
 |---|---|---|---|---|---|---|
-| 1 | Crumb Patrol | Farmhouse breakfast table, 2.4 × 1.4 m | 4 cm | 22 cm | 4:00 | "Crumb Patrol" — bossa-funk, Rhodes + brushes + whistle |
-| 2 | Bedroom Bedlam | Kid's bedroom, 6 × 5 m | 20 cm | 1.1 m | 6:00 | "Sock Drawer Stomp" — clavinet toy-funk + glockenspiel |
-| 3 | House Party | Bungalow + back garden, 30 × 24 m | 1 m | 5 m | 7:00 | "Household Shuffle" — swing, walking bass, muted horn |
-| 4 | Cul-de-Sac | Suburban street, 220 × 220 m | 4.5 m | 22 m | 8:00 | "Cul-de-Sac Strut" — disco-funk, octave bass, brass stabs |
-| 5 | Small Town | Town + farms + harbour, 800 × 800 m | 18 m | 90 m | 9:00 | "Main Street Mambo" — mambo/latin jazz, piano montuno, cowbell |
-| 6 | The Big Tidy | City + port + hills, 2.6 × 2.6 km | 75 m | 400 m | 10:00 | "Skyline Shuffle" — big-band funk finale |
+| 1 | Crumb Patrol | Farmhouse breakfast table, 2.4 × 1.4 m (Prudence supervises) | 4 cm | 22 cm | 4:00 | "Crumb Patrol" — bossa-funk, Rhodes + brushes + whistle |
+| 2 | Bedroom Bedlam | Kids' bedroom, 7.6 × 6.2 m | 20 cm | 1.1 m | 5:00 | "Sock Drawer Stomp" — clavinet toy-funk + glockenspiel |
+| 3 | House Party | Cut-away bungalow (low dollhouse walls) + garden, 34 × 26 m | 1 m | 5 m | 7:00 | "Household Shuffle" — swing, walking bass, muted horn |
+| 4 | Cul-de-Sac | Maple Loop: street, turning circle, park, 240 × 240 m | 4.5 m | 22 m | 8:00 | "Cul-de-Sac Strut" — disco-funk, octave bass, brass stabs |
+| 5 | Small Town | Puddleford: town grid, farm, harbour, fairground, railway, 900 × 900 m | 18 m | 90 m | 9:00 | "Main Street Mambo" — mambo/latin jazz, piano montuno, cowbell |
+| 6 | The Big Tidy | Downtown, port, airport, stadium, space centre, suburbs, sky, 2.6 × 2.6 km | 75 m | 400 m | 10:00 | "Skyline Shuffle" — big-band funk finale |
 
-Total timed play ≈ 44 min; Zen is open-ended. Balance (`tools/balance.mjs`) verifies each level
+Total timed play ≈ 43 min; Zen is open-ended. Balance (`tools/balance.mjs`) verifies each level
 contains enough collectible volume for 3★ with ≥ 2.5× margin and that the smallest objects are
 collectible at the start size.
 

@@ -1,7 +1,7 @@
 // Lint Roller — app shell: boot, renderer, main loop, state machine (menus <-> play <-> results),
 // audio, save, haptics, postcard.
 import * as THREE from 'three';
-import { AssetLibrary } from './render/assets.js';
+import { AssetLibrary, chooseCompression, ASSET_BASE } from './render/assets.js';
 import { shared } from './render/materials.js';
 import { TIERS, AutoQuality } from './render/quality.js';
 import { sharedTime } from './render/environment.js';
@@ -96,6 +96,8 @@ class App {
   // ------------------------------------------------------------ boot
   async boot() {
     this.ui.showLoading('Unpacking crumbs…');
+    this.packDir = await chooseCompression();
+    if (params.get('nowasm')) this.packDir = ASSET_BASE.packs = 'packs_q/';
     await this.lib.loadCatalog();
     this.ui.setLoading(0.3);
     try {
@@ -177,6 +179,7 @@ class App {
       if (e.session.attract) return;
       this.sfx.milestone(Math.round(Math.log10(e.size) * 3));
       this.ui.hudStamp(formatSize(e.size) + '!');
+      setTimeout(() => this.sfx.squeak(), 260);
       this.haptic('big');
     });
     ev.on('target', (e) => {

@@ -432,7 +432,30 @@ export class Session {
     this.rVis += (b.r - this.rVis) * (1 - Math.exp(-dt * 7));
     this.rPop *= Math.exp(-dt * 7);
     this.coreFlash.value *= Math.exp(-dt * 5);
-    this.ballGroup.position.copy(b.pos);
+    // lumpy roll: big stuck things passing under the ball lift it a little
+    const q = b.quat;
+    const cr0 = this.rVis * 0.95;
+    let lift = 0;
+    const cru = this.crust;
+    for (let it = 0; it < cru.count; it++) {
+      if (cru.dead[it]) continue;
+      const out = cru.dist[it] + cru.rad[it] * 0.55 - cr0;
+      if (out <= lift) continue;
+      // y of the item's direction after rotating by the ball quaternion
+      const x = cru.loc[it * 3],
+        y = cru.loc[it * 3 + 1],
+        z = cru.loc[it * 3 + 2];
+      const ix = q.w * x + q.y * z - q.z * y,
+        iy = q.w * y + q.z * x - q.x * z,
+        iz = q.w * z + q.x * y - q.y * x,
+        iw = -q.x * x - q.y * y - q.z * z;
+      const wy = iy * q.w + iw * -q.y + iz * -q.x - ix * -q.z;
+      const l = Math.hypot(x, y, z) || 1;
+      const down = -wy / l; // 1 when pointing straight down
+      if (down > 0.82) lift = Math.max(lift, out * (down - 0.82) / 0.18);
+    }
+    this.lift = (this.lift || 0) + (Math.min(lift, b.r * 0.35) - (this.lift || 0)) * (1 - Math.exp(-dt * 18));
+    this.ballGroup.position.set(b.pos.x, b.pos.y + this.lift, b.pos.z);
     this.ballGroup.quaternion.copy(b.quat);
     const cr = this.rVis * 0.95 * (1 + this.rPop);
     this.core.scale.setScalar(cr);

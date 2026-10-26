@@ -12,7 +12,9 @@ import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const RAW = path.join(ROOT, 'build', 'raw');
 const OUT = path.join(ROOT, 'assets', 'packs');
+const OUTQ = path.join(ROOT, 'assets', 'packs_q'); // fallback without meshopt (no WebAssembly needed)
 fs.mkdirSync(OUT, { recursive: true });
+fs.mkdirSync(OUTQ, { recursive: true });
 
 await MeshoptEncoder.ready;
 await MeshoptDecoder.ready;
@@ -29,8 +31,9 @@ for (const f of fs.readdirSync(RAW).filter((f) => f.endsWith('.glb')).sort()) {
     prune(),
     // colours carry palette indices (k/255): 8-bit normalized keeps them exact
     quantize({ quantizePosition: 14, quantizeNormal: 8, quantizeColor: 8, quantizationVolume: 'mesh' }),
-    meshopt({ encoder: MeshoptEncoder, level: 'high' }),
   );
+  fs.writeFileSync(path.join(OUTQ, f), await io.writeBinary(doc));
+  await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'high' }));
   const bytes = await io.writeBinary(doc);
   fs.writeFileSync(path.join(OUT, f), bytes);
   const rawSize = fs.statSync(path.join(RAW, f)).size;

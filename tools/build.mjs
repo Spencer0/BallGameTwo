@@ -43,7 +43,7 @@ for (const f of ['catalog.json', 'icons.png', 'icons.json']) {
   const s = path.join(ROOT, 'assets', f);
   if (fs.existsSync(s)) copy(s, path.join(DIST, 'assets', f));
 }
-for (const dir of ['packs', 'img']) {
+for (const dir of ['packs', 'packs_q', 'img']) {
   const d = path.join(ROOT, 'assets', dir);
   if (!fs.existsSync(d)) continue;
   for (const f of fs.readdirSync(d)) copy(path.join(d, f), path.join(DIST, 'assets', dir, f));

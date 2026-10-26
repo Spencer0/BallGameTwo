@@ -349,3 +349,8 @@ body.playing #hud { display: block; }
   .bg-dots, .title-lint, .load-lint, .dlg-next { animation: none !important; }
   #hud-stamp.go { animation-duration: .9s; }
 }
+
+#hud-stats { position: absolute; left: var(--gutter-l); right: var(--gutter-r); bottom: calc(var(--sab) + 6px); text-align: center; display: none;
+  font: 700 12px/1.3 ui-monospace, Menlo, monospace; color: var(--paper); text-shadow: 0 1px 0 var(--ink), 0 0 4px var(--ink); }
+#hud-stats.show { display: block; }
+#hud-size-wrap { pointer-events: auto; }

@@ -253,6 +253,14 @@ export function layout(lib, seed = 303) {
     L.put('hedge', x, D / 2 - 0.9, { yaw: 0 });
     L.put('hedge', x + 1, -D / 2 + 0.9, { yaw: 0 });
   }
+  L.put('car', 13.2, -9.6, { yaw: Math.PI / 2, tint: 'sky' });
+  L.put('garden_shed', -14.5, -10.3, { yaw: Math.PI / 2 });
+  L.put('trampoline', 13.5, 0.6);
+  L.put('swing_set', -13.4, -2.5, { yaw: Math.PI / 2 });
+  L.put('picnic_table', 6.5, -10.4, { yaw: 0 });
+  L.put('wheelie_bin', 15.5, 4.2);
+  L.put('wheelie_bin', 15.5, 5.6, { tint: 'leaf' });
+  L.put('mailbox', 4, 12.2, { yaw: Math.PI });
   L.put('kiddie_pool', 11.5, 9, {});
   L.put('pingpong_table', -12, -9.5, { yaw: 0 });
   L.put('bbq_grill', 3, -10.5);

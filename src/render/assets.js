@@ -11,7 +11,21 @@ loader.setMeshoptDecoder(MeshoptDecoder);
 const v3 = new THREE.Vector3();
 const n3 = new THREE.Matrix3();
 
-export const ASSET_BASE = { url: 'assets/' };
+export const ASSET_BASE = { url: 'assets/', packs: 'packs/' };
+
+/** meshopt needs WebAssembly; some locked-down hosts forbid compiling it. Probe once. */
+export async function chooseCompression() {
+  try {
+    // smallest valid module: magic + version
+    const mod = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]);
+    await WebAssembly.instantiate(mod);
+    await MeshoptDecoder.ready;
+    ASSET_BASE.packs = 'packs/';
+  } catch {
+    ASSET_BASE.packs = 'packs_q/';
+  }
+  return ASSET_BASE.packs;
+}
 
 /** catalog entry + runtime data */
 export class ObjType {
@@ -116,7 +130,7 @@ export class AssetLibrary {
   }
 
   async _loadPack(name) {
-    const gltf = await loader.loadAsync(ASSET_BASE.url + 'packs/' + name + '.glb');
+    const gltf = await loader.loadAsync(ASSET_BASE.url + ASSET_BASE.packs + name + '.glb');
     gltf.scene.updateMatrixWorld(true);
     gltf.scene.traverse((o) => {
       if (!o.isMesh) return;
