@@ -22,7 +22,7 @@ export const LEVELS = [
     color: 'tomato',
   },
   { n: 2, id: 'bedroom', name: 'Bedroom Bedlam', place: "The Kid's Bedroom", start: 0.2, target: 1.1, time: 360, packs: ['L1', 'L2', 'L3'], cell: 0.4, mod: l2, theme: 'bedroom', color: 'cobalt' },
-  { n: 3, id: 'house', name: 'House Party', place: 'The Whole House', start: 1.0, target: 5, time: 420, packs: ['L1', 'L2', 'L3', 'L4'], cell: 2, mod: l3, theme: 'house', color: 'teal' },
+  { n: 3, id: 'house', name: 'House Party', place: 'The Whole House', start: 1.0, target: 5, time: 480, packs: ['L1', 'L2', 'L3', 'L4'], cell: 2, mod: l3, theme: 'house', color: 'teal' },
   { n: 4, id: 'culdesac', name: 'Cul-de-Sac', place: 'Maple Loop', start: 4.5, target: 22, time: 480, packs: ['L2', 'L3', 'L4'], cell: 8, mod: l4, theme: 'culdesac', color: 'leaf' },
   { n: 5, id: 'town', name: 'Small Town', place: 'Puddleford', start: 18, target: 90, time: 540, packs: ['L2', 'L3', 'L4', 'L5'], cell: 30, mod: l5, theme: 'town', color: 'tangerine' },
   { n: 6, id: 'city', name: 'The Big Tidy', place: 'The Whole City', start: 75, target: 400, time: 600, packs: ['L3', 'L4', 'L5', 'L6'], cell: 100, mod: l6, theme: 'city', color: 'grape', stars: [1, 1.35, 1.7] },
