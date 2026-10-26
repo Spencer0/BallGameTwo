@@ -10,7 +10,7 @@ import { Network } from './city/network.js';
 import { paintNetwork } from './city/surface.js';
 import { Occupancy, occupyNetwork, frameAt, local, fenceLine } from './city/frontage.js';
 import { SK } from '../render/streets.js';
-import { suburbLot, closeFences, pickId, woods, parkingLot, court, countryside } from './city/suburb.js';
+import { suburbLot, closeFences, frontageFences, pickId, woods, parkingLot, court, countryside } from './city/suburb.js';
 import { lifeSpec, spawnTraffic, spawnWalkers, spawnLoopWalkers, trafficLights, stopSigns, flock } from './city/lifespec.js';
 
 const S = 240;
@@ -204,12 +204,15 @@ export function layout(lib, seed = 404) {
     const n = Math.floor((len - 4) / W);
     if (n < 1) continue;
     const pad = (len - n * W) / 2;
+    const recs = [];
     for (let k = 0; k < n; k++) {
-      const fr = frameAt(f, pad + W * (k + 0.5));
+      const s = pad + W * (k + 0.5);
+      const fr = frameAt(f, s);
       const [ix, iz] = local(fr, 0, -6);
       const outside = ((ix - LOOP.cx) / LOOP.rx) ** 2 + ((iz - LOOP.cz) / LOOP.rz) ** 2 > 1;
-      suburbLot(ctx, fr, e, { W, D: outside ? 36 : 30, first: k === 0, last: k === n - 1 });
+      recs.push({ s, rec: suburbLot(ctx, fr, e, { W, D: outside ? 36 : 30, first: k === 0, last: k === n - 1, fenceMode: 'frontage' }) });
     }
+    frontageFences(ctx, f, recs, frameAt);
   }
   closeFences(ctx);
   birchGreen(ctx);
@@ -291,7 +294,9 @@ export function layout(lib, seed = 404) {
   // kids riding and running round the turning circles; a parent watching from a driveway
   for (const c of ctx.courts || []) {
     const ring = [];
-    for (let k = 0; k < 16; k++) ring.push([c.x + Math.sin((k / 16) * Math.PI * 2) * (c.r - 2.2), c.z + Math.cos((k / 16) * Math.PI * 2) * (c.r - 2.2)]);
+    // round the grass island in the middle of the circle, not out in the roadway
+    const ri = c.r * 0.32 + 0.8;
+    for (let k = 0; k < 16; k++) ring.push([c.x + Math.sin((k / 16) * Math.PI * 2) * ri, c.z + Math.cos((k / 16) * Math.PI * 2) * ri]);
     spawnLoopWalkers(L, life, ring, 2 + Math.floor(L.rand() * 2), ['person_kid', 'person_kid', 'person_teen'], { speed: [1.6, 2.8], dogs: 0.2 });
     if (L.rand() < 0.5) L.put(pickId(L, ['bicycle', 'tricycle']), c.x + L.range(-3, 3), c.z + L.range(-3, 3), { yaw: L.range(0, 6.28) });
   }
@@ -320,9 +325,7 @@ function birchGreen(ctx) {
   }
   ctx.paint.push((b) => {
     b.disc(BIRCH.cx, BIRCH.cz, 9.5, SK.path, { r0: 7.5, P: [1], C: ['sand', 'caramel'], segs: 36, y: -0.04 });
-    b.rect(BIRCH.cx - 3, BIRCH.cz + 4, 7, 5, 0.6, SK.dirt, { C: ['caramel', 'cocoa'], y: -0.03 });
   });
-  L.put('swing_set', BIRCH.cx - 3, BIRCH.cz + 4, { yaw: 0.6 });
   for (const a of [0.8, 2.6, 4.4]) L.put('park_bench', BIRCH.cx + Math.sin(a) * 11, BIRCH.cz + Math.cos(a) * 11, { yaw: a + Math.PI });
 }
 
@@ -397,6 +400,11 @@ function stripMall(ctx) {
     { id: 'cafe', x: 100, lot: 24 },
     { id: pickId(L, ['strip_mall', 'shop_b']), x: 175, lot: 48 },
   ];
+  // the Methodist church on its own lot at the west end of the strip
+  {
+    const ch = L.lib.byId.get('church');
+    if (ch) L.put('church', -212, prop + 4 + ch.dims[2] / 2, { yaw: Math.PI, tint: 'paper' });
+  }
   for (const p of pads) {
     const t = L.lib.byId.get(p.id);
     if (!t) continue;

@@ -30,7 +30,7 @@ const HOUSE_POOL = ['house_d', 'house_e', 'house_f', 'house_a', 'house_c', 'hous
  * One suburban lot. fr = frame on the property line at the lot's centre (yaw faces the road).
  * e = the street edge (for verge/walk widths). opts: W (frontage), D (depth), first/last (fence ends), pie.
  */
-export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'cocoa' } = {}) {
+export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = false, pie = false, setback: sb = null, pool: poolIds = null, fenceP = 1, fenceIds = null, fenceTint: ft = 'cocoa', fenceMode = 'lot' } = {}) {
   const { L, occ, fences, paint } = ctx;
   const pool = (poolIds || HOUSE_POOL).filter((id) => L.lib.byId.has(id));
   if (!pool.length) return false;
@@ -152,13 +152,21 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
     paint.push((b) => b.rect(yx, yz, W - 0.4, D + backStart, fr.yaw, SK.solid, { C: ['lime'], y: -0.06 }));
   }
   let rightRun = null;
-  if (!fenced) {
+  const sideDriveGate = (sg) => typeof info.drive !== 'number' && Math.sign(gx) === sg;
+  if (fenced && !pie && fenceMode === 'frontage') {
+    // the block's fences are drawn once all its lots are down (frontageFences); here just the returns from
+    // the back corners of the house to the lot lines
+    for (const sg of [-1, 1]) if (!sideDriveGate(sg)) fenceLine2(L, fence, local(fr, sg * (hw + 0.2), backStart), local(fr, sg * W / 2, backStart), fences, fenceTint, occ);
+  } else if (!fenced) {
     // an open back yard
   } else if (!pie) {
-    rightRun = [local(fr, W / 2, backStart), local(fr, W / 2, -D)];
-    const left = local(fr, -W / 2, backStart),
+    // side fences run the whole lot line from just behind the house front, so whatever depth the
+    // neighbour's house is, its return meets this run (one continuous fence per shared lot line)
+    const sideStart = -(setback + 1.2);
+    rightRun = [local(fr, W / 2, sideStart), local(fr, W / 2, -D)];
+    const left = local(fr, -W / 2, sideStart),
       leftEnd = local(fr, -W / 2, -D),
-      right = local(fr, W / 2, backStart),
+      right = local(fr, W / 2, sideStart),
       rightEnd = local(fr, W / 2, -D);
     fenceLine2(L, fence, left, leftEnd, fences, fenceTint, occ);
     if (last) {
@@ -166,6 +174,13 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       rightRun = null;
     }
     fenceLine2(L, fence, leftEnd, rightEnd, fences, fenceTint, occ);
+    // returns from the back corners of the house out to the lot lines, so the yard is closed against the
+    // house (left open on the driveway side when the drive runs back past the house: that's the gate)
+    const sideDrive = typeof info.drive !== 'number';
+    for (const sg of [-1, 1]) {
+      if (sideDrive && Math.sign(gx) === sg) continue;
+      fenceLine2(L, fence, local(fr, sg * (hw + 0.2), backStart), local(fr, sg * W / 2, backStart), fences, fenceTint, occ);
+    }
   } else {
     // pie lot: radial side fences along the wedge edges, the rear line across the wide end
     const { cx, cz, a, half, R } = pie;
@@ -178,9 +193,15 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
       for (let k = 6; k >= 0; k--) wedge.push(P(a - half + (2 * half * k) / 6, r1));
       paint.push((b) => b.poly(wedge, SK.solid, { C: ['lime'], y: -0.06, origin: [cx, cz] }));
     }
-    fenceLine2(L, fence, P(a - half, r0), P(a - half, r1), fences, fenceTint, occ);
-    fenceLine2(L, fence, P(a + half, r0), P(a + half, r1), fences, fenceTint, occ);
+    const rs = r0; // from the back of the house
+    fenceLine2(L, fence, P(a - half, rs), P(a - half, r1), fences, fenceTint, occ);
+    fenceLine2(L, fence, P(a + half, rs), P(a + half, r1), fences, fenceTint, occ);
     fenceLine2(L, fence, P(a - half, r1), P(a + half, r1), fences, fenceTint, occ);
+    // returns from the house's back corners to the wedge sides (local right is towards increasing angle)
+    for (const sg of [-1, 1]) {
+      if (typeof info.drive !== 'number' && Math.sign(gx) === sg) continue;
+      fenceLine2(L, fence, local(fr, sg * (hw + 0.2), backStart), P(a + sg * half, r0), fences, fenceTint, occ);
+    }
   }
   // each family's yard has a character, not the same kit everywhere
   const THEMES = [
@@ -232,7 +253,11 @@ export function suburbLot(ctx, fr, e, { W = 20, D = 30, first = false, last = fa
     const dog = L.put('dog', x, z);
     if (dog) (ctx.yardDogs || (ctx.yardDogs = [])).push({ it: dog, fr, W, z0: backStart, z1: -D });
   }
-  (ctx.lots || (ctx.lots = [])).push({ fr, W, D, setback, gx, driveLen, house, fence, fenceTint, leftAt: fenced && !pie ? local(fr, -W / 2, backStart) : null, rightRun, rearL: local(fr, -W / 2, -D), rearR: local(fr, W / 2, -D), fenced: fenced && !pie });
+  if (fenceMode === 'frontage' && !pie) {
+    if (fenced) rightRun = null;
+    return { fr, W, D, backStart, fenced, fence, fenceTint };
+  }
+  (ctx.lots || (ctx.lots = [])).push({ fr, W, D, setback, gx, driveLen, house, fence, fenceTint, leftAt: fenced && !pie ? local(fr, -W / 2, -(setback + 1.2)) : null, rightRun, rearL: local(fr, -W / 2, -D), rearR: local(fr, W / 2, -D), fenced: fenced && !pie });
   return true;
 }
 
@@ -263,14 +288,23 @@ function fenceLine2(L, id, [x0, z0], [x1, z1], dedupe, tint, occ = null) {
   const ux = (x1 - x0) / len,
     uz = (z1 - z0) / len;
   const yaw = L.along(id, Math.atan2(ux, uz));
+  const log = L.fenceLog ? { x0, z0, x1, z1, n, dup: 0, blocked: [] } : null;
+  if (log) L.fenceLog.push(log);
   for (let k = 0; k < n; k++) {
     const c = (k + 0.5) * (len / n);
     const x = x0 + ux * c,
       z = z0 + uz * c;
     const key = Math.round(x) + ',' + Math.round(z);
-    if (dedupe.has(key)) continue;
+    if (dedupe.has(key)) {
+      if (log) log.dup++;
+      continue;
+    }
     // never through a house, garage, driveway, road or somebody's front garden
-    if (occ && occ.hits({ x, z, hw: 0.5, hd: 0.5, yaw: 0 }, FENCE_PASS)) continue;
+    const hit = occ && occ.hits({ x, z, hw: 0.3, hd: 0.3, yaw: 0 }, FENCE_PASS);
+    if (hit) {
+      if (log) log.blocked.push(hit.tag);
+      continue;
+    }
     dedupe.add(key);
     L.put(id, x, z, { yaw, scale: s, tint });
   }
@@ -391,4 +425,40 @@ export function countryside(ctx, net, { inner, outer, cell = 130, trees = 0.18, 
         for (let t = -w / 2 + 5; t < w / 2 - 4; t += 13) L.put(L.rand() < 0.7 ? 'tree_round' : 'pine_tree', cx + (along ? t : -w / 2), cz + (along ? -w / 2 : t), { scale: L.range(1, 1.4), tint: L.pick(['leaf', 'pine', 'lime']) });
       }
     }
+}
+
+/**
+ * Fences for a run of lots along one frontage (fenceMode 'frontage'): one continuous rear fence following
+ * the street's curve, a fence down every shared lot line from the nearer house's back to the rear line,
+ * and the two outer sides. recs: [{ s, rec }] where rec is what suburbLot returned and s the lot centre.
+ */
+export function frontageFences(ctx, f, recs, frameAt) {
+  const { L, occ, fences } = ctx;
+  const lots = recs.filter((r) => r.rec && r.rec.fenced).sort((a, b) => a.s - b.s);
+  // split into runs of neighbouring lots
+  const runs = [];
+  for (const r of lots) {
+    const last = runs[runs.length - 1];
+    if (last && r.s - last[last.length - 1].s < r.rec.W * 1.2) last.push(r);
+    else runs.push([r]);
+  }
+  for (const run of runs) {
+    const a = run[0],
+      z = run[run.length - 1];
+    const D = Math.min(...run.map((r) => r.rec.D));
+    const { fence, fenceTint } = a.rec;
+    const at = (s, depth) => local(frameAt(f, s), 0, depth);
+    // rear line, panel by panel along the curve
+    const s0 = a.s - a.rec.W / 2,
+      s1 = z.s + z.rec.W / 2;
+    const n = Math.max(1, Math.round((s1 - s0) / 2.4));
+    for (let k = 0; k < n; k++) fenceLine2(L, fence, at(s0 + ((s1 - s0) * k) / n, -D), at(s0 + ((s1 - s0) * (k + 1)) / n, -D), fences, fenceTint, occ);
+    // the outer sides and every shared lot line
+    fenceLine2(L, fence, at(s0, a.rec.backStart), at(s0, -D), fences, fenceTint, occ);
+    fenceLine2(L, fence, at(s1, z.rec.backStart), at(s1, -D), fences, fenceTint, occ);
+    for (let k = 0; k < run.length - 1; k++) {
+      const sb = (run[k].s + run[k].rec.W / 2 + run[k + 1].s - run[k + 1].rec.W / 2) / 2;
+      fenceLine2(L, fence, at(sb, Math.max(run[k].rec.backStart, run[k + 1].rec.backStart)), at(sb, -D), fences, fenceTint, occ);
+    }
+  }
 }

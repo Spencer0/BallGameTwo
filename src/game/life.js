@@ -369,6 +369,30 @@ export class Life {
       }
       if (this.conflicts(a.lane, a.next, o.lane, o.next)) return false;
     }
+    // a car waiting at another approach's stop line with its nose out over the junction: don't turn
+    // through it
+    const node = this.net.lanes[a.lane].to;
+    if (!this.sig[node]) return true; // (only at lights, where the waiting car is held by its red)
+    if (!this.nodeIn) {
+      this.nodeIn = new Map();
+      this.net.lanes.forEach((l, id) => {
+        if (!this.nodeIn.has(l.to)) this.nodeIn.set(l.to, []);
+        this.nodeIn.get(l.to).push(id);
+      });
+    }
+    const path = this.connector(a.lane, a.next).pts;
+    const w = this.w;
+    for (const lid of this.nodeIn.get(node) || []) {
+      if (lid === a.lane) continue;
+      const cars = this.laneCars[lid];
+      const lane = this.net.lanes[lid];
+      for (const o of cars) {
+        if (o.dead || o.conn || o.s < lane.len - 7 || o.v > 0.5 || this.canGo(lane)) continue;
+        const ox = w.x[o.i],
+          oz = w.z[o.i];
+        for (const p of path) if ((p[0] - ox) ** 2 + (p[1] - oz) ** 2 < 9) return false;
+      }
+    }
     return true;
   }
 
