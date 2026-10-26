@@ -145,6 +145,8 @@ export class Session {
     this.ball.handler = this;
     const sp = mod.spawn;
     this.ball.reset(sp.x, this.env.groundAt(sp.x, sp.z), sp.z, L.start / 2);
+    this.ball.speedMul = L.speed ?? 1;
+    this.growth = L.growth ?? 1;
     this.rVis = this.ball.r;
     this.rPop = 0;
     this.ballGroup = new THREE.Group();
@@ -249,7 +251,7 @@ export class Session {
     this.dropChildren(i);
     const vol = t.vol * w.scale[i] ** 3;
     const before = ball.diameter;
-    const gained = rules.gainVolume(ball.r, vol, w.size[i]);
+    const gained = rules.gainVolume(ball.r, vol, w.size[i], this.growth);
     ball.r = rules.radiusFromVolume(rules.sphereVolume(ball.r) + gained);
     f.gained = gained;
     this.rPop = Math.min(0.12, this.rPop + 0.03 + (0.25 * vol) / (rules.sphereVolume(r) + 1e-12));
@@ -272,7 +274,7 @@ export class Session {
     const t = w.types[w.type[i]];
     w.remove(i);
     this.dropChildren(i);
-    this.ball.r = rules.grow(this.ball.r, t.vol * w.scale[i] ** 3, w.size[i]);
+    this.ball.r = rules.grow(this.ball.r, t.vol * w.scale[i] ** 3, w.size[i], this.growth);
     this.count(t);
     this.tinyAcc++;
     if (this.time - this.lastTinyFx > 0.12) {

@@ -1,8 +1,19 @@
-// Level 5 — Small Town: Puddleford. Town grid + plaza, farmland west, harbour south-east,
-// fairground north-east, a railway across the north. 900 x 900 m.
+// Level 5 — Small Town: Puddleford. Town grid + plaza, suburbs on a street ring, farmland west,
+// harbour south-east, fairground north-east, a railway across the north. 1.5 x 1.5 km.
 import { Layout } from './layout.js';
+import { roadPlanes, lotsAlong, streetFurniture } from './streets.js';
 
-const S = 450;
+const S = 750;
+const SUBURB_ROADS = [
+  { x0: -700, z0: -260, x1: 700, z1: -260 },
+  { x0: -700, z0: 260, x1: 700, z1: 260 },
+  { x0: -260, z0: -700, x1: -260, z1: 700 },
+  { x0: 260, z0: -700, x1: 260, z1: 700 },
+  { x0: -700, z0: 520, x1: 120, z1: 520 },
+  { x0: 520, z0: -700, x1: 520, z1: 120 },
+  { x0: -560, z0: -700, x1: -560, z1: -260 },
+];
+const SUB_RW = 12;
 const RW = 14; // road width
 const GRID = [-150, -75, 0, 75, 150];
 
@@ -18,7 +29,7 @@ export const env = {
     [0.55, '#FFC27A'],
     [1, 'butter'],
   ],
-  fog: { near: 300, far: 800, k: 75, color: '#FFE0A8' },
+  fog: { near: 320, far: 900, k: 75, color: '#FFE0A8' },
   groundY: 0,
   planes: [
     { x: 0, z: 0, w: 6000, d: 6000, y: -0.4, pattern: 'lawn', a: 'leaf', b: '#47B064', cell: 40 },
@@ -38,6 +49,11 @@ export const env = {
     { x: 300, z: -300, w: 220, d: 220, y: -0.1, pattern: 'checks', a: 'sand', b: 'butter', cell: 16 },
     // railway
     { x: 0, z: -390, w: 2 * S, d: 10, y: -0.05, pattern: 'roadx', a: 'stone', b: 'cocoa', cell: 10, offset: [0, 390] },
+    ...roadPlanes(SUBURB_ROADS, SUB_RW, { y: -0.06 }),
+    // more fields to the far west and south
+    { x: -650, z: -500, w: 180, d: 280, y: -0.1, pattern: 'lawn', a: 'sun', b: 'butter', cell: 7 },
+    { x: -650, z: 380, w: 180, d: 300, y: -0.1, pattern: 'lawn', a: 'leaf', b: 'lime', cell: 7, rot: Math.PI / 2 },
+    { x: -380, z: 650, w: 300, d: 160, y: -0.1, pattern: 'lawn', a: 'caramel', b: 'sand', cell: 7 },
   ],
   blocks: [
     { min: [-S - 20, -5, -S - 20], max: [S + 20, 2000, -S], visible: false },
@@ -48,7 +64,7 @@ export const env = {
 };
 
 // Madame Prudence, town-sized, on the horizon
-env.decor = [{ id: 'char__prudence', x: -560, y: 0, z: -320, yaw: 0.9, scale: 80, size: 220 }];
+env.decor = [{ id: 'char__prudence', x: -920, y: 0, z: -520, yaw: 1.05, scale: 80, size: 220 }];
 
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
 export const spawn = { x: 37.5, z: 60, yaw: Math.PI };
@@ -237,5 +253,62 @@ export function layout(lib, seed = 505) {
       { minX: x0, maxX: x1, minZ: z0, maxZ: z1 },
       { pad: 0.8 },
     );
+  // ---- suburbs on the outer street ring
+  const avoid = [
+    { x: 0, z: 0, r: 230 }, // town centre
+    { x: 330, z: 330, r: 190 }, // harbour
+    { x: 300, z: -300, r: 160 }, // fairground
+    { x: -330, z: 0, r: 0 },
+  ];
+  const homes = ['house_a', 'house_b', 'house_c', 'house_a', 'house_b', 'apartment_block', 'shop_a', 'garage'];
+  lotsAlong(L, SUBURB_ROADS, {
+    spacing: 30,
+    setback: 22,
+    radius: 13,
+    bounds,
+    avoid,
+    lotFn: (L2, x, z, yaw) => {
+      const id = L2.pick(homes);
+      L2.put(id, x, z, { yaw });
+      const fx = Math.sin(yaw),
+        fz = Math.cos(yaw);
+      const rx = Math.cos(yaw),
+        rz = -Math.sin(yaw);
+      if (L2.rand() < 0.7) L2.put(L2.pick(['car', 'pickup_truck', 'car']), x + fx * 11 + rx * 8, z + fz * 11 + rz * 8, { yaw: L2.along('car', yaw) });
+      L2.put(L2.pick(['tree_round', 'bush', 'pine_tree']), x + fx * 10 - rx * 9, z + fz * 10 - rz * 9);
+      if (L2.rand() < 0.5) L2.put(L2.pick(['garden_shed', 'trampoline', 'swing_set', 'above_ground_pool', 'picnic_table']), x - fx * 14 + rx * 6, z - fz * 14 + rz * 6, { yaw });
+      if (L2.rand() < 0.4) L2.put(L2.pick(['person_adult', 'person_kid', 'dog', 'person_adult2']), x + fx * 14, z + fz * 14);
+    },
+  });
+  streetFurniture(L, SUBURB_ROADS, SUB_RW, { lampEvery: 32, parked: 0.25, vehicles: ['car', 'car', 'pickup_truck', 'delivery_van', 'city_bus', 'tractor'] });
+  // ---- outer farms and a village green
+  for (const [bx, bz] of [[-640, -560], [-660, 420], [-420, 640], [620, 600]]) {
+    L.put('red_barn', bx, bz, { yaw: L.range(0, 6.28) });
+    L.put('grain_silo', bx + 22, bz + 6);
+    if (L.rand() < 0.6) L.put('windmill', bx - 40, bz + 30, { yaw: L.range(0, 6.28) });
+    L.scatterTable(
+      [
+        ['cow', 14],
+        ['sheep', 18],
+        ['horse', 6],
+        ['hay_bale', 24],
+        ['tractor', 2],
+        ['picket_fence', 14],
+        ['tree_round', 10],
+        ['pine_tree', 10],
+        ['sunflower', 16],
+      ],
+      { minX: bx - 110, maxX: bx + 110, minZ: bz - 110, maxZ: bz + 110 },
+      { pad: 1 },
+    );
+  }
+  // forests along the edges
+  for (let k = 0; k < 260; k++) {
+    const t = k / 260;
+    const edge = k % 4;
+    const u = -S + 10 + ((t * 4) % 1) * (2 * S - 20);
+    const [x, z] = edge === 0 ? [u, -S + 10] : edge === 1 ? [u, S - 10] : edge === 2 ? [-S + 10, u] : [S - 10, u];
+    L.put(k % 3 ? 'pine_tree' : 'tree_round', x + L.range(-6, 6), z + L.range(-6, 6), { scale: L.range(1, 1.6) });
+  }
   return L;
 }

@@ -20,6 +20,24 @@ export class Layout {
     this.bounds = bounds; // {minX,maxX,minZ,maxZ}
     this.blockers = []; // {x,z,r} areas kept clear (e.g. spawn point)
     this.missing = new Set();
+    this.hash = new Map(); // spatial hash of placed items for overlap tests
+    this.hcell = Math.max(1e-3, (bounds.maxX - bounds.minX) / 160);
+    this.maxR = 0;
+  }
+
+  /** cell size for the overlap hash; set once from the level's scale before placing */
+  setCell(c) {
+    this.hcell = c;
+    this.hash.clear();
+    for (const it of this.items) this.index(it);
+  }
+
+  index(it) {
+    const k = Math.floor(it.x / this.hcell) + ',' + Math.floor(it.z / this.hcell);
+    let a = this.hash.get(k);
+    if (!a) this.hash.set(k, (a = []));
+    a.push(it);
+    if (it.r > this.maxR) this.maxR = it.r;
   }
 
   has(id) {
@@ -51,12 +69,28 @@ export class Layout {
     const b = this.bounds;
     if (x - r < b.minX || x + r > b.maxX || z - r < b.minZ || z + r > b.maxZ) return false;
     for (const c of this.blockers) if ((x - c.x) ** 2 + (z - c.z) ** 2 < (r + c.r) ** 2) return false;
-    for (const it of this.items) {
-      if (Math.abs(it.y - y) > 1e-3) continue;
-      const rr = r + it.r + Math.min(r, it.r) * pad;
-      if ((x - it.x) ** 2 + (z - it.z) ** 2 < rr * rr) return false;
+    const reach = r + this.maxR * (1 + pad);
+    const c = this.hcell;
+    const x0 = Math.floor((x - reach) / c),
+      x1 = Math.floor((x + reach) / c);
+    const z0 = Math.floor((z - reach) / c),
+      z1 = Math.floor((z + reach) / c);
+    if ((x1 - x0 + 1) * (z1 - z0 + 1) > this.items.length + 64) {
+      for (const it of this.items) if (this.overlaps(it, x, z, r, y, pad)) return false;
+      return true;
     }
+    for (let cx = x0; cx <= x1; cx++)
+      for (let cz = z0; cz <= z1; cz++) {
+        const a = this.hash.get(cx + ',' + cz);
+        if (a) for (const it of a) if (this.overlaps(it, x, z, r, y, pad)) return false;
+      }
     return true;
+  }
+
+  overlaps(it, x, z, r, y, pad) {
+    if (Math.abs(it.y - y) > 1e-3) return false;
+    const rr = r + it.r + Math.min(r, it.r) * pad;
+    return (x - it.x) ** 2 + (z - it.z) ** 2 < rr * rr;
   }
 
   /** Yaw that lines an object's longest horizontal axis up with direction `dir` (radians, like yaw). */
@@ -86,6 +120,7 @@ export class Layout {
       on: opts.on,
     };
     this.items.push(it);
+    this.index(it);
     return it;
   }
 

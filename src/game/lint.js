@@ -67,7 +67,7 @@ export class Lint {
     const vx = ball.vel.x,
       vz = ball.vel.z;
     const sp = Math.hypot(vx, vz);
-    const vmax = 4.4 * ball.r;
+    const vmax = 4.4 * ball.speedMul * ball.r;
     const moving = sp > vmax * 0.08;
     // face the direction of travel when moving, otherwise the camera's forward
     const want = moving ? Math.atan2(vx, vz) : camYaw;

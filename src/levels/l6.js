@@ -1,8 +1,20 @@
 // Level 6 — The Big Tidy: the whole city. Downtown towers, port, airport, stadium, space centre,
-// suburbs, and clouds overhead for the very end. 2.6 x 2.6 km.
+// a ring of outer districts, and clouds overhead for the very end. 4.4 x 4.4 km.
 import { Layout } from './layout.js';
+import { roadPlanes, lotsAlong, streetFurniture } from './streets.js';
 
-const S = 1300;
+const S = 2200;
+const OUTER = [
+  { x0: -2100, z0: -1500, x1: 2100, z1: -1500 },
+  { x0: -2100, z0: 1500, x1: 2100, z1: 1500 },
+  { x0: -1500, z0: -2100, x1: -1500, z1: 2100 },
+  { x0: 1500, z0: -2100, x1: 1500, z1: 2100 },
+  { x0: -2100, z0: -500, x1: -1500, z1: -500 },
+  { x0: 1500, z0: 500, x1: 2100, z1: 500 },
+  { x0: -500, z0: 1500, x1: -500, z1: 2100 },
+  { x0: 500, z0: -2100, x1: 500, z1: -1500 },
+];
+const OUT_RW = 36;
 const RW = 34;
 const GRID = [-600, -400, -200, 0, 200, 400, 600];
 
@@ -19,11 +31,11 @@ export const env = {
     [0.75, 'tangerine'],
     [1, 'butter'],
   ],
-  fog: { near: 900, far: 2400, k: 70, color: '#FF9E7A' },
+  fog: { near: 1000, far: 2800, k: 70, color: '#FF9E7A' },
   groundY: 0,
   planes: [
     { x: 0, z: 0, w: 20000, d: 20000, y: -2, pattern: 'lawn', a: 'pine', b: '#2A8A5E', cell: 120 },
-    { x: 0, z: 0, w: 2 * S, d: 2 * S, y: -1.5, pattern: 'lawn', a: 'leaf', b: '#47B064', cell: 50 },
+    { x: 0, z: 0, w: 2 * S, d: 2 * S, y: -1.5, pattern: 'lawn', a: 'leaf', b: '#47B064', cell: 60 },
     { x: 0, z: 0, w: 1440, d: 1440, y: -1, pattern: 'tiles', a: '#7A7390', b: '#837C99', c: 'charcoal', cell: 25 },
     ...roads,
     // central park
@@ -37,6 +49,7 @@ export const env = {
     { x: -1000, z: -100, w: 70, d: 650, y: 0.04, pattern: 'roadz', a: 'charcoal', b: 'snow', cell: 70, offset: [1000, 100] },
     // stadium plaza (north)
     { x: 0, z: -950, r: 230, y: -0.6, pattern: 'tiles', a: 'cloud', b: '#E6E9F1', c: 'stone', cell: 20 },
+    ...roadPlanes(OUTER, OUT_RW, { y: -1.2, walkColor: 'stone' }),
     // space centre (east)
     { x: 1050, z: -300, w: 400, d: 500, y: -0.7, pattern: 'checks', a: 'sand', b: '#F2D9AE', cell: 50 },
   ],
@@ -49,7 +62,7 @@ export const env = {
 };
 
 // Madame Prudence, city-sized, supervising from beyond the stadium
-env.decor = [{ id: 'char__prudence', x: 250, y: 0, z: -1650, yaw: -0.2, scale: 300, size: 800 }];
+env.decor = [{ id: 'char__prudence', x: 400, y: 0, z: -2700, yaw: -0.15, scale: 300, size: 800 }];
 
 export const bounds = { minX: -S, maxX: S, minZ: -S, maxZ: S };
 export const spawn = { x: 300, z: 520, yaw: Math.PI };
@@ -226,6 +239,53 @@ export function layout(lib, seed = 606) {
   for (let k = 0; k < 6; k++) L.put('helicopter', L.range(-900, 900), L.range(-900, 700), { y: L.range(80, 160) });
   for (let k = 0; k < 4; k++) L.put('blimp', L.range(-900, 900), L.range(-900, 700), { y: L.range(170, 260), yaw: L.range(0, 6.28) });
   for (let k = 0; k < 6; k++) L.put('hot_air_balloon', L.range(-1100, 1100), L.range(-1100, 700), { y: L.range(90, 200), scale: L.range(1, 1.6) });
-  for (let k = 0; k < 26; k++) L.put('fluffy_cloud', L.range(-1200, 1200), L.range(-1200, 1200), { y: L.range(220, 420), scale: L.range(0.8, 1.6), yaw: L.range(0, 6.28) });
+  // ---- outer districts on the ring roads (the city keeps going)
+  const avoid = [{ x: 0, z: 0, r: 1350 }];
+  const mix = ['house_a', 'house_b', 'house_c', 'apartment_block', 'apartment_block', 'office_block', 'shop_a', 'shop_b', 'apartment_tower', 'parking_garage', 'factory_chimneys', 'red_barn'];
+  lotsAlong(L, OUTER, {
+    spacing: 70,
+    setback: 60,
+    radius: 32,
+    bounds,
+    avoid,
+    lotFn: (L2, x, z, yaw) => {
+      L2.put(L2.pick(mix), x, z, { yaw });
+      const fx = Math.sin(yaw),
+        fz = Math.cos(yaw);
+      const rx = Math.cos(yaw),
+        rz = -Math.sin(yaw);
+      L2.put(L2.pick(['tree_round', 'pine_tree', 'tree_round']), x + fx * 30 - rx * 26, z + fz * 30 - rz * 26, { scale: 1.3 });
+      if (L2.rand() < 0.6) L2.put(L2.pick(['car', 'city_bus', 'delivery_van', 'fire_truck']), x + fx * 34 + rx * 20, z + fz * 34 + rz * 20, { yaw: L2.along('car', yaw) });
+      if (L2.rand() < 0.4) L2.put(L2.pick(['house_a', 'house_b', 'garage', 'shop_b']), x - fx * 34 + rx * 26, z - fz * 34 + rz * 26, { yaw });
+    },
+  });
+  streetFurniture(L, OUTER, OUT_RW, { lampEvery: 80, parked: 0.3, hydrants: false, vehicles: ['car', 'city_bus', 'delivery_van', 'garbage_truck'] });
+  // hills of forest and lakeside landmarks beyond the ring
+  L.scatterTable(
+    [
+      ['pine_tree', 220],
+      ['tree_round', 160],
+      ['windmill', 6],
+      ['water_tower', 6],
+      ['radio_mast', 4],
+      ['lighthouse', 2],
+      ['church', 4],
+      ['grain_silo', 6],
+      ['ferris_wheel', 2],
+      ['circus_tent', 2],
+      ['stadium', 1],
+      ['observation_tower', 1],
+      ['big_wheel', 1],
+      ['cathedral', 1],
+      ['museum_dome', 1],
+      ['skyscraper_spire', 3],
+      ['skyscraper_twist', 2],
+      ['skyscraper_deco', 3],
+    ],
+    { minX: -S + 60, maxX: S - 60, minZ: -S + 60, maxZ: S - 60 },
+    { pad: 0.6 },
+  );
+  for (let k = 0; k < 40; k++) L.put('fluffy_cloud', L.range(-S, S), L.range(-S, S), { y: L.range(220, 480), scale: L.range(0.8, 1.8), yaw: L.range(0, 6.28) });
+  for (let k = 0; k < 6; k++) L.put('blimp', L.range(-S, S), L.range(-S, S), { y: L.range(170, 300), yaw: L.range(0, 6.28) });
   return L;
 }

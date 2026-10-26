@@ -33,6 +33,7 @@ export class Ball {
     this.wantDir = new THREE.Vector3(); // desired move direction (world, horizontal)
     this.handler = null; // { pickup(i, nx, ny, nz), bump(i, impact, nx, ny, nz), wobble(i), tiny(i) }
     this.bumpCooldown = 0;
+    this.speedMul = 1; // per-level pace (big levels lumber a little)
   }
 
   get diameter() {
@@ -63,10 +64,10 @@ export class Ball {
     const wl = Math.hypot(wx, wz);
     this.wantDir.set(wl > 0 ? wx / wl : 0, 0, wl > 0 ? wz / wl : 0);
     const input = Math.min(1, wl);
-    const vmax = PHYS.speed * r;
+    const vmax = PHYS.speed * this.speedMul * r;
     // acceleration towards desired direction
-    this.vel.x += wx * PHYS.accel * r * dt;
-    this.vel.z += wz * PHYS.accel * r * dt;
+    this.vel.x += wx * PHYS.accel * this.speedMul * r * dt;
+    this.vel.z += wz * PHYS.accel * this.speedMul * r * dt;
     // drag (stronger when idle) + speed cap
     const drag = input > 0.05 ? PHYS.dragMove : PHYS.dragIdle;
     const k = Math.exp(-drag * dt);

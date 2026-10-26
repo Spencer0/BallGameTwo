@@ -74,7 +74,7 @@ export class FollowCamera {
     const vx = ball.vel.x,
       vz = ball.vel.z;
     const sp = Math.hypot(vx, vz);
-    const vmax = 4.4 * ball.r;
+    const vmax = 4.4 * ball.speedMul * ball.r;
     if (sp > vmax * 0.18 && Math.abs(this.turnLeft) < 0.3) {
       const heading = Math.atan2(vx, vz);
       const d = angleDiff(heading, this.yaw);

@@ -25,7 +25,9 @@ for (const n of levels) {
     if (res.reached && !res.over) await page.evaluate(() => window.__game.finish());
     await page.waitForTimeout(1500);
     const save = await page.evaluate(() => window.__game.save.data);
-    const ok = res.reached && save.unlocked >= Math.min(6, n + 1) && errors.length === 0;
+    const lvlId = ['crumb', 'bedroom', 'house', 'culdesac', 'town', 'city'][n - 1];
+    const done = save.levels[lvlId] && save.levels[lvlId][mode].done;
+    const ok = res.reached && done && (n === 6 || save.unlocked >= n + 1) && errors.length === 0;
     if (!ok) failures++;
     console.log(`${ok ? 'ok ' : 'BAD'} L${n} ${mode.padEnd(5)} goal reached at ${res.t.toFixed(0)}s game time (${mode === 'timed' ? `limit ${(res.t + res.left).toFixed(0)}s` : 'no limit'}), ` +
       `size ${res.d.toFixed(3)} m / goal ${res.target} m, ${res.pickups} pickups, real ${((Date.now() - t0) / 1000).toFixed(0)}s` + (errors.length ? `\n   errors: ${errors.slice(0, 5).join(' | ')}` : ''));

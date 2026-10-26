@@ -39,14 +39,14 @@ export function radiusFromVolume(v) {
 }
 
 /** Ball volume gained by absorbing an object (effective volume objVol, pickup size objSize). */
-export function gainVolume(radius, objVol, objSize) {
+export function gainVolume(radius, objVol, objSize, mult = 1) {
   const D = 2 * radius;
-  return GROWTH * objVol + (Math.PI / 2) * LIN_GROWTH * objSize * D * D;
+  return mult * (GROWTH * objVol + (Math.PI / 2) * LIN_GROWTH * objSize * D * D);
 }
 
 /** New radius after absorbing an object. */
-export function grow(radius, objVol, objSize = 0) {
-  return radiusFromVolume(sphereVolume(radius) + gainVolume(radius, objVol, objSize));
+export function grow(radius, objVol, objSize = 0, mult = 1) {
+  return radiusFromVolume(sphereVolume(radius) + gainVolume(radius, objVol, objSize, mult));
 }
 
 /** New radius after losing `gained` volume (an item knocked loose). Never below minR. */
