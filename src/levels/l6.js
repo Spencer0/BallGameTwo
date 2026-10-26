@@ -641,6 +641,7 @@ export function layout(lib, seed = 606) {
     }
   }
   unionSquare(ctx, life);
+  bowTies(ctx);
   plaza(ctx, life);
   centralPark(ctx, life);
   batteryPark(ctx, life);
@@ -763,6 +764,37 @@ function blockYard(ctx, x0, x1, z0, z1, boro = false) {
     if (occ.hits(r)) continue;
     occ.add(r, 'tree');
     L.put(pickId(L, ['street_tree', 'tree_round']), x, z, { scale: L.range(0.9, 1.3), tint: L.pick(['leaf', 'pine', 'lime', 'leaf']) });
+  }
+}
+
+/** The triangles where Broadway crosses an avenue and a street close together (Herald Square, Madison
+ *  Square): pave each as a pedestrian island with trees, so the crossing isn't one sheet of asphalt. */
+function bowTies(ctx) {
+  const { L, paint } = ctx;
+  const N = net.nodes;
+  const find = (x, z) => N.find((n) => Math.abs(n.x - x) < 0.6 && Math.abs(n.z - z) < 0.6);
+  for (const e of net.edges) {
+    if (e.name !== 'Broadway' && e.name !== 'Broadway Plaza') continue;
+    const A = N[e.a],
+      B = N[e.b];
+    if (Math.hypot(B.x - A.x, B.z - A.z) > 140) continue;
+    for (const [cx, cz] of [[A.x, B.z], [B.x, A.z]]) {
+      if (!find(cx, cz)) continue;
+      const tri = [[A.x, A.z], [B.x, B.z], [cx, cz]];
+      const gx = (A.x + B.x + cx) / 3,
+        gz = (A.z + B.z + cz) / 3;
+      const a = Math.hypot(B.x - A.x, B.z - A.z),
+        b = Math.hypot(cx - B.x, cz - B.z),
+        c = Math.hypot(A.x - cx, A.z - cz);
+      const area = Math.abs((B.x - A.x) * (cz - A.z) - (cx - A.x) * (B.z - A.z)) / 2;
+      const r = (2 * area) / (a + b + c); // inradius
+      const f = (r - 13) / r; // stay clear of the carriageways
+      if (f < 0.12) continue;
+      const ins = tri.map(([x, z]) => [gx + (x - gx) * f, gz + (z - gz) * f]);
+      paint.push((bb) => bb.poly(ins, SK.plaza, { P: [3], C: ['concrete', 'cloud', 'stone'], y: 0.03, origin: ins[0] }));
+      L.put(pickId(L, ['street_tree', 'tree_round']), gx, gz, { scale: 1.2, tint: 'leaf' });
+      L.put('park_bench', gx + (ins[0][0] - gx) * 0.5, gz + (ins[0][1] - gz) * 0.5, { yaw: 0 });
+    }
   }
 }
 
@@ -1265,7 +1297,7 @@ export const review = {
   ],
   motion: [
     { name: 'fifth_ave', pos: [60, 90, 300], look: [0, 0, 180] },
-    { name: 'plaza', pos: [PLAZA_C[0] + 20, 120, PLAZA_C[1] + 110], look: [PLAZA_C[0], 0, PLAZA_C[1]] },
+    { name: 'plaza', pos: [PLAZA_C[0] + 70, 48, PLAZA_C[1] + 95], look: [PLAZA_C[0], 6, PLAZA_C[1]] },
     { name: 'park', pos: [-40, 120, -900], look: [-40, 0, -1030] },
     { name: 'airport', pos: [-1380, 170, 0], look: [-1620, 0, -380] },
     { name: 'harbour', pos: [500, 250, 1700], look: [100, 0, 2000] },
