@@ -151,6 +151,7 @@ class App {
       s.world.lodPx = this.quality.lodPx;
       s.world.cullPx = this.quality.cullPx;
       s.world.setOutlines(this.quality.outlines);
+      s.world.shadowsOn = this.quality.shadows;
       s.particles.budget = this.quality.particles;
     }
     this.resize();
@@ -173,6 +174,7 @@ class App {
   }
 
   frame(now) {
+    const c0 = performance.now();
     const dt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
     sharedTime.value += dt;
@@ -195,6 +197,9 @@ class App {
     }
     this.frames++;
     this.stats.frameMs = this.stats.frameMs * 0.95 + dt * 1000 * 0.05;
+    const cpu = performance.now() - c0;
+    this.stats.cpuMs = (this.stats.cpuMs || cpu) * 0.95 + cpu * 0.05;
+    this.stats.cpuMax = Math.max(this.stats.cpuMax || 0, cpu);
   }
 
   resultsCamera(dt) {
@@ -528,7 +533,23 @@ class App {
   }
 }
 
+/** iOS Safari: no pinch-zoom, no double-tap zoom, no rubber-band scroll; menu lists still scroll. */
+function guardGestures() {
+  const scrollable = (el) => el && el.closest && el.closest('.level-list, .col-body, .res-items, .res-panel, .panel');
+  document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1 || !scrollable(e.target)) e.preventDefault();
+  }, { passive: false });
+  let lastEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = performance.now();
+    if (now - lastEnd < 320 && !e.target.closest('button, input, label')) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+}
+
 async function boot() {
+  guardGestures();
   const app = new App();
   window.__game = app;
   await app.boot();

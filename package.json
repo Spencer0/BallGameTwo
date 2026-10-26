@@ -6,8 +6,9 @@
   "scripts": {
     "build": "node tools/build.mjs",
     "dev": "node tools/build.mjs --dev",
-    "test": "node --test tests/unit/",
-    "pack": "node tools/pack.mjs"
+    "test": "node --test tests/unit/*.test.js",
+    "pack": "node tools/pack.mjs",
+    "balance": "node tools/balance.mjs"
   },
   "repository": {
     "type": "git",

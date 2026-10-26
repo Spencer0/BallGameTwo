@@ -219,6 +219,12 @@ def main():
     o, _ = core.finalize("prudence_full", recenter=True)
     render_png(o, os.path.join(ROOT, "assets", "img", "prudence_full.png"), 512, az=-24, el=6, pad=1.04)
     bpy.data.objects.remove(o, do_unlink=True)
+    # in-world Prudence (stern, inspecting) for set dressing
+    core.begin(0)
+    prudence("stern", full=True)
+    o, st = core.finalize("char__prudence", recenter=True)
+    print(f"[char] prudence world tris {st['tris']}")
+    out_objs.append(o)
 
     # export Lint rig
     bpy.ops.object.select_all(action="DESELECT")

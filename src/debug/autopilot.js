@@ -17,6 +17,8 @@ export class Autopilot {
     this.override = { x: 0, y: 0 };
     this.skill = 1; // 0..1, lower = more wandering
     this.wanderT = 0;
+    this.banned = new Map(); // instance -> time until which it is ignored (unreachable)
+    this.t = 0;
   }
 
   update(dt) {
@@ -27,6 +29,7 @@ export class Autopilot {
     const b = s.ball,
       w = s.world;
     this.retarget -= dt;
+    this.t += dt;
     // stuck detection
     this.stuckT += dt;
     if (this.stuckT > 1.2) {
@@ -34,6 +37,7 @@ export class Autopilot {
       if (moved < b.r * 0.6 && this.escape <= 0) {
         this.escape = 0.9;
         this.escapeDir = Math.random() * Math.PI * 2;
+        if (this.target >= 0) this.banned.set(this.target, this.t + 12);
         this.target = -1;
       }
       this.lastPos.x = b.pos.x;
@@ -90,6 +94,8 @@ export class Autopilot {
       if (w.state[i] !== ALIVE && w.state[i] !== MOVING) continue;
       const size = w.size[i];
       if (!canPickUp(size, D) || isTiny(size, b.r)) continue;
+      const ban = this.banned.get(i);
+      if (ban !== undefined && ban > this.t) continue;
       // skip things resting on top of big obstacles (unreachable for now)
       if (w.y[i] > b.pos.y + b.r * 1.5) continue;
       const d = Math.hypot(w.x[i] - b.pos.x, w.z[i] - b.pos.z) + b.r;

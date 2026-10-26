@@ -155,7 +155,7 @@ def button():
 @asset("thumbtack", "Thumbtack", "Lands point-up. Every. Single. Time.", 1, "metal", "tiny",
        variants=["tomato", "sky", "sun", "leaf"], col="cyl", fill=0.3)
 def thumbtack():
-    _lathe([(0.0, 0.0), (0.0026, 0.0003), (0.0042, 0.001), (0.0048, 0.0016)], color="tomato", segs=10, tint=True)
+    _lathe([(0.0, 0.0), (0.0026, 0.0003), (0.0042, 0.001), (0.0048, 0.0016)], color="tomato", segs=8, tint=True)
     cyl(0.0058, 0.0013, at=(0, 0, 0.0016), color="tomato", segs=12, tint=True, bevel=0.0004)
     cyl(0.0006, 0.0075, at=(0, 0, 0.0029), r2=0.00005, color="stone", segs=6)
 
@@ -197,7 +197,7 @@ def bottle_cap():
 @asset("grape", "Grape", "Left the bunch to find itself.", 1, "food", "tiny", variants=["grape", "lime"],
        col="sphere", fill=0.52)
 def grape():
-    sphere(0.0085, at=(0, 0, 0.0085), scale=(0.95, 0.95, 1.18), rot=(0, 25, 0), color="grape", segs=10, tint=True)
+    sphere(0.0085, at=(0, 0, 0.0085), scale=(0.97, 0.97, 1.1), rot=(0, 25, 0), color="grape", segs=10, tint=True)
     a = math.radians(25)
     cyl(0.001, 0.0045, at=(0.0094 * math.sin(a), 0, 0.0085 + 0.0094 * math.cos(a)), rot=(0, 25, 0),
         color="pine", segs=5)
@@ -897,7 +897,7 @@ def cereal_box():
        fill=0.3)
 def newspaper():
     W, Dp, T = 0.29, 0.2, 0.004
-    lift = -9.0
+    lift = -14.0
     box((W, Dp, T), at=(0, 0, 0), base=True, color="paper")
     cyl(T, W, at=(-W / 2, Dp / 2, T), rot=(0, 90, 0), color="paper", segs=8)
     hinge = (0.0, Dp / 2, T)

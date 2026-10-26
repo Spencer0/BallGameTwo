@@ -44,6 +44,21 @@ export const env = {
   ],
 };
 
+// the kitchen around the table: Madame Prudence supervising from the end of the table
+env.decor = [
+  { id: 'char__prudence', x: W / 2 + 0.55, y: -0.76, z: 0.05, yaw: -Math.PI / 2, scale: 0.55, size: 1.5 },
+  { id: 'desk_chair', x: -0.6, y: -0.76, z: -D / 2 - 0.35, yaw: 0, tint: 'tomato', scale: 1.05 },
+  { id: 'desk_chair', x: 0.6, y: -0.76, z: -D / 2 - 0.35, yaw: 0, tint: 'tomato', scale: 1.05 },
+  { id: 'desk_chair', x: -0.6, y: -0.76, z: D / 2 + 0.35, yaw: Math.PI, tint: 'tomato', scale: 1.05 },
+  { id: 'desk_chair', x: 0.6, y: -0.76, z: D / 2 + 0.35, yaw: Math.PI, tint: 'tomato', scale: 1.05 },
+  { id: 'fridge', x: -3.4, y: -0.76, z: -5.5, yaw: 0 },
+  { id: 'stove', x: -1.8, y: -0.76, z: -5.6, yaw: 0 },
+  { id: 'potted_fern', x: 4.5, y: -0.76, z: -5.4 },
+  { id: 'grandfather_clock', x: 6.6, y: -0.76, z: 2, yaw: -Math.PI / 2 },
+  { id: 'cat', x: -2.2, y: -0.76, z: 1.6, yaw: 2.3, scale: 1.2 },
+  { id: 'dog', x: 2.6, y: -0.76, z: 2.4, yaw: -2.0 },
+];
+
 export const bounds = { minX: -W / 2, maxX: W / 2, minZ: -D / 2, maxZ: D / 2 };
 export const spawn = { x: 0, z: 0.42, yaw: Math.PI }; // facing -Z (towards the far place setting)
 
@@ -67,7 +82,7 @@ export function layout(lib, seed = 101) {
     L.put('butter_knife', x + 0.17, z, { yaw: yaw - 0.04 });
     L.put('spoon', x + 0.21, z + 0.03, { yaw: yaw + 0.1 });
     L.put(L.rand() < 0.5 ? 'mug' : 'teacup', x + 0.2, z - 0.15 * Math.cos(yaw));
-    L.put('egg_cup', x - 0.18, z - 0.14 * Math.cos(yaw));
+    L.put('boiled_egg_cup', x - 0.18, z - 0.14 * Math.cos(yaw));
   }
   // --- centrepiece strip
   L.put('vase_tulips', 0, 0, { yaw: 0.3 });
@@ -80,7 +95,7 @@ export function layout(lib, seed = 101) {
   L.put('cereal_box', -0.98, -0.45, { yaw: 0.25 });
   L.put('milk_carton', -0.82, -0.5, { yaw: -0.3 });
   L.put('newspaper', 0.85, -0.05, { yaw: 1.2 });
-  L.put('bowl_cereal', -0.45, 0.45);
+  L.put('bowl_of_cereal', -0.45, 0.45);
   L.put('pancake_stack', 0.5, 0.45);
 
   // --- fruit corner
@@ -92,7 +107,7 @@ export function layout(lib, seed = 101) {
       ['orange', 3],
       ['lemon', 2],
       ['grape', 10],
-      ['cherry', 4],
+      ['cherry_pair', 4],
       ['strawberry', 6],
       ['blueberry', 10],
     ],

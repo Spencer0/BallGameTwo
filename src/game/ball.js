@@ -217,20 +217,19 @@ export class Ball {
       const nz = -lnx * s + lnz * c;
       const ny = lny;
       const vn = this.vel.x * nx + this.vel.y * ny + this.vel.z * nz;
-      this.resolve(nx, ny, nz, r - d);
+      const lip = world.y[i] + (col.cy * sc + top) - (this.pos.y - r);
+      const low = lip < PHYS.climbMax * r;
+      this.resolve(nx, ny, nz, r - d, low);
       if (ny > 0.55) this.grounded = true;
-      else {
-        const lip = world.y[i] + (col.cy * sc + top) - (this.pos.y - r);
-        if (Math.abs(ny) < 0.6 && this.wantsInto(nx, nz) && lip < PHYS.climbMax * r) climb = true;
-        if (vn < 0) {
-          const impact = -vn / (PHYS.speed * r);
-          if (isAlmost(size, D)) this.handler.wobble(i, impact);
-          if (impact > 0.35 && this.bumpCooldown <= 0) {
-            this.bumpCooldown = 0.25;
-            this.handler.bump(i, impact, nx, ny, nz);
-          }
+      else if (low && ny > -0.3 && this.wantsInto(nx, nz)) climb = true; // walls and edges of low things
+      if (!low && ny <= 0.55 && vn < 0) {
+        const impact = -vn / (PHYS.speed * r);
+        if (isAlmost(size, D)) this.handler.wobble(i, impact);
+        if (impact > 0.35 && this.bumpCooldown <= 0) {
+          this.bumpCooldown = 0.25;
+          this.handler.bump(i, impact, nx, ny, nz);
         }
-      }
+      } else if (low && vn < -0.2 * PHYS.speed * r && isAlmost(size, D)) this.handler.wobble(i, 0.3);
     }
     this.bumpCooldown -= dt;
     this.climbing = climb;
@@ -251,13 +250,13 @@ export class Ball {
     return -(this.wantDir.x * nx + this.wantDir.z * nz) / h > 0.45;
   }
 
-  resolve(nx, ny, nz, pen) {
+  resolve(nx, ny, nz, pen, soft = false) {
     this.pos.x += nx * pen;
     this.pos.y += ny * pen;
     this.pos.z += nz * pen;
     const vn = this.vel.x * nx + this.vel.y * ny + this.vel.z * nz;
     if (vn < 0) {
-      const e = ny > 0.55 ? 0 : PHYS.restitution;
+      const e = ny > 0.55 || soft ? 0 : PHYS.restitution;
       this.vel.x -= (1 + e) * vn * nx;
       this.vel.y -= (1 + e) * vn * ny;
       this.vel.z -= (1 + e) * vn * nz;

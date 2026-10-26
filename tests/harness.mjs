@@ -30,7 +30,7 @@ export const VIEWPORTS = {
 };
 
 export async function launch(vp = 'iphone14', opts = {}) {
-  const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info', '--js-flags=--expose-gc'] });
   const v = VIEWPORTS[vp];
   const ctx = await browser.newContext({
     viewport: { width: v.width, height: v.height },

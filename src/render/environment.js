@@ -4,14 +4,16 @@ import * as THREE from 'three';
 import { HEX } from './palette.js';
 import { shared, linearRGB, makeToonMaterial, makeOutlineMaterial } from './materials.js';
 
-export const PATTERN = { solid: 0, gingham: 1, boards: 2, tiles: 3, lawn: 4, carpet: 5, stripes: 6, asphalt: 7, water: 8 };
+export const PATTERN = { solid: 0, gingham: 1, boards: 2, tiles: 3, lawn: 4, carpet: 5, stripes: 6, asphalt: 7, water: 8, checks: 9, roadz: 10, roadx: 11 };
 
 const groundVertex = /* glsl */ `
 varying vec3 vWorld;
+varying vec3 vNormalW;
 varying float vFogDepth;
 void main() {
   vec4 wp = modelMatrix * vec4(position, 1.0);
   vWorld = wp.xyz;
+  vNormalW = normalize(mat3(modelMatrix) * normal);
   vec4 mv = viewMatrix * wp;
   vFogDepth = -mv.z;
   gl_Position = projectionMatrix * mv;
@@ -29,7 +31,10 @@ uniform float uFogNear;
 uniform float uFogFar;
 uniform float uTime;
 uniform vec2 uOffset;
+uniform int uMode; // 0 ground (xz), 1 wall (horizontal coord, y)
+uniform float uShade;
 varying vec3 vWorld;
+varying vec3 vNormalW;
 varying float vFogDepth;
 float aastep(float edge, float x) {
   float w = fwidth(x) * 0.75;
@@ -37,6 +42,7 @@ float aastep(float edge, float x) {
 }
 void main() {
   vec2 p = (vWorld.xz + uOffset) / uCell;
+  if (uMode == 1) p = vec2(abs(vNormalW.x) > 0.5 ? vWorld.z : vWorld.x, vWorld.y) / uCell;
   vec3 col = uA;
   if (uPattern == 1) { // gingham
     float a = aastep(0.5, fract(p.x));
@@ -65,17 +71,27 @@ void main() {
     col = mix(uA, uB, aastep(0.5, fract(p.x)));
   } else if (uPattern == 7) { // asphalt
     col = uA;
+  } else if (uPattern == 10 || uPattern == 11) { // road with dashed centre line (p is local: offset = -centre)
+    vec2 q = uPattern == 10 ? p : p.yx;
+    float dash = step(0.5, fract(q.y * 0.9));
+    float line = 1.0 - aastep(0.035, abs(q.x));
+    col = mix(uA, uB, line * dash);
+    float edge = aastep(0.44, abs(q.x)) * (1.0 - aastep(0.47, abs(q.x)));
+    col = mix(col, uB, edge);
+  } else if (uPattern == 9) { // plain checks
+    col = mix(uA, uB, mod(floor(p.x) + floor(p.y), 2.0));
   } else if (uPattern == 8) { // water ripples
     float w = sin(p.x * 1.7 + uTime * 0.8) * 0.5 + sin(p.y * 2.3 - uTime * 0.6) * 0.5;
     col = mix(uA, uB, aastep(0.72, w));
   }
+  col *= uShade;
   float f = smoothstep(uFogNear, uFogFar, vFogDepth);
   gl_FragColor = vec4(mix(col, uFogColor, f), 1.0);
   #include <colorspace_fragment>
 }
 `;
 
-export function makeGroundMaterial({ pattern = 'solid', a = 'paper', b = 'cloud', c = 'ink', cell = 1, offset = [0, 0] }) {
+export function makeGroundMaterial({ pattern = 'solid', a = 'paper', b = 'cloud', c = 'ink', cell = 1, offset = [0, 0], mode = 0, shade = 1 }) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uA: { value: linearRGB(HEX[a] || a) },
@@ -88,6 +104,8 @@ export function makeGroundMaterial({ pattern = 'solid', a = 'paper', b = 'cloud'
       uFogFar: shared.uFogFar,
       uTime: sharedTime,
       uOffset: { value: new THREE.Vector2(offset[0], offset[1]) },
+      uMode: { value: mode },
+      uShade: { value: shade },
     },
     vertexShader: groundVertex,
     fragmentShader: groundFragment,
@@ -162,14 +180,41 @@ export class Environment {
     this.skyTexture = makeSkyTexture(spec.sky);
     this.disposables.push(this.skyTexture);
     for (const p of spec.planes || []) {
-      const geo = new THREE.PlaneGeometry(p.w, p.d);
+      const geo = p.r ? new THREE.CircleGeometry(p.r, 48) : new THREE.PlaneGeometry(p.w, p.d);
       geo.rotateX(-Math.PI / 2);
+      if (p.rot) geo.rotateY(p.rot);
       const mat = makeGroundMaterial(p);
       const m = new THREE.Mesh(geo, mat);
       m.position.set(p.x, p.y ?? 0, p.z);
       m.renderOrder = -1;
       this.group.add(m);
       this.disposables.push(geo, mat);
+    }
+    // room walls: inward-facing planes (invisible from outside, so the camera can pass behind them)
+    for (const w of spec.walls || []) {
+      const [x0, z0] = w.from;
+      const [x1, z1] = w.to;
+      const len = Math.hypot(x1 - x0, z1 - z0);
+      const geo = new THREE.PlaneGeometry(len, w.h);
+      const mat = makeGroundMaterial({ ...w, mode: 1, shade: w.shade ?? 1 });
+      const m = new THREE.Mesh(geo, mat);
+      // walls run counter-clockwise around the room; the inward normal is (-dz, dx)
+      const nx = -(z1 - z0) / len,
+        nz = (x1 - x0) / len;
+      m.rotation.y = Math.atan2(nx, nz); // plane faces +Z by default
+      m.position.set((x0 + x1) / 2, (w.y ?? 0) + w.h / 2, (z0 + z1) / 2);
+      this.group.add(m);
+      this.disposables.push(geo, mat);
+      if (w.collide !== false) {
+        const t = w.thick ?? 1;
+        const box = { minX: Math.min(x0, x1), maxX: Math.max(x0, x1), minZ: Math.min(z0, z1), maxZ: Math.max(z0, z1), minY: -1, maxY: (w.y ?? 0) + w.h + 50, climb: false, cam: false };
+        if (Math.abs(nx) > 0.5) {
+          if (nx > 0) box.minX -= t;
+          else box.maxX += t;
+        } else if (nz > 0) box.minZ -= t;
+        else box.maxZ += t;
+        this.boxes.push(box);
+      }
     }
     const blockGeo = new THREE.BoxGeometry(1, 1, 1);
     // aPal for trivial boxes: single palette index, filled per block material via uTint
@@ -209,12 +254,52 @@ export class Environment {
         }
       }
       if (b.collide !== false)
-        this.boxes.push({ minX: x0, minY: y0, minZ: z0, maxX: x1, maxY: y1, maxZ: z1, climb: !!b.climb });
+        this.boxes.push({ minX: x0, minY: y0, minZ: z0, maxX: x1, maxY: y1, maxZ: z1, climb: !!b.climb, cam: b.cam !== false && b.visible !== false });
     }
   }
 
   groundAt() {
     return this.groundY;
+  }
+
+  /**
+   * Segment (ax,ay,az)->(bx,by,bz) against camera-blocking boxes (slab test).
+   * Returns the smallest hit fraction in [0,1] (1 = clear).
+   */
+  segmentHit(ax, ay, az, bx, by, bz) {
+    let best = 1;
+    const dx = bx - ax,
+      dy = by - ay,
+      dz = bz - az;
+    for (let k = 0; k < this.boxes.length; k++) {
+      const B = this.boxes[k];
+      if (!B.cam) continue;
+      let t0 = 0,
+        t1 = 1;
+      let ok = true;
+      for (let axis = 0; axis < 3 && ok; axis++) {
+        const o = axis === 0 ? ax : axis === 1 ? ay : az;
+        const d = axis === 0 ? dx : axis === 1 ? dy : dz;
+        const lo = axis === 0 ? B.minX : axis === 1 ? B.minY : B.minZ;
+        const hi = axis === 0 ? B.maxX : axis === 1 ? B.maxY : B.maxZ;
+        if (Math.abs(d) < 1e-9) {
+          if (o < lo || o > hi) ok = false;
+        } else {
+          let ta = (lo - o) / d,
+            tb = (hi - o) / d;
+          if (ta > tb) {
+            const t = ta;
+            ta = tb;
+            tb = t;
+          }
+          if (ta > t0) t0 = ta;
+          if (tb < t1) t1 = tb;
+          if (t0 > t1) ok = false;
+        }
+      }
+      if (ok && t0 < best) best = t0;
+    }
+    return best;
   }
 
   dispose() {

@@ -132,6 +132,35 @@ export class Layout {
     for (const [id, count] of table) this.scatter(id, count, region, opts);
   }
 
+  /**
+   * Buildings along a frontage from (x0,z0) to (x1,z1), each facing `yaw`, spaced by their own
+   * widths + gap. ids: array (random pick per slot).
+   */
+  row(ids, x0, z0, x1, z1, yaw, gap = 2, opts = {}) {
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const ux = (x1 - x0) / len,
+      uz = (z1 - z0) / len;
+    let d = 0;
+    const out = [];
+    while (d < len) {
+      const id = this.pick(ids);
+      if (!this.has(id)) {
+        this.missing.add(id);
+        d += 10;
+        continue;
+      }
+      const t = this.lib.byId.get(id);
+      const s = opts.scaleRange ? this.range(opts.scaleRange[0], opts.scaleRange[1]) : 1;
+      // width along the row: the object's local x extent (it faces yaw, so its x axis runs along the row)
+      const w = t.dims[0] * s;
+      if (d + w > len) break;
+      const c = d + w / 2;
+      out.push(this.put(id, x0 + ux * c, z0 + uz * c, { ...opts, yaw, scale: s }));
+      d += w + gap;
+    }
+    return out;
+  }
+
   /** A line of objects (ant trails, fences, cars on a road). */
   line(id, x0, z0, x1, z1, count, opts = {}) {
     const yaw = Math.atan2(x1 - x0, z1 - z0);

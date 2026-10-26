@@ -100,8 +100,15 @@ def _glyph(ch, at, rot, size, depth, color, lod0=True):
        variants=["sky", "flamingo", "lime", "sun"], col="sphere")
 def marble():
     sphere(0.008, at=(0, 0, 0.008), color="sky", segs=12, rings=7, tint=True)
-    torus(0.0071, 0.002, at=(0, 0, 0.008), rot=_aim((0.75, 0.43, 0.5)), color="snow", segs=12, rsegs=3,
-          lod0=True)
+    # S-shaped vane across the side facing the viewer
+    pts = []
+    for i in range(11):
+        t = math.radians(-62 + 124 * i / 10)
+        lat = 0.75 * math.sin(2 * t)
+        v = Vector((math.sin(t) * math.cos(lat), -math.cos(t) * math.cos(lat), math.sin(lat)))
+        v = Matrix.Rotation(math.radians(25), 3, "Z") @ v * 0.0076
+        pts.append((v.x, v.y, v.z + 0.008))
+    tube(pts, 0.0012, color="snow", segs=4, lod0=True)
     sphere(0.0017, at=(-0.0035, -0.0058, 0.0115), color="snow", segs=5, lod0=True)
 
 
@@ -541,18 +548,20 @@ def game_console():
 
 @asset("trophy", "Trophy", "Participation, gold edition.", L, "metal", "medium", col="cyl", fill=0.35)
 def trophy():
-    box((0.13, 0.13, 0.05), base=True, color="cocoa", bevel=0.004, bseg=1)
-    box((0.1, 0.1, 0.025), at=(0, 0, 0.05), base=True, color="cocoa", bevel=0.003, bseg=1)
-    box((0.07, 0.004, 0.026), at=(0, -0.066, 0.025), color="butter")
-    lathe([(0.0, 0.075), (0.035, 0.075), (0.03, 0.085), (0.012, 0.1), (0.01, 0.13), (0.02, 0.143), (0.0, 0.143)],
-          color="sun", segs=12)
-    lathe([(0.0, 0.14), (0.03, 0.142), (0.06, 0.16), (0.076, 0.2), (0.081, 0.245), (0.086, 0.26), (0.08, 0.262),
-           (0.072, 0.254), (0.0, 0.24)], color="sun", segs=16)
+    S = 1.2
+    box((0.13 * S, 0.13 * S, 0.05 * S), base=True, color="cocoa", bevel=0.004, bseg=1)
+    box((0.1 * S, 0.1 * S, 0.025 * S), at=(0, 0, 0.05 * S), base=True, color="cocoa", bevel=0.003, bseg=1)
+    box((0.07 * S, 0.004, 0.026 * S), at=(0, -0.066 * S, 0.025 * S), color="butter", lod0=True)
+    lathe([(r * S, z * S) for (r, z) in ((0.0, 0.075), (0.035, 0.075), (0.03, 0.085), (0.012, 0.1), (0.01, 0.13),
+                                         (0.02, 0.143), (0.0, 0.143))], color="sun", segs=12)
+    lathe([(r * S, z * S) for (r, z) in ((0.0, 0.14), (0.03, 0.142), (0.06, 0.16), (0.076, 0.2), (0.081, 0.245),
+                                         (0.086, 0.26), (0.08, 0.262), (0.072, 0.254), (0.0, 0.24))],
+          color="sun", segs=16)
     for k in (-1, 1):
-        torus(0.032, 0.008, at=(k * 0.078, 0, 0.21), rot=(90, 100 if k > 0 else -80, 0), arc=200, color="sun",
-              segs=10, rsegs=5)
-    extrude(star_points(5, 0.026, 0.012), 0.004, at=(0, -0.071, 0.2), rot=(83, 0, 0), color="butter",
-            center=False)
+        torus(0.032 * S, 0.008 * S, at=(k * 0.078 * S, 0, 0.21 * S), rot=(90, 100 if k > 0 else -80, 0), arc=200,
+              color="sun", segs=10, rsegs=5)
+    extrude(star_points(5, 0.026 * S, 0.012 * S), 0.004, at=(0, -0.071 * S, 0.2 * S), rot=(83, 0, 0),
+            color="butter", center=False, lod0=True)
 
 
 @asset("toy_dinosaur", "Toy Dinosaur", "Rawr. That's it. That's the whole personality.", L, "plastic", "medium",
@@ -755,15 +764,16 @@ def board_game():
 @asset("trash_can", "Trash Can", "Three-point line is the bed. Success rate: 11%.", L, "plastic", "small",
        variants=["sky", "lime", "flamingo", "grape"], col="cyl", fill=0.5)
 def trash_can():
-    lathe([(0.0, 0.0), (0.105, 0.0), (0.14, 0.33), (0.13, 0.33), (0.097, 0.03), (0.0, 0.03)], color="sky",
-          segs=16, tint=True)
-    torus(0.137, 0.01, at=(0, 0, 0.33), color="snow", segs=16, rsegs=5)
-    for (p, r) in (((0.03, 0.02, 0.33), 0.045), ((-0.05, -0.03, 0.315), 0.04), ((0.06, -0.06, 0.3), 0.035)):
-        ico(r, at=p, color="paper", subdiv=1, rot=(20, 30 * r * 100, 10), scale=(1, 0.95, 0.9))
-    ico(0.035, at=(0.17, -0.12, 0.032), color="paper", subdiv=1, rot=(10, 40, 70))
-    cyl(0.006, 0.12, at=(-0.02, 0.05, 0.3), rot=(12, -10, 0), color="sun", segs=6)
-    cyl(0.006, 0.014, at=_rp((-0.02, 0.05, 0.3), (12, -10, 0), (0, 0, 0.12)), rot=(12, -10, 0), r2=0.001,
-        color="sand", segs=6)
+    box((0.24, 0.24, 0.32), base=True, color="sky", taper=(1.25, 1.25), tint=True)
+    box((0.31, 0.31, 0.03), at=(0, 0, 0.305), base=True, color="snow", bevel=0.006, bseg=1)
+    box((0.27, 0.27, 0.004), at=(0, 0, 0.334), color="ink_soft")
+    for (p, r, far) in (((0.04, 0.03, 0.35), 0.055, True), ((-0.06, -0.04, 0.345), 0.05, True),
+                        ((0.07, -0.07, 0.34), 0.04, False), ((-0.05, 0.07, 0.34), 0.04, False)):
+        ico(r, at=p, color="paper", subdiv=1, rot=(20, 30 + r * 900, 10), scale=(1, 0.95, 0.88), lod0=not far)
+    ico(0.042, at=(0.2, -0.14, 0.036), color="paper", subdiv=1, rot=(10, 40, 70))
+    for k in range(4):
+        x = -0.075 + 0.05 * k
+        box((0.02, 0.004, 0.22), at=(x * 1.08, -0.1245, 0.04), rot=(5.4, 0, 0), base=True, color="snow", lod0=True)
 
 
 @asset("toy_rocket", "Toy Rocket", "Fuelled by imagination and one AA battery.", L, "plastic", "medium",

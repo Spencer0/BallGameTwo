@@ -33,6 +33,7 @@ export class FollowCamera {
     this.smoothPos = new THREE.Vector3();
     this.first = true;
     this.reducedMotion = false;
+    this.clip = 1; // smoothed camera-collision distance factor
   }
 
   reset(ball, yaw) {
@@ -57,7 +58,7 @@ export class FollowCamera {
     this.zoomKick = Math.max(this.zoomKick, zoom);
   }
 
-  update(dt, ball, input) {
+  update(dt, ball, input, env) {
     this.t += dt;
     // pull back smoothly as the ball grows
     this.camR += (ball.r - this.camR) * (1 - Math.exp(-dt * 1.6));
@@ -92,6 +93,17 @@ export class FollowCamera {
       bz = ball.pos.z;
     this.target.set(bx + fx * R * CAM.ahead, by, bz + fz * R * CAM.ahead);
     cam.position.set(bx - fx * R * CAM.dist, by + R * CAM.height, bz - fz * R * CAM.dist);
+    // keep the camera inside rooms: pull it in front of camera-blocking walls (snap in, ease out)
+    if (env) {
+      const hit = env.segmentHit(bx, by + R * 0.5, bz, cam.position.x, cam.position.y, cam.position.z);
+      const want = hit < 1 ? Math.max(0.15, hit - 0.06) : 1;
+      this.clip = want < this.clip ? want : this.clip + (want - this.clip) * (1 - Math.exp(-dt * 2));
+      if (this.clip < 0.999) {
+        cam.position.x = bx + (cam.position.x - bx) * this.clip;
+        cam.position.y = by + R * 0.5 + (cam.position.y - by - R * 0.5) * this.clip;
+        cam.position.z = bz + (cam.position.z - bz) * this.clip;
+      }
+    }
     // keep the camera above the ground plane
     if (cam.position.y < this.target.y + R * 0.6) cam.position.y = this.target.y + R * 0.6;
     if (this.shakeT > 0) {

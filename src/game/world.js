@@ -2,10 +2,12 @@
 // rendering with cell frustum culling + LOD selection. See TECH.md §5–6.
 import * as THREE from 'three';
 import { toonMaterial, makeOutlineMaterial } from '../render/materials.js';
+import { makeBlobMaterial } from '../render/environment.js';
 
 export const ALIVE = 1;
 export const GONE = 0; // collected (in the ball crust or bulk-collected)
 export const MOVING = 2; // creature / falling / knocked loose (still collectible)
+export const MOVING_AIR = 3; // airborne (knocked loose, falling): no blob shadow
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -270,12 +272,32 @@ export class World {
       this.batchOf[t] = b;
     }
   }
+  /** One instanced draw for soft blob shadows under nearby (LOD0) objects. */
+  buildShadows(scene, cap) {
+    const g = new THREE.PlaneGeometry(2, 2);
+    g.rotateX(-Math.PI / 2);
+    this.shadowMat = makeBlobMaterial(0.2);
+    this.shadows = new THREE.InstancedMesh(g, this.shadowMat, cap);
+    this.shadows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.shadows.frustumCulled = false;
+    this.shadows.count = 0;
+    this.shadows.renderOrder = 1;
+    this.shadowCap = cap;
+    this.shadowsOn = true;
+    scene.add(this.shadows);
+  }
+
   setOutlines(on) {
     for (const b of this.batches) b.outlines = on;
   }
   dispose() {
     for (const b of this.batches) b.dispose();
     this.batches.length = 0;
+    if (this.shadows) {
+      this.shadows.removeFromParent();
+      this.shadows.geometry.dispose();
+      this.shadowMat.dispose();
+    }
   }
 
   /** Fill instance buffers from cells visible to the camera. */
@@ -299,6 +321,9 @@ export class World {
       cullPx = this.cullPx;
     const pad = this.maxBound;
     let visible = 0;
+    let ns = 0;
+    const sh = this.shadows && this.shadowsOn ? this.shadows.instanceMatrix.array : null;
+    const shCap = this.shadowCap || 0;
     for (let cz = z0; cz <= z1; cz++) {
       for (let cx = x0; cx <= x1; cx++) {
         const c = this.cellIndex(cx, cz);
@@ -328,6 +353,31 @@ export class World {
             const n = b.n0++;
             copy16(this.mat, i * 16, b.lod0.instanceMatrix.array, n * 16);
             b.lod0.geometry.attributes.aTint.array[n] = this.tint[i];
+            if (sh && ns < shCap && this.state[i] !== MOVING_AIR) {
+              const t = this.types[this.type[i]];
+              const s = this.scale[i];
+              const o = ns++ * 16;
+              const c = Math.cos(this.yaw[i]),
+                sn = Math.sin(this.yaw[i]);
+              const hx = t.dims[0] * 0.5 * s * 1.08,
+                hz = t.dims[2] * 0.5 * s * 1.08;
+              sh[o] = c * hx;
+              sh[o + 1] = 0;
+              sh[o + 2] = -sn * hx;
+              sh[o + 3] = 0;
+              sh[o + 4] = 0;
+              sh[o + 5] = 1;
+              sh[o + 6] = 0;
+              sh[o + 7] = 0;
+              sh[o + 8] = sn * hz;
+              sh[o + 9] = 0;
+              sh[o + 10] = c * hz;
+              sh[o + 11] = 0;
+              sh[o + 12] = this.x[i];
+              sh[o + 13] = this.y[i] + 0.002 * s * t.dims[1];
+              sh[o + 14] = this.z[i];
+              sh[o + 15] = 1;
+            }
           } else {
             const n = b.n1++;
             copy16(this.mat, i * 16, b.lod1.instanceMatrix.array, n * 16);
@@ -338,5 +388,14 @@ export class World {
     }
     for (let k = 0; k < this.batches.length; k++) this.batches[k].flush();
     this.visibleCount = visible;
+    if (this.shadows) {
+      this.shadows.count = ns;
+      this.shadows.visible = ns > 0;
+      if (ns > 0) {
+        this.shadows.instanceMatrix.clearUpdateRanges();
+        this.shadows.instanceMatrix.addUpdateRange(0, ns * 16);
+        this.shadows.instanceMatrix.needsUpdate = true;
+      }
+    }
   }
 }

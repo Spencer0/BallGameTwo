@@ -86,12 +86,27 @@ export class Session {
     this.scene.add(this.env.group);
     this.scene.background = this.env.skyTexture;
     if (mod.env.fog) {
-      shared.uFogNear.value = mod.env.fog[0];
-      shared.uFogFar.value = mod.env.fog[1];
-      linearRGB(HEX[mod.env.fog[2]] || mod.env.fog[2], shared.uFogColor.value);
+      linearRGB(HEX[mod.env.fog.color] || mod.env.fog.color, shared.uFogColor.value);
     } else {
       shared.uFogNear.value = 1e7;
       shared.uFogFar.value = 2e7;
+    }
+    // static set dressing (not collectible): { id, x, y, z, yaw, scale, tint }
+    this.decor = [];
+    for (const d of mod.env.decor || []) {
+      const t = lib.byId.get(d.id);
+      const geo = t ? t.geo[0] : lib.sets.get(d.id);
+      if (!geo) continue;
+      const tint = d.tint ? PAL[d.tint] + 1 : 0;
+      const mat = makeToonMaterial({ tint });
+      const omat = makeOutlineMaterial(d.size ?? 1, { tint });
+      for (const m of [new THREE.Mesh(geo, mat), new THREE.Mesh(geo, omat)]) {
+        m.position.set(d.x, d.y ?? 0, d.z);
+        m.rotation.y = d.yaw ?? 0;
+        m.scale.setScalar(d.scale ?? 1);
+        this.scene.add(m);
+      }
+      this.decor.push(mat, omat);
     }
     // world
     const layout = mod.layout(lib);
@@ -113,6 +128,8 @@ export class Session {
       if (t.flags.includes('wander') && !it.on) this.creatures.push({ i, heading: Math.random() * 6.28, timer: 0, speed: 0 });
     }
     this.world.buildBatches(this.scene, this.game.quality);
+    this.world.buildShadows(this.scene, 1500);
+    this.world.shadowsOn = this.game.quality.shadows;
     this.totalObjects = layout.items.length;
 
     // ball
@@ -388,13 +405,26 @@ export class Session {
     this.updateFallers(dt);
     this.updateWobbles(dt);
     this.updateBallVisual(dt);
-    this.cam.update(dt, this.ball, input);
+    this.cam.update(dt, this.ball, input, this.env);
+    this.updateFog();
     const lintSize = this.level.start * 0.6 * Math.pow(this.ball.diameter / this.level.start, 0.35);
     this.lint.update(dt, this.ball, this.cam.yaw, lintSize, this.env.groundAt(this.ball.pos.x, this.ball.pos.z));
     this.updateFlyers(dt);
     this.particles.update(dt);
     this.crust.bury(this.rVis * 0.9, this.ball.r * 0.035, this.time);
     shared.uFocalPx.value = this.game.focalPx;
+  }
+
+  /** Fog that scales with the ball: the world opens up as you grow (outdoor levels). */
+  updateFog() {
+    const f = this.level.mod.env.fog;
+    if (!f) return;
+    const R = this.cam.camR;
+    const near = Math.max(f.near, R * f.k * 0.35);
+    const far = Math.max(f.far, R * f.k);
+    shared.uFogNear.value = near;
+    shared.uFogFar.value = far;
+    this.world.viewDist = far * 1.05;
   }
 
   updateBallVisual(dt) {
@@ -569,6 +599,7 @@ export class Session {
     this.blob.material.dispose();
     for (const f of this.flyers) f.mat.dispose();
     this.lint.dispose();
+    for (const m of this.decor) m.dispose();
     this.particles.mesh.geometry.dispose();
     this.particles.mat.dispose();
     this.scene.clear();
