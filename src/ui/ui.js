@@ -529,9 +529,9 @@ export class UI {
     const newSet = new Set(rec.newTypes);
     const grid = items
       .slice(0, 40)
-      .map(([id, c]) => {
+      .map(([id, c], k) => {
         const t = this.app.lib.byId.get(id);
-        return `<div class="item ${newSet.has(id) ? 'new' : ''}" title="${esc(t.name)}"><span class="ic" style="${this.iconStyle(id, 46)}"></span><b>${c}</b>${newSet.has(id) ? '<i>new</i>' : ''}</div>`;
+        return `<div class="item ${newSet.has(id) ? 'new' : ''}" title="${esc(t.name)}" style="animation-delay:${(0.6 + Math.min(k, 24) * 0.045).toFixed(3)}s"><span class="ic" style="${this.iconStyle(id, 46)}"></span><b>${c}</b>${newSet.has(id) ? '<i>new</i>' : ''}</div>`;
       })
       .join('');
     const canNext = result.completed && L.n < 6 && this.app.save.data.unlocked > L.n;
@@ -561,6 +561,19 @@ export class UI {
         </div>
       </section>`);
     this.setScreen(node, 'results');
+    // roll the size up from the start size
+    const big = node.querySelector('.res-size .big');
+    const d0 = L.start,
+      d1 = result.diameter,
+      t0 = performance.now() + 350;
+    const tick = (now) => {
+      const t = Math.max(0, Math.min(1, (now - t0) / 1300));
+      const e = 1 - Math.pow(1 - t, 3);
+      big.textContent = formatSize(d0 * Math.pow(d1 / d0, e));
+      if (t < 1 && big.isConnected) requestAnimationFrame(tick);
+    };
+    big.textContent = formatSize(d0);
+    requestAnimationFrame(tick);
     setTimeout(() => this.app.sfx.babble(verdict, mood === 'shocked' ? 81 : 76), 1500);
     if (timed) {
       node.querySelectorAll('.rs').forEach((s, k) => {
@@ -649,7 +662,7 @@ export class UI {
   async showEnding() {
     await this.dialog(ENDING);
     const node = el(`
-      <section class="screen ending-screen bg-dots" style="--bg: var(--grape)">
+      <section class="screen ending-screen see-through" style="--bg: var(--grape)">
         <h2 class="display big">The End</h2>
         <p class="sub light">The city has been tidied. Madame Prudence has filed her report.</p>
         <img class="title-lint" src="${IMG}lint_wave.png" alt="">

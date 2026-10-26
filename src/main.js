@@ -109,6 +109,13 @@ class App {
     await this.lib.loadPack('CHAR');
     this.ui.setLoading(0.6);
     await this.lib.loadPack('L1');
+    // avoid a flash of fallback fonts on the logo (never wait long: fonts are optional)
+    try {
+      await Promise.race([document.fonts.load('64px Shrikhand'), new Promise((r) => setTimeout(r, 1500))]);
+      await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 500))]);
+    } catch {
+      /* fallback fonts are fine */
+    }
     this.ui.setLoading(1);
     this.ui.hideLoading();
     const lvl = params.get('level');
@@ -167,6 +174,7 @@ class App {
       const isNew = !this.save.data.seen[e.type.id] && e.session.collected.get(e.type.id) === 1;
       this.ui.hudPickup(e.type, e.rel, isNew);
       if (e.rel > 0.2) this.haptic('pick');
+      if (e.rel > 0.42) e.session.cam.kick(2.5, 0.03); // a big one: tiny lurch
     });
     ev.on('tiny', (e) => !e.session.attract && this.sfx.tiny());
     ev.on('bump', (e) => {
