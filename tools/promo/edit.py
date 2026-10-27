@@ -10,17 +10,19 @@ END = 20.5
 PULLBACK = os.path.join(D, '..', 'promo', 'frames', '10_city_pullback')
 # shot -> slot on the timeline (s); cuts sit in the pauses between voiceover lines
 SLOTS = [
-    ('01_desk_low', 0.0, 2.12), ('02_desk_orbit', 2.12, 3.67), ('03_bedroom_title', 3.67, 5.86),
-    ('04_house_orbit', 5.86, 8.2), ('05_suburb_low', 8.2, 10.4), ('06_town_chase', 10.4, 12.7),
-    ('07_city_low', 12.7, 15.15), ('08_city_pullback', 15.15, END),
+    ('01_desk_low', 0.0, 2.15), ('02_desk_orbit', 2.15, 3.75), ('02b_desk_clean', 3.75, 9.85),
+    # "However, the dust bunny gets drunk with power and takes things a little too far": a world a second
+    ('03_bedroom_title', 9.85, 10.95), ('04_house_orbit', 10.95, 12.0), ('05_suburb_low', 12.0, 13.05),
+    ('06_town_chase', 13.05, 14.1), ('07_city_low', 14.1, 15.2), ('08_city_pullback', 15.2, END),
 ]
-SUBS = [  # spoken words, plain subtitles low-centre like a dev's own TikTok
-    ("I'm finally about to release my new game", 0.05, 2.0), ("I've been building it for a while", 2.2, 3.6),
-    ("It's called", 3.9, 5.75), ("I've always wanted to make a game like this", 6.0, 9.8),
-    ('where you can hoover up everything around you', 10.05, 12.6), ('and it just keeps escalating', 12.6, 14.95),
-    ("preview link's in the comments", 15.3, 16.6), ('let me know what you guys think', 16.9, END),
+SUBS = [  # the words as spoken (transcribed with word timings), plain subtitles low-centre
+    ('Check out my new game', 0.0, 0.9), ("I'm about to release", 0.9, 2.15), ("It's called", 2.3, 3.75),
+    ('The premise is straightforward', 3.96, 5.7), ('A family hires a dust bunny', 6.02, 7.6),
+    ('to roll the ball of lint to clean the table', 7.6, 9.85), ('However,', 10.14, 10.95),
+    ('the dust bunny gets drunk with power', 10.98, 12.8), ('and takes things a little too far', 12.8, 15.1),
+    ("Preview link's in the comments", 15.5, 16.9), ('Let me know what you guys think', 16.98, END),
 ]
-TITLE = ('LINT ROLLER', 4.35, 5.8)
+TITLE = ('LINT ROLLER', 2.64, 3.9)
 SANS = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
 
 os.makedirs(f'{D}/seg', exist_ok=True)
@@ -59,7 +61,7 @@ draws.append(f"drawtext=fontfile={D}/Shrikhand.ttf:text='{t}':fontsize=124:fontc
              f"x=(w-text_w)/2:y=h*0.22:enable='between(t,{a},{b})'")
 # voice on top; the game's own sounds under it; the music bed low, out at the end
 mix = (f"[0:v]{','.join(draws)}[v];"
-       f"[0:a]volume=2.2[sfx];[1:a]volume=1.0,apad[vo];[2:a]volume=0.22,afade=t=out:st={END - 1.2}:d=1.2[mus];"
+       f"[0:a]volume=0.9[sfx];[1:a]volume=1.0,apad[vo];[2:a]volume=0.22,afade=t=out:st={END - 1.2}:d=1.2[mus];"
        f"[vo][sfx][mus]amix=inputs=3:duration=first:normalize=0,alimiter=limit=0.95[a]")
 subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', f'{D}/clips_only.mov', '-i', f'{D}/vo.mp3', '-i', f'{D}/music.wav',
                 '-filter_complex', mix, '-map', '[v]', '-map', '[a]', '-t', str(END), '-c:v', 'libx264', '-crf', '18', '-preset', 'slow',

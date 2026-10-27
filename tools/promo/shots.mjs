@@ -4,6 +4,7 @@
 export const SHOTS = [
   { name: '01_desk_low', level: 1, hud: false, mode: 'chase', at: { x: 0, z: 0.42, d: 0.05, yaw: Math.PI }, push: [0.15, 1], preroll: 0.5, dur: 2.4 },
   { name: '02_desk_orbit', level: 1, hud: false, mode: 'orbit', a0: 2.2, spin: 0.7, preroll: 70, dur: 1.9 },
+  { name: '02b_desk_clean', level: 1, hud: true, mode: 'follow', preroll: 6, dur: 6.4 },
   { name: '03_bedroom_title', level: 2, hud: true, mode: 'follow', dur: 2.5 },
   { name: '04_house_orbit', level: 3, hud: false, mode: 'orbit', a0: 0.4, spin: 0.6, at: { x: 4.5, z: 3.5, d: 1.2, yaw: Math.PI }, preroll: 3, dur: 2.6 },
   { name: '05_suburb_low', level: 4, hud: false, mode: 'low', side: -1, dur: 2.5 },
