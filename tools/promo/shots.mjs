@@ -5,7 +5,7 @@ export const SHOTS = [
   { name: '01_desk_low', level: 1, hud: false, mode: 'low', side: 1, dur: 2.4 },
   { name: '02_desk_orbit', level: 1, hud: false, mode: 'orbit', a0: 2.2, spin: 0.7, preroll: 70, dur: 1.9 },
   { name: '03_bedroom_title', level: 2, hud: true, mode: 'follow', dur: 2.5 },
-  { name: '04_house_orbit', level: 3, hud: false, mode: 'orbit', a0: 0.4, spin: 0.6, dur: 2.6 },
+  { name: '04_house_orbit', level: 3, hud: false, mode: 'orbit', a0: 0.4, spin: 0.6, at: { x: 4.5, z: 3.5, d: 1.2, yaw: Math.PI }, preroll: 3, dur: 2.6 },
   { name: '05_suburb_low', level: 4, hud: false, mode: 'low', side: -1, dur: 2.5 },
   { name: '06_town_chase', level: 5, hud: true, mode: 'chase', preroll: 18, dur: 2.6 },
   { name: '07_city_low', level: 6, hud: false, mode: 'low', side: 1, dur: 2.7 },
