@@ -27,9 +27,11 @@ const tpl = fs.readFileSync(path.join(ROOT, 'src', 'index.html'), 'utf8');
 
 fs.writeFileSync(path.join(DIST, 'game.js'), js);
 fs.writeFileSync(path.join(DIST, 'style.css'), css);
+// web build only: the artifact page can't load third-party scripts
+const CF_ANALYTICS = `<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "3b0ed9eb21f94100abdb68ef36c57014"}'></script><!-- End Cloudflare Web Analytics -->`;
 const full = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8">\n${tpl
   .replace('<!--STYLE-->', '<link rel="stylesheet" href="style.css">')
-  .replace(/<div id="app">[\s\S]*<!--SCRIPT-->/, (m) => `</head><body>\n${m.replace('<!--SCRIPT-->', '<script src="game.js"></script>')}`)}\n</body></html>\n`;
+  .replace(/<div id="app">[\s\S]*<!--SCRIPT-->/, (m) => `</head><body>\n${m.replace('<!--SCRIPT-->', '<script src="game.js"></script>')}`)}\n${CF_ANALYTICS}\n</body></html>\n`;
 fs.writeFileSync(path.join(DIST, 'index.html'), full);
 // function replacements: the minified JS contains `$'`/`$&` sequences that string replacements would expand
 const frag = tpl
