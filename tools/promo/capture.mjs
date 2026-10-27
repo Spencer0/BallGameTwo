@@ -51,6 +51,11 @@ if (only === 'music') {
           s.rVis = r;
           s.cam.reset(s.ball, sh.at.yaw ?? 0, 0);
         }
+        if (sh.push) {
+          // steer by hand instead of the autopilot: straight ahead, a touch to one side
+          g.autopilot = null;
+          g.input.override = { x: sh.push[0], y: sh.push[1] };
+        }
         g.simSpeed = 12;
         for (let k = 0, n = Math.round((preroll * 60) / 12); k < n; k++) g.step(1 / 60);
         g.simSpeed = 1;
