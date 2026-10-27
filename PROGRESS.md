@@ -55,6 +55,17 @@ Jank fixed:
 - Results card on short phones (SE): rows were squashed together, then scrolled; now a compact layout fits
   without scrolling and the action row never wraps.
 
+## Living cities (round 2)
+- L4–L6 rebuilt on a road network modelled on real places: a 1990s collector-loop subdivision, a Midwestern
+  river town with a courthouse square, and a Manhattan-like island with boroughs, Jersey City and a harbour.
+- Every street connects (no dead ends). Traffic obeys signals and stop signs and yields to pedestrians, who
+  cross at zebras and wait for gaps. Trains, boats, planes, ducks and plaza crowds all move.
+- Review panel (urban planner, art director, life and simulation, QA skeptic) judged fresh renders each round.
+  Over rounds 12–15 every reviewer passed every level at least once; round 15's fails (east-bank voids,
+  a bridge landing in a meadow, plaza crowds in a junction) were fixed after that round and not re-reviewed.
+- Verification: unit tests 34/34; the playthrough bot completes all 6 levels in Zen and Timed;
+  a 4-minute L6 soak shows no errors and a flat heap; the single-page artifact build passes.
+
 ## Final verification
 - Playthrough bot: all 6 levels × Zen and Timed complete, next level unlocks, no console errors.
 - 32-minute soak across all six levels (load/dispose every ~45 s): heap flat at 37–39 MB once all packs are
