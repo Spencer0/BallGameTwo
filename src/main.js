@@ -29,6 +29,8 @@ class App {
   constructor() {
     this.events = new Events();
     this.save = new SaveStore();
+    // every level open for testing: on the hosted artifact build (it sets __PACKS_AS_TEXT) and with ?debug or ?all
+    if (window.__PACKS_AS_TEXT || params.has('debug') || params.has('all')) this.save.data.unlocked = Math.max(this.save.data.unlocked, LEVELS.length);
     this.lib = new AssetLibrary();
     this.audio = new AudioEngine();
     this.sfx = new Sfx(this.audio);
