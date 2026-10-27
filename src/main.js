@@ -131,6 +131,11 @@ class App {
       this.ui.showTitle();
       setTimeout(() => this.prefetch(), 1500);
     }
+    if (params.has('capture')) {
+      // video capture: no real-time loop; the recorder advances the game a fixed step per frame
+      this.step = (dt) => this.frame(this.last + dt * 1000);
+      return;
+    }
     const loop = (now) => {
       this.frame(now);
       requestAnimationFrame(loop);
