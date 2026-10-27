@@ -13,7 +13,7 @@ SLOTS = [
 ]
 CAPS = [  # text, start, end, size, y (fraction of height)
     ("I'm thinking about", 0.15, 3.65, 74, 0.20), ('launching my game...', 0.15, 3.65, 74, 0.25),
-    ('LINT ROLLER', 3.9, 5.85, 150, 0.22),
+    ('LINT ROLLER', 3.9, 5.85, 118, 0.22),
     ('a game about cleaning...', 6.1, 8.4, 70, 0.20), ('gone wrong', 7.2, 8.4, 92, 0.255),
     ('a tiny dust bunny', 8.6, 11.6, 70, 0.20), ('cleans ONE table...', 8.6, 11.6, 70, 0.25),
     ('farther...', 11.9, 13.45, 96, 0.22), ('farther...', 13.85, 14.75, 110, 0.22),
