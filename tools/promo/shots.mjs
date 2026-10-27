@@ -7,7 +7,7 @@ export const SHOTS = [
   { name: '03_bedroom_title', level: 2, hud: true, mode: 'follow', dur: 2.5 },
   { name: '04_house_orbit', level: 3, hud: false, mode: 'orbit', a0: 0.4, spin: 0.6, dur: 2.6 },
   { name: '05_suburb_low', level: 4, hud: false, mode: 'low', side: -1, dur: 2.5 },
-  { name: '06_town_chase', level: 5, hud: true, mode: 'chase', dur: 2.6 },
+  { name: '06_town_chase', level: 5, hud: true, mode: 'chase', preroll: 18, dur: 2.6 },
   { name: '07_city_low', level: 6, hud: false, mode: 'low', side: 1, dur: 2.7 },
   {
     name: '08_city_pullback',

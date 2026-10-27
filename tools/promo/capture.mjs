@@ -19,7 +19,7 @@ async function open(level, hud) {
   page.on('pageerror', (e) => console.log('  [pageerror]', e.message));
   await page.goto(`${url}?level=${level}&mode=zen&q=high&capture&auto=1`);
   await page.waitForFunction(() => window.__game?.step && window.__game.session, null, { timeout: 240000 });
-  await page.addStyleTag({ content: hud ? '#stick { display: none !important; }' : '#hud, #ui, #stick { display: none !important; }' });
+  await page.addStyleTag({ content: hud ? '#stick, #hud-hint { display: none !important; }' : '#hud, #ui, #stick { display: none !important; }' });
   return { ctx, page };
 }
 
