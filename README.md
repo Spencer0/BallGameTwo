@@ -8,8 +8,11 @@ and, eventually, the whole city.
 Everything is original and made from code: 240+ objects modelled by Blender Python scripts,
 seven pieces of music and all sound effects synthesised with Web Audio, rendered with Three.js.
 
-**Play it:** https://claude.ai/artifact/WY8bjgJp4aa1vB6BNitPUB. Open it on your iPhone and hold the phone
-upright. Tap once to start the sound.
+**Play it:** https://spencer0.github.io/BallGameTwo/ (also hosted at https://claude.ai/artifact/WY8bjgJp4aa1vB6BNitPUB).
+Open it on your iPhone and hold the phone upright. Tap once to start the sound.
+
+Every push to `main` or `claude/lint-roller-game` rebuilds the game and redeploys GitHub Pages
+(`.github/workflows/pages.yml`).
 
 ## How to play
 
