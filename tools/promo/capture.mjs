@@ -3,6 +3,7 @@
 // clock (an offline context) and saved beside the frames.
 //   node tools/promo/capture.mjs outDir [shotName,...|music]
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
 import { serve } from '../../tests/harness.mjs';
 import { SHOTS, MUSIC } from './shots.mjs';
@@ -58,63 +59,92 @@ if (only === 'music') {
         for (let k = 0; k < 240 && Math.hypot(s.ball.vel.x, s.ball.vel.z) < s.ball.r * 2; k++) g.step(1 / 60);
         s.particles.clear?.();
       },
-      [shot, shot.preroll ?? TIMES[shot.level] * 0.2],
+      [shot, shot.preroll ?? TIMES[shot.level] * 0.015],
     );
     const N = Math.round(shot.dur * FPS);
-    await page.evaluate((sec) => window.__game.audioCapture({ seconds: sec, music: false }), shot.dur + 1);
+    // QA: a take where the ball stalls or grinds against a wall is thrown away and re-shot a little later
     const dir = `${out}/frames/${shot.name}`;
-    fs.rmSync(dir, { recursive: true, force: true });
-    fs.mkdirSync(dir, { recursive: true });
     const t0 = Date.now();
-    for (let f = 0; f < N; f++) {
-      await page.evaluate(
-        ([sh, f, N]) => {
-          const g = window.__game,
-            s = g.session,
-            b = s.ball,
-            r = b.r;
-          const t = f / 30;
-          if (sh.cam) {
-            const u = N > 1 ? f / (N - 1) : 0;
-            const e = u * u * (3 - 2 * u);
-            const lerp = (a, c) => a.map((v, i) => v + (c[i] - v) * e);
-            g.debugView = { pos: lerp(sh.cam.from.pos, sh.cam.to.pos), look: lerp(sh.cam.from.look, sh.cam.to.look), fov: sh.cam.fov || 55, far: 20000 };
-          } else if (sh.mode && sh.mode !== 'follow') {
-            // a camera that moves with the ball: low tracking shot, orbit, or high chase
-            const st = (window.__cam ||= { h: Math.atan2(b.vel.x, b.vel.z) || 0, a0: sh.a0 ?? 0.6 });
-            if (Math.hypot(b.vel.x, b.vel.z) > r * 0.3) {
-              let d = Math.atan2(b.vel.x, b.vel.z) - st.h;
-              d = Math.atan2(Math.sin(d), Math.cos(d));
-              st.h += d * 0.06;
+    // one audio clock across every take; the good take's slice is cut out at the end
+    const AUDIO = 6 * (shot.dur + 4) + 10;
+    await page.evaluate((sec) => window.__game.audioCapture({ seconds: sec, music: false }), AUDIO);
+    let keepAt = 0;
+    let take = 0,
+      ok = false,
+      speeds;
+    while (!ok) {
+      take++;
+      speeds = [];
+      const tStart = await page.evaluate(() => window.__game.vclock.t);
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.mkdirSync(dir, { recursive: true });
+      for (let f = 0; f < N; f++) {
+        const v = await page.evaluate(
+          ([sh, f, N]) => {
+            const g = window.__game,
+              s = g.session,
+              b = s.ball,
+              r = b.r;
+            const t = f / 30;
+            if (sh.cam) {
+              const u = N > 1 ? f / (N - 1) : 0;
+              const e = u * u * (3 - 2 * u);
+              const lerp = (a, c) => a.map((v, i) => v + (c[i] - v) * e);
+              g.debugView = { pos: lerp(sh.cam.from.pos, sh.cam.to.pos), look: lerp(sh.cam.from.look, sh.cam.to.look), fov: sh.cam.fov || 55, far: 20000 };
+            } else if (sh.mode && sh.mode !== 'follow') {
+              // a camera that moves with the ball: low tracking shot, orbit, or high chase
+              const st = (window.__cam ||= { h: Math.atan2(b.vel.x, b.vel.z) || 0, a0: sh.a0 ?? 0.6 });
+              if (Math.hypot(b.vel.x, b.vel.z) > r * 0.3) {
+                let d = Math.atan2(b.vel.x, b.vel.z) - st.h;
+                d = Math.atan2(Math.sin(d), Math.cos(d));
+                st.h += d * 0.06;
+              }
+              const fx = Math.sin(st.h),
+                fz = Math.cos(st.h);
+              const P = b.pos;
+              let pos, look;
+              if (sh.mode === 'low') {
+                const side = sh.side ?? 1;
+                pos = [P.x - fx * r * 4.6 + fz * r * 3.4 * side, P.y + r * 0.7, P.z - fz * r * 4.6 - fx * r * 3.4 * side];
+                look = [P.x + fx * r * 1.5, P.y + r * 0.2, P.z + fz * r * 1.5];
+              } else if (sh.mode === 'orbit') {
+                const a = st.a0 + t * (sh.spin ?? 0.5);
+                pos = [P.x + Math.sin(a) * r * 6, P.y + r * 2.8, P.z + Math.cos(a) * r * 6];
+                look = [P.x, P.y, P.z];
+              } else {
+                pos = [P.x - fx * r * 6, P.y + r * 6.5, P.z - fz * r * 6];
+                look = [P.x + fx * r * 4, P.y, P.z + fz * r * 4];
+              }
+              const k = st.p ? 0.18 : 1;
+              st.p = st.p ? st.p.map((v, i) => v + (pos[i] - v) * k) : pos;
+              st.l = st.l ? st.l.map((v, i) => v + (look[i] - v) * k) : look;
+              g.debugView = { pos: st.p, look: st.l, fov: 60, near: r * 0.05, far: Math.max(r * 3000, 400), focus: true };
             }
-            const fx = Math.sin(st.h),
-              fz = Math.cos(st.h);
-            const P = b.pos;
-            let pos, look;
-            if (sh.mode === 'low') {
-              const side = sh.side ?? 1;
-              pos = [P.x - fx * r * 4.6 + fz * r * 3.4 * side, P.y + r * 0.7, P.z - fz * r * 4.6 - fx * r * 3.4 * side];
-              look = [P.x + fx * r * 1.5, P.y + r * 0.2, P.z + fz * r * 1.5];
-            } else if (sh.mode === 'orbit') {
-              const a = st.a0 + t * (sh.spin ?? 0.5);
-              pos = [P.x + Math.sin(a) * r * 6, P.y + r * 2.8, P.z + Math.cos(a) * r * 6];
-              look = [P.x, P.y, P.z];
-            } else {
-              pos = [P.x - fx * r * 6, P.y + r * 6.5, P.z - fz * r * 6];
-              look = [P.x + fx * r * 4, P.y, P.z + fz * r * 4];
-            }
-            const k = st.p ? 0.18 : 1;
-            st.p = st.p ? st.p.map((v, i) => v + (pos[i] - v) * k) : pos;
-            st.l = st.l ? st.l.map((v, i) => v + (look[i] - v) * k) : look;
-            g.debugView = { pos: st.p, look: st.l, fov: 60, near: r * 0.05, far: Math.max(r * 3000, 400), focus: true };
-          }
-          g.step(1 / 30);
-        },
-        [shot, f, N],
-      );
-      await page.screenshot({ path: `${dir}/${String(f).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 92 });
+            g.step(1 / 30);
+            return Math.hypot(b.vel.x, b.vel.z) / b.r; // rolling speed in radii per second
+          },
+          [shot, f, N],
+        );
+        speeds.push(v);
+        await page.screenshot({ path: `${dir}/${String(f).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 92 });
+      }
+      const sorted = [...speeds].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length / 2)],
+        slow = speeds.filter((v) => v < 1.2).length / speeds.length;
+      ok = !!shot.cam || (median > 2.5 && slow < 0.06) || take >= 6;
+      keepAt = tStart;
+      console.log(`  ${shot.name} take ${take}: median ${median.toFixed(1)} r/s, slow ${(slow * 100).toFixed(0)}%${ok ? '' : ' -> retake'}`);
+      if (!ok)
+        await page.evaluate(() => {
+          window.__cam = null;
+          for (let k = 0; k < 45; k++) window.__game.step(1 / 30); // roll on a bit and try again
+          const s = window.__game.session;
+          for (let k = 0; k < 240 && Math.hypot(s.ball.vel.x, s.ball.vel.z) < s.ball.r * 2; k++) window.__game.step(1 / 60);
+        });
     }
-    fs.writeFileSync(`${dir}.wav`, Buffer.from(await page.evaluate(() => window.__game.audioRender()), 'base64'));
+    fs.writeFileSync(`${dir}.all.wav`, Buffer.from(await page.evaluate(() => window.__game.audioRender()), 'base64'));
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', String(keepAt), '-t', String(shot.dur + 1), '-i', `${dir}.all.wav`, `${dir}.wav`]);
+    fs.rmSync(`${dir}.all.wav`);
     console.log(`${shot.name}: ${N} frames in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
     await ctx.close();
   }

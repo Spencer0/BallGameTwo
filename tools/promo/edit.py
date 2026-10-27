@@ -5,7 +5,9 @@ import os, subprocess, sys
 
 D = sys.argv[1]
 FPS = 30
-END = 19.4
+END = 20.5
+# the ending: v1's city pull-back, played a little faster to fit (8.6 s of footage)
+PULLBACK = os.path.join(D, '..', 'promo', 'frames', '10_city_pullback')
 # shot -> slot on the timeline (s); cuts sit in the pauses between voiceover lines
 SLOTS = [
     ('01_desk_low', 0.0, 2.12), ('02_desk_orbit', 2.12, 3.67), ('03_bedroom_title', 3.67, 5.86),
@@ -24,8 +26,10 @@ SANS = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
 os.makedirs(f'{D}/seg', exist_ok=True)
 segs = []
 for name, a, b in SLOTS:
-    out = f'{D}/seg/{name}.mp4'
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', f'{D}/frames/{name}/%05d.jpg', '-i', f'{D}/frames/{name}.wav',
+    src, rate = f'{D}/frames/{name}', FPS
+    if name == '08_city_pullback' and os.path.isdir(PULLBACK):
+        src, rate = PULLBACK, round(FPS * 8.6 / (b - a), 3)
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(rate), '-i', f'{src}/%05d.jpg', '-i', f'{D}/frames/{name}.wav',
                     '-t', f'{b - a:.3f}', '-vf', 'scale=1080:1920,format=yuv420p', '-c:v', 'libx264', '-crf', '17', '-r', str(FPS),
                     '-c:a', 'pcm_s16le', '-af', 'afade=t=out:st=%.3f:d=0.08' % (b - a - 0.08), f'{D}/seg/{name}.mov'], check=True)
     segs.append(f'{D}/seg/{name}.mov')

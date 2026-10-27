@@ -9,14 +9,6 @@ export const SHOTS = [
   { name: '05_suburb_low', level: 4, hud: false, mode: 'low', side: -1, dur: 2.5 },
   { name: '06_town_chase', level: 5, hud: true, mode: 'chase', preroll: 18, dur: 2.6 },
   { name: '07_city_low', level: 6, hud: false, mode: 'low', side: 1, dur: 2.7 },
-  {
-    name: '08_city_pullback',
-    level: 6,
-    hud: false,
-    at: { x: 0, z: 300, d: 120, yaw: Math.PI },
-    preroll: 4,
-    dur: 5.0,
-    cam: { from: { pos: [0, 70, 400], look: [0, 20, 290] }, to: { pos: [1000, 1200, 1700], look: [0, 0, -500] }, fov: 55 },
-  },
+  // the ending is v1's city pull-back (tools/promo/edit.py takes it from the v1 capture)
 ];
 export const MUSIC = { song: 'title', seconds: 21 };
