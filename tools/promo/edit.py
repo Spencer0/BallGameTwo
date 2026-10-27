@@ -1,47 +1,52 @@
-"""Cut the captured frames to the voiceover and burn in captions.
-python3 tools/promo/edit.py <promoDir>   (expects frames/<shot>/, vo.mp3, Shrikhand.ttf in promoDir)"""
+"""Cut the captured clips to the voiceover, burn in subtitles and mix voice, game sounds and music.
+python3 tools/promo/edit.py <promoDir>
+expects frames/<shot>/ + frames/<shot>.wav, music.wav, vo.mp3 and Shrikhand.ttf in promoDir."""
 import os, subprocess, sys
 
 D = sys.argv[1]
 FPS = 30
-# shot -> slot on the timeline (s); cut points sit in the pauses between voiceover lines
+END = 19.4
+# shot -> slot on the timeline (s); cuts sit in the pauses between voiceover lines
 SLOTS = [
-    ('01_hook_city', 0.0, 3.77), ('02_title_desk', 3.77, 5.92), ('03_desk_roll', 5.92, 8.49),
-    ('04_desk_grow', 8.49, 11.73), ('05_house', 11.73, 13.53), ('06_park', 13.53, 14.78),
-    ('07_suburb', 14.78, 17.52), ('08_town', 17.52, 19.96), ('09_city_street', 19.96, 22.0),
-    ('10_city_pullback', 22.0, 30.2),
+    ('01_desk_low', 0.0, 2.12), ('02_desk_orbit', 2.12, 3.67), ('03_bedroom_title', 3.67, 5.86),
+    ('04_house_orbit', 5.86, 8.2), ('05_suburb_low', 8.2, 10.4), ('06_town_chase', 10.4, 12.7),
+    ('07_city_low', 12.7, 15.15), ('08_city_pullback', 15.15, END),
 ]
-CAPS = [  # text, start, end, size, y (fraction of height)
-    ("I'm thinking about", 0.15, 3.65, 74, 0.20), ('launching my game...', 0.15, 3.65, 74, 0.25),
-    ('LINT ROLLER', 3.9, 5.85, 118, 0.22),
-    ('a game about cleaning...', 6.1, 8.4, 70, 0.20), ('gone wrong', 7.2, 8.4, 92, 0.255),
-    ('a tiny dust bunny', 8.6, 11.6, 70, 0.20), ('cleans ONE table...', 8.6, 11.6, 70, 0.25),
-    ('farther...', 11.9, 13.45, 96, 0.22), ('farther...', 13.85, 14.75, 110, 0.22),
-    ('FARTHER...', 15.0, 17.45, 130, 0.22), ('and FARTHER!', 17.8, 19.9, 140, 0.22),
-    ('should I release it?', 20.2, 21.95, 80, 0.22),
-    ('Play the preview', 22.0, 30.2, 86, 0.20), ('in the comments!', 22.0, 30.2, 86, 0.255),
+SUBS = [  # spoken words, plain subtitles low-centre like a dev's own TikTok
+    ("I'm finally about to release my new game", 0.05, 2.0), ("I've been building it for a while", 2.2, 3.6),
+    ("It's called", 3.9, 5.75), ("I've always wanted to make a game like this", 6.0, 9.8),
+    ('where you can hoover up everything around you', 10.05, 12.6), ('and it just keeps escalating', 12.6, 14.95),
+    ("preview link's in the comments", 15.3, 16.6), ('let me know what you guys think', 16.9, END),
 ]
+TITLE = ('LINT ROLLER', 4.35, 5.8)
+SANS = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
+
 os.makedirs(f'{D}/seg', exist_ok=True)
 segs = []
 for name, a, b in SLOTS:
     out = f'{D}/seg/{name}.mp4'
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', f'{D}/frames/{name}/%05d.jpg',
-                    '-t', f'{b - a:.3f}', '-vf', 'scale=1080:1920,format=yuv420p', '-c:v', 'libx264', '-crf', '17', '-r', str(FPS), out], check=True)
-    segs.append(out)
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', f'{D}/frames/{name}/%05d.jpg', '-i', f'{D}/frames/{name}.wav',
+                    '-t', f'{b - a:.3f}', '-vf', 'scale=1080:1920,format=yuv420p', '-c:v', 'libx264', '-crf', '17', '-r', str(FPS),
+                    '-c:a', 'pcm_s16le', '-af', 'afade=t=out:st=%.3f:d=0.08' % (b - a - 0.08), f'{D}/seg/{name}.mov'], check=True)
+    segs.append(f'{D}/seg/{name}.mov')
 with open(f'{D}/seg/list.txt', 'w') as f:
     f.writelines(f"file '{s}'\n" for s in segs)
-subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', f'{D}/seg/list.txt', '-c', 'copy', f'{D}/clips_only.mp4'], check=True)
+subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', f'{D}/seg/list.txt', '-c', 'copy', f'{D}/clips_only.mov'], check=True)
 
-font = f'{D}/Shrikhand.ttf'
 def esc(t):
     return t.replace('\\', '\\\\').replace("'", "’").replace(':', '\\:').replace('%', '\\%')
 draws = [
-    f"drawtext=fontfile={font}:text='{esc(t)}':fontsize={s}:fontcolor=white:borderw={max(6, s // 11)}:bordercolor=0x2a1e3f:"
-    f"x=(w-text_w)/2:y=h*{y}-text_h/2:enable='between(t,{a},{b})'"
-    for t, a, b, s, y in CAPS
+    f"drawtext=fontfile={SANS}:text='{esc(t)}':fontsize=54:fontcolor=white:borderw=5:bordercolor=black@0.85:"
+    f"x=(w-text_w)/2:y=h*0.70:enable='between(t,{a},{b})'" for t, a, b in SUBS
 ]
-subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', f'{D}/clips_only.mp4', '-i', f'{D}/vo.mp3',
-                '-filter_complex', f"[0:v]{','.join(draws)}[v];[1:a]apad=pad_dur=1.0,afade=t=out:st=29.4:d=0.8[a]",
-                '-map', '[v]', '-map', '[a]', '-t', '30.2', '-c:v', 'libx264', '-crf', '18', '-preset', 'slow', '-pix_fmt', 'yuv420p',
-                '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', f'{D}/lint_roller_promo.mp4'], check=True)
+t, a, b = TITLE
+draws.append(f"drawtext=fontfile={D}/Shrikhand.ttf:text='{t}':fontsize=124:fontcolor=white:borderw=11:bordercolor=0x2a1e3f:"
+             f"x=(w-text_w)/2:y=h*0.22:enable='between(t,{a},{b})'")
+# voice on top; the game's own sounds under it; the music bed low, out at the end
+mix = (f"[0:v]{','.join(draws)}[v];"
+       f"[0:a]volume=2.2[sfx];[1:a]volume=1.0,apad[vo];[2:a]volume=0.22,afade=t=out:st={END - 1.2}:d=1.2[mus];"
+       f"[vo][sfx][mus]amix=inputs=3:duration=first:normalize=0,alimiter=limit=0.95[a]")
+subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', f'{D}/clips_only.mov', '-i', f'{D}/vo.mp3', '-i', f'{D}/music.wav',
+                '-filter_complex', mix, '-map', '[v]', '-map', '[a]', '-t', str(END), '-c:v', 'libx264', '-crf', '18', '-preset', 'slow',
+                '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', f'{D}/lint_roller_promo.mp4'], check=True)
 print('ok', f'{D}/lint_roller_promo.mp4')

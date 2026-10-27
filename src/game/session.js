@@ -641,7 +641,7 @@ export class Session {
     this.focus.z = b.pos.z;
     this.focus.r = b.r;
     // a fixed debug/review camera isn't looking at the ball: don't hide what stands between them
-    this.world.focus = this.over || this.game.debugView ? null : this.focus;
+    this.world.focus = this.over || (this.game.debugView && !this.game.debugView.focus) ? null : this.focus; // (a capture camera can ask to keep the see-through)
     this.world.updateRender(this.camera, this.game.focalPx);
     renderer.render(this.scene, this.camera);
   }

@@ -133,7 +133,56 @@ class App {
     }
     if (params.has('capture')) {
       // video capture: no real-time loop; the recorder advances the game a fixed step per frame
-      this.step = (dt) => this.frame(this.last + dt * 1000);
+      this.step = (dt) => {
+        if (this.vclock) this.vclock.t += dt;
+        this.frame(this.last + dt * 1000);
+      };
+      // audio capture: the engine runs on an offline context whose clock is the capture clock, so every
+      // sound lands on the frame that made it; rendered to a WAV at the end
+      this.audioCapture = ({ seconds, music = true, song = null }) => {
+        const off = new OfflineAudioContext(2, Math.ceil(48000 * seconds), 48000);
+        const vclock = (this.vclock = { t: 0 });
+        this.audio.ctx = new Proxy(off, {
+          get(o, k) {
+            if (k === 'currentTime') return vclock.t;
+            if (k === 'state') return 'running';
+            const v = o[k];
+            return typeof v === 'function' ? v.bind(o) : v;
+          },
+        });
+        AudioNode.prototype.disconnect = function () {}; // (real-time cleanup timers would cut sounds out of the graph before the render)
+        this.audio.musicVol = music ? 0.7 : 0;
+        this.audio.build();
+        this.audio.unlocked = true;
+        this.offline = off;
+        if (song) this.music.play(SONGS[song], { fadeIn: 0.2 });
+        else this.playMusicForState();
+      };
+      this.audioRender = async () => {
+        const buf = await this.offline.startRendering();
+        const n = buf.length,
+          ch = [buf.getChannelData(0), buf.getChannelData(1)];
+        const out = new DataView(new ArrayBuffer(44 + n * 4));
+        const w = (o, s) => [...s].forEach((c, i) => out.setUint8(o + i, c.charCodeAt(0)));
+        w(0, 'RIFF');
+        out.setUint32(4, 36 + n * 4, true);
+        w(8, 'WAVEfmt ');
+        out.setUint32(16, 16, true);
+        out.setUint16(20, 1, true);
+        out.setUint16(22, 2, true);
+        out.setUint32(24, 48000, true);
+        out.setUint32(28, 48000 * 4, true);
+        out.setUint16(32, 4, true);
+        out.setUint16(34, 16, true);
+        w(36, 'data');
+        out.setUint32(40, n * 4, true);
+        for (let i = 0; i < n; i++)
+          for (let c = 0; c < 2; c++) out.setInt16(44 + i * 4 + c * 2, Math.max(-1, Math.min(1, ch[c][i])) * 32767, true);
+        let bin = '';
+        const bytes = new Uint8Array(out.buffer);
+        for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        return btoa(bin);
+      };
       return;
     }
     const loop = (now) => {
