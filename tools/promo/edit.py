@@ -35,9 +35,20 @@ subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '
 
 def esc(t):
     return t.replace('\\', '\\\\').replace("'", "’").replace(':', '\\:').replace('%', '\\%')
+def wrap(t, n=24):
+    # two balanced lines for anything longer than n characters
+    if len(t) <= n:
+        return [t]
+    words, best = t.split(), None
+    for i in range(1, len(t.split())):
+        a, b = ' '.join(words[:i]), ' '.join(words[i:])
+        if best is None or max(len(a), len(b)) < max(len(best[0]), len(best[1])):
+            best = (a, b)
+    return list(best)
 draws = [
-    f"drawtext=fontfile={SANS}:text='{esc(t)}':fontsize=54:fontcolor=white:borderw=5:bordercolor=black@0.85:"
-    f"x=(w-text_w)/2:y=h*0.70:enable='between(t,{a},{b})'" for t, a, b in SUBS
+    f"drawtext=fontfile={SANS}:text='{esc(line)}':fontsize=62:fontcolor=white:borderw=6:bordercolor=black@0.85:"
+    f"x=(w-text_w)/2:y=h*0.68+{k * 78}:enable='between(t,{a},{b})'"
+    for t, a, b in SUBS for k, line in enumerate(wrap(t))
 ]
 t, a, b = TITLE
 draws.append(f"drawtext=fontfile={D}/Shrikhand.ttf:text='{t}':fontsize=124:fontcolor=white:borderw=11:bordercolor=0x2a1e3f:"
